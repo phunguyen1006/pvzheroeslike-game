@@ -1,0 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap');
+
+:root {
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: #fff;
+  background: #0f172a;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --font-display: 'Fredoka', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { min-width: 320px; min-height: 100vh; margin: 0; background: radial-gradient(circle at 50% -20%, #1d4f3b 0, #0f172a 50%, #070b16 100%); }
+button { font: inherit; }
+button:focus-visible { outline: 3px solid #fef08a; outline-offset: 3px; }

@@ -1,0 +1,70 @@
+.game-shell {
+  width: min(1480px, 100%);
+  margin: 0 auto;
+  padding: 20px clamp(14px, 3vw, 42px) 42px;
+  box-sizing: border-box;
+}
+
+.game-header,
+.turn-console,
+.hand-heading,
+.hero-panel {
+  display: flex;
+  align-items: center;
+}
+
+.game-header {
+  min-height: 64px;
+  gap: 22px;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.game-logo { width: min(240px, 27vw); height: auto; object-fit: contain; }
+
+.phase-tracker { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.phase-tracker span,
+.preview-badge,
+.team-label,
+.class-label,
+.selection-state,
+.eyebrow {
+  color: #dbeafe;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.phase-tracker span { padding: 9px 12px; border-radius: 999px; background: rgba(15, 31, 43, 0.82); border: 1px solid rgba(255,255,255,.13); }
+.phase-tracker .active { color: #fff; background: #15803d; border-color: #4ade80; }
+.preview-badge { padding: 8px 11px; border: 1px solid #fbbf24; border-radius: 6px; color: #fef3c7; }
+
+.battle-layout { display: grid; grid-template-columns: minmax(190px, .75fr) minmax(520px, 3fr) minmax(190px, .75fr); gap: 18px; align-items: stretch; }
+.hero-panel { flex-direction: column; justify-content: center; gap: 8px; min-height: 430px; padding: 18px 12px; text-align: center; border-radius: 18px; background: linear-gradient(160deg, rgba(15, 31, 43, .96), rgba(13, 49, 37, .9)); border: 1px solid rgba(255,255,255,.13); box-shadow: 0 16px 36px rgba(0,0,0,.26); }
+.hero-panel.zombies { background: linear-gradient(160deg, rgba(43, 18, 43, .96), rgba(14, 38, 64, .9)); }
+.hero-art { width: min(148px, 100%); aspect-ratio: 1; object-fit: contain; filter: drop-shadow(0 7px 5px rgba(0,0,0,.4)); }
+.hero-copy { display: grid; gap: 2px; }
+.hero-copy strong { color: #fff; font-family: var(--font-display); font-size: 1.3rem; }
+.class-label { color: #a7f3d0; letter-spacing: .04em; }
+.zombies .class-label { color: #bfdbfe; }
+.health { display: flex; align-items: center; justify-content: center; gap: 4px; width: 62px; height: 48px; border-radius: 50%; background: #b91c1c; border: 3px solid #fecaca; box-shadow: inset 0 -4px 0 rgba(0,0,0,.18); color: #fff; }
+.health span { font: 800 1.28rem/1 var(--font-display); }.health small { font-weight: 800; }
+.block-meter { display: flex; gap: 3px; }.block-meter i { width: 10px; height: 16px; border-radius: 2px; background: #fbbf24; border: 1px solid #fde68a; transform: skew(-10deg); }
+
+.board-wrap { position: relative; overflow: hidden; min-height: 430px; border: 2px solid rgba(255,255,255,.24); border-radius: 18px; background: #1d4c33; box-shadow: 0 18px 38px rgba(0,0,0,.28); }
+.board-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .82; }
+.lane-grid { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(5, 1fr); height: 100%; min-height: 430px; padding: 16px; gap: 10px; }
+.lane { position: relative; display: flex; align-items: flex-end; justify-content: center; padding: 18px 5px; cursor: pointer; color: #fff; background: rgba(1, 25, 18, .18); border: 2px dashed rgba(255,255,255,.38); border-radius: 12px; transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease; touch-action: manipulation; }
+.lane:hover, .lane:focus-visible { transform: translateY(-3px); background: rgba(21, 128, 61, .38); border-color: #bbf7d0; outline: none; }
+.lane.water { background: rgba(3, 105, 161, .30); }.lane.water:hover, .lane.water:focus-visible { background: rgba(3, 105, 161, .6); border-color: #bae6fd; }
+.lane.occupied { border-style: solid; border-color: #fbbf24; background: rgba(60, 60, 8, .45); }
+.lane-number { position: absolute; top: 10px; left: 10px; min-width: 28px; padding: 4px; border-radius: 999px; color: #052e16; background: #fef3c7; font-weight: 900; }
+.lane-name { padding: 5px 7px; border-radius: 6px; background: rgba(0,0,0,.5); font-size: .72rem; font-weight: 800; }.deployed-card { align-self: center; padding: 7px; border-radius: 8px; background: #14532d; box-shadow: 0 4px 0 #052e16; font-weight: 900; }
+
+.turn-console { justify-content: space-between; gap: 16px; margin-top: 16px; padding: 12px 18px; border-radius: 12px; background: rgba(15, 31, 43, .9); border: 1px solid rgba(255,255,255,.13); }.resource-counter { display: flex; align-items: center; gap: 8px; color: #fff; white-space: nowrap; }.resource-counter img { width: 34px; height: 34px; object-fit: contain; }.resource-counter strong { font-size: 1.2rem; }.match-status { flex: 1; color: #dbeafe; text-align: center; }.end-turn { min-height: 44px; padding: 9px 16px; cursor: pointer; border: 0; border-radius: 8px; color: #fff; background: #d97706; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); font-weight: 900; transition: background-color 180ms ease, transform 180ms ease; }.end-turn:hover, .end-turn:focus-visible { background: #f59e0b; transform: translateY(-1px); outline: 3px solid #fde68a; outline-offset: 2px; }
+
+.hand-section { margin: 22px auto 0; max-width: 1120px; }.hand-heading { justify-content: space-between; margin-bottom: 12px; }.hand-heading h1 { margin: 2px 0 0; color: #fff; font: 700 clamp(1.35rem, 2.7vw, 2rem)/1 var(--font-display); }.selection-state { color: #bbf7d0; }.card-hand { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }.card { position: relative; min-height: 180px; padding: 0; overflow: hidden; cursor: pointer; border: 3px solid transparent; border-radius: 12px; background: #14351f; box-shadow: 0 8px 12px rgba(0,0,0,.25); transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease; touch-action: manipulation; }.card:hover, .card:focus-visible { transform: translateY(-7px); border-color: #fef08a; outline: none; }.card.selected { transform: translateY(-12px); border-color: #fbbf24; box-shadow: 0 0 0 3px rgba(251,191,36,.25), 0 14px 18px rgba(0,0,0,.35); }.card img { display: block; width: 100%; height: 100%; min-height: 180px; object-fit: cover; }.cost { position: absolute; top: 7px; left: 7px; display: grid; place-items: center; width: 31px; height: 31px; border-radius: 50%; color: #422006; background: #fde047; border: 2px solid #fff7ae; font-weight: 900; }.card-title { position: absolute; right: 4px; bottom: 5px; left: 4px; padding: 5px; border-radius: 6px; color: #fff; background: rgba(0,0,0,.74); font-size: .73rem; font-weight: 900; }
+
+@media (max-width: 960px) { .battle-layout { grid-template-columns: 1fr 1fr; }.board-wrap { order: -1; grid-column: 1 / -1; min-height: 370px; }.hero-panel { min-height: 220px; flex-direction: row; justify-content: space-around; }.hero-art { width: 105px; }.lane-grid { min-height: 370px; }.card-hand { gap: 8px; }.card { min-height: 140px; }.card img { min-height: 140px; } }
+@media (max-width: 640px) { .game-shell { padding-inline: 10px; }.game-header { align-items: flex-start; flex-wrap: wrap; gap: 10px; }.game-logo { width: 190px; }.phase-tracker { justify-content: flex-start; order: 3; }.phase-tracker span { padding: 6px 8px; font-size: .62rem; }.preview-badge { margin-left: auto; }.board-wrap, .lane-grid { min-height: 290px; }.lane-grid { padding: 8px; gap: 5px; }.lane { padding-inline: 2px; }.lane-name { font-size: .57rem; word-break: break-word; }.lane-number { top: 5px; left: 5px; min-width: 20px; padding: 2px; font-size: .68rem; }.deployed-card { font-size: .62rem; }.turn-console { align-items: stretch; flex-wrap: wrap; gap: 8px; }.match-status { flex-basis: 100%; order: 3; text-align: left; font-size: .86rem; }.end-turn { margin-left: auto; }.hero-panel { min-height: 155px; padding: 10px 6px; gap: 4px; }.hero-art { width: 76px; }.hero-copy strong { font-size: 1rem; }.team-label, .class-label { font-size: .58rem; }.health { width: 45px; height: 37px; }.block-meter i { width: 7px; height: 12px; }.card-hand { display: flex; overflow-x: auto; padding: 9px 3px 15px; scroll-snap-type: x mandatory; }.card { min-width: 112px; min-height: 158px; scroll-snap-align: start; }.card img { min-height: 158px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
