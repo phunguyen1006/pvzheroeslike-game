@@ -23,7 +23,8 @@ export interface HeroDamageResult {
 export function applyHeroDamage(
   hero: HeroState,
   damage: number,
-  hasBullseye: boolean = false
+  hasBullseye: boolean = false,
+  handSize: number = 0
 ): HeroDamageResult {
   if (hero.hp <= 0 || damage <= 0) {
     return {
@@ -80,6 +81,24 @@ export function applyHeroDamage(
   const newMeter = hero.blockMeter + roll
 
   if (newMeter >= 8) {
+    if (handSize >= 10) {
+      // Hand Overflow Rule (PvZ Heroes official mechanics):
+      // When a Hero's hand is full (10 cards), the Super-Block cannot trigger because the hero cannot receive the superpower card.
+      // The block meter fills to 8/8, but does NOT trigger Super-Block (Hero takes full damage).
+      const newHp = Math.max(0, hero.hp - damage)
+      return {
+        updatedHero: {
+          ...hero,
+          hp: newHp,
+          blockMeter: 8,
+        },
+        actualDamage: damage,
+        blocked: false,
+        isSuperBlockTriggered: false,
+        meterGained: roll,
+      }
+    }
+
     // Super-Block triggered: 100% damage blocked, meter resets, block count increments
     return {
       updatedHero: {
@@ -221,7 +240,7 @@ export function resolveSingleLaneCombat(
       }
     } else if (lane.environment.id === 'zombie_moon_base_z' && zombie) {
       // Moon Base Z: Overshoot 3 (3 damage to Plant Hero before combat)
-      const overshootRes = applyHeroDamage(currentPlantHero, 3, false)
+      const overshootRes = applyHeroDamage(currentPlantHero, 3, false, updatedPlantHand.length)
       currentPlantHero = overshootRes.updatedHero
       events.push({
         laneIndex,
@@ -554,7 +573,7 @@ export function resolveSingleLaneCombat(
             adjLane.zombieMinion = null
           }
         } else {
-          const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+          const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
           currentZombieHero = res.updatedHero
           events.push({
             laneIndex: adjIdx,
@@ -576,7 +595,7 @@ export function resolveSingleLaneCombat(
 
     // Strikethrough handling
     if (plantHasStrikethrough && plantCanAttack) {
-      const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+      const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
       currentZombieHero = res.updatedHero
       events.push({
         laneIndex,
@@ -615,7 +634,7 @@ export function resolveSingleLaneCombat(
     }
 
     if (zombieHasStrikethrough && zombieCanAttack) {
-      const res = applyHeroDamage(currentPlantHero, zombie.currentAttack, zombieHasBullseye)
+      const res = applyHeroDamage(currentPlantHero, zombie.currentAttack, zombieHasBullseye, updatedPlantHand.length)
       currentPlantHero = res.updatedHero
       if (res.actualDamage > 0) {
         zombieHurtPlantHero = true
@@ -657,7 +676,7 @@ export function resolveSingleLaneCombat(
           description: `⚡ ${zombie.name} kích hoạt Frenzy tấn công bồi tiếp tục lên ${plantTeamUp.name} Team-Up gây ${frenzyDmg} damage${plantTeamUp.currentHealth <= 0 ? ' (Tiêu diệt!)' : ''}`,
         })
       } else {
-        const frenzyRes = applyHeroDamage(currentPlantHero, zombie.currentAttack, zombieHasBullseye)
+        const frenzyRes = applyHeroDamage(currentPlantHero, zombie.currentAttack, zombieHasBullseye, updatedPlantHand.length)
         currentPlantHero = frenzyRes.updatedHero
         events.push({
           laneIndex,
@@ -680,7 +699,7 @@ export function resolveSingleLaneCombat(
     // Plant Frenzy handling (if Plant with Frenzy destroyed Zombie and survived)
     const plantHasFrenzy = Boolean(plant.frenzy || plant.traits?.includes('frenzy'))
     if (plantHasFrenzy && plantCanAttack && plant.currentHealth > 0 && zombie.currentHealth <= 0) {
-      const frenzyRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+      const frenzyRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
       currentZombieHero = frenzyRes.updatedHero
       events.push({
         laneIndex,
@@ -703,7 +722,7 @@ export function resolveSingleLaneCombat(
     if (plantHasDoubleStrike && plantCanAttack && plant.currentHealth > 0) {
       if (zombie.currentHealth <= 0) {
         // Zombie destroyed, Double Strike attacks Zombie Hero directly
-        const doubleRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+        const doubleRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
         currentZombieHero = doubleRes.updatedHero
         events.push({
           laneIndex,
@@ -763,7 +782,7 @@ export function resolveSingleLaneCombat(
             : `⚡ ${plant.name} kích hoạt Double Strike gây thêm ${secondDmg} damage lên ${zombie.name}${zombie.currentHealth <= 0 ? ' (Tiêu diệt!)' : ''}`,
         })
         if (plantHasStrikethrough) {
-          const doubleStrikeRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+          const doubleStrikeRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
           currentZombieHero = doubleStrikeRes.updatedHero
           events.push({
             laneIndex,
