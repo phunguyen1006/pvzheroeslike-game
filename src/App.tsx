@@ -1,146 +1,679 @@
-import { useState } from 'react'
+import { useReducer, useState, useEffect, useRef } from 'react'
+import {
+  gameReducer,
+  createInitialGameState,
+  getAIDecision,
+  getAITurnPlan,
+} from './engine'
+import type { Card as CardType } from './engine/types'
+import { resolveSingleLaneCombat } from './engine/combat'
+import type { AIDifficulty } from './engine/ai'
+import { HeroTopArena } from './components/board/HeroTopArena'
+import { HeroBottomArena } from './components/board/HeroBottomArena'
+import { GameBoard } from './components/board/GameBoard'
+import { Hand } from './components/cards/Hand'
+import { CombatLogDrawer } from './components/ui/CombatLogDrawer'
+import { GameOverModal } from './components/ui/GameOverModal'
+import { SuperBlockModal } from './components/ui/SuperBlockModal'
+import { MulliganModal } from './components/ui/MulliganModal'
+import { MainMenu } from './components/screens/MainMenu'
+import { HeroSelect } from './components/screens/HeroSelect'
+import { DeckBuilder } from './components/screens/DeckBuilder'
+import type { Projectile, FloatingTextItem } from './components/board/CombatVFXLayer'
+import { soundManager } from './audio/SoundManager'
 import './App.css'
 
-type Team = 'plants' | 'zombies'
+export function App() {
+  const [currentScreen, setCurrentScreen] = useState<'menu' | 'hero_select' | 'deck_builder' | 'battle'>('menu')
+  const [selectedHeroes, setSelectedHeroes] = useState<{ plant: string; zombie: string }>({
+    plant: 'hero_green_shadow',
+    zombie: 'hero_super_brainz',
+  })
+  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('normal')
+  const [customPlantDeck, setCustomPlantDeck] = useState<CardType[] | undefined>(undefined)
+  const [customZombieDeck, setCustomZombieDeck] = useState<CardType[] | undefined>(undefined)
 
-type Card = {
-  name: string
-  cost: number
-  image: string
-}
-
-const plantHand: Card[] = [
-  { name: 'Peashooter', cost: 1, image: '/assets/cards/plants/Peashooter.png' },
-  { name: 'Sunflower', cost: 1, image: '/assets/cards/plants/Sunflower.png' },
-  { name: 'Wall-Nut', cost: 1, image: '/assets/cards/plants/Wall-Nut.png' },
-  { name: 'Snow Pea', cost: 2, image: '/assets/cards/plants/Snow Pea.png' },
-  { name: 'Bonk Choy', cost: 1, image: '/assets/cards/plants/Bonk Choy.png' },
-]
-
-const lanes = ['Left Heights', 'Lane 2', 'Water Lane', 'Lane 4', 'Right Heights']
-
-function HeroPanel({ team }: { team: Team }) {
-  const plant = team === 'plants'
-  const heroName = plant ? 'Green Shadow' : 'Super Brainz'
-  const heroImage = plant
-    ? '/assets/heroes/plants/Green Shadow.png'
-    : '/assets/heroes/zombies/Super Brainz.png'
-
-  return (
-    <aside className={`hero-panel ${team}`} aria-label={`${heroName} hero status`}>
-      <img className="hero-art" src={heroImage} alt={heroName} />
-      <div className="hero-copy">
-        <span className="team-label">{plant ? 'Plants' : 'Zombies'}</span>
-        <strong>{heroName}</strong>
-        <span className="class-label">{plant ? 'Smarty / Guardian' : 'Brainy / Sneaky'}</span>
-      </div>
-      <div className="health" aria-label="20 health">
-        <span>20</span>
-        <small>HP</small>
-      </div>
-      <div className="block-meter" aria-label="Super-Block meter: 0 of 8">
-        {Array.from({ length: 8 }, (_, index) => <i key={index} />)}
-      </div>
-    </aside>
+  const [gameState, dispatch] = useReducer(gameReducer, undefined, () =>
+    createInitialGameState(selectedHeroes.plant, selectedHeroes.zombie)
   )
-}
 
-function App() {
-  const [selectedCard, setSelectedCard] = useState<Card | null>(null)
-  const [playedLanes, setPlayedLanes] = useState<Record<number, string>>({})
-  const [status, setStatus] = useState('Choose a Plant card, then select an open lane.')
+  const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
+  const [selectedLaneIndex, setSelectedLaneIndex] = useState<number | undefined>(undefined)
+  const [activeCombatLaneIndex, setActiveCombatLaneIndex] = useState<number | undefined>(undefined)
+  const [isCombatResolving, setIsCombatResolving] = useState(false)
 
-  const playToLane = (lane: number) => {
-    if (!selectedCard) {
-      setStatus('Select a card from your hand first.')
-      return
-    }
+  // Stable references for async combat loop and super-block resumption
+  const gameStateRef = useRef(gameState)
+  gameStateRef.current = gameState
+  const nextLaneToExecuteRef = useRef<number | null>(null)
+  const executeLaneRef = useRef<((idx: number) => void) | null>(null)
 
-    if (playedLanes[lane]) {
-      setStatus(`${lanes[lane]} already has ${playedLanes[lane]}.`)
-      return
-    }
+  // Combat Visual & Sound FX States
+  const [projectiles, setProjectiles] = useState<Projectile[]>([])
+  const [floatingTexts, setFloatingTexts] = useState<FloatingTextItem[]>([])
+  const [isScreenShaking, setIsScreenShaking] = useState(false)
+  const [plantHeroHurt, setPlantHeroHurt] = useState(false)
+  const [zombieHeroHurt, setZombieHeroHurt] = useState(false)
+  const [isMuted, setIsMuted] = useState(soundManager.getMuted())
+  const [isCombatLogOpen, setIsCombatLogOpen] = useState(false)
 
-    setPlayedLanes((current) => ({ ...current, [lane]: selectedCard.name }))
-    setStatus(`${selectedCard.name} deployed to ${lanes[lane]}.`)
-    setSelectedCard(null)
+  const isPlayerPlantTurn = gameState.phase === 'PLANT_PLAY'
+
+  const toggleSound = () => {
+    const nextMute = !isMuted
+    setIsMuted(nextMute)
+    soundManager.setMuted(nextMute)
+    if (!nextMute) soundManager.playCardDrop()
   }
 
+  // Start match when heroes & difficulty are picked
+  const handleStartWithHeroes = (plantId: string, zombieId: string, diff: AIDifficulty = 'normal') => {
+    setSelectedHeroes({ plant: plantId, zombie: zombieId })
+    setAiDifficulty(diff)
+    dispatch({
+      type: 'START_MATCH',
+      plantHeroId: plantId,
+      zombieHeroId: zombieId,
+      plantDeck: customPlantDeck,
+      zombieDeck: customZombieDeck,
+    })
+    setCurrentScreen('battle')
+  }
+
+  // Handle saving custom deck from DeckBuilder
+  const handleSaveDeck = (side: 'plants' | 'zombies', deck: CardType[]) => {
+    if (side === 'plants') {
+      setCustomPlantDeck(deck)
+    } else {
+      setCustomZombieDeck(deck)
+    }
+    dispatch({
+      type: 'START_MATCH',
+      plantHeroId: selectedHeroes.plant,
+      zombieHeroId: selectedHeroes.zombie,
+      plantDeck: side === 'plants' ? deck : customPlantDeck,
+      zombieDeck: side === 'zombies' ? deck : customZombieDeck,
+    })
+    setCurrentScreen('battle')
+  }
+
+  // AI Automatic Behavior for Zombie side (or Plant side if playing Zombies)
+  useEffect(() => {
+    if (currentScreen !== 'battle' || gameState.winner || gameState.phase === 'MULLIGAN') return
+
+    const isAITurn =
+      (gameState.phase === 'ZOMBIE_PLAY' || gameState.phase === 'ZOMBIE_TRICKS')
+
+    if (!isAITurn) return
+
+    const timeoutIds: ReturnType<typeof setTimeout>[] = []
+    const plan = getAITurnPlan(gameState, 'zombies', aiDifficulty)
+
+    if (plan.length === 0) {
+      // Pass turn after thoughtful delay
+      const thinkTime = aiDifficulty === 'expert' ? 950 : aiDifficulty === 'easy' ? 550 : 750
+      const tid = setTimeout(() => {
+        dispatch({ type: 'NEXT_PHASE' })
+      }, thinkTime)
+      timeoutIds.push(tid)
+    } else {
+      // Execute each planned action with authentic mobile pacing
+      const stepDelay = aiDifficulty === 'expert' ? 800 : 650
+      plan.forEach((step, idx) => {
+        const tid = setTimeout(() => {
+          if (step.action === 'PLAY_MINION' && step.card && step.laneIndex !== undefined) {
+            dispatch({
+              type: 'PLAY_CARD',
+              side: 'zombies',
+              cardId: step.card.id,
+              laneIndex: step.laneIndex,
+            })
+            soundManager.playCardDrop()
+          } else if (step.action === 'PLAY_TRICK' && step.card) {
+            dispatch({
+              type: 'PLAY_CARD',
+              side: 'zombies',
+              cardId: step.card.id,
+              laneIndex: step.laneIndex ?? 0,
+              targetHero: step.targetHero,
+            })
+            soundManager.playAttackHit()
+          }
+        }, (idx + 1) * stepDelay)
+        timeoutIds.push(tid)
+      })
+
+      // Once all planned cards have been dropped, pass turn cleanly
+      const endTid = setTimeout(() => {
+        dispatch({ type: 'NEXT_PHASE' })
+      }, (plan.length + 1) * stepDelay + 250)
+      timeoutIds.push(endTid)
+    }
+
+    return () => {
+      timeoutIds.forEach(clearTimeout)
+    }
+  }, [currentScreen, gameState.phase, gameState.turn, gameState.winner, aiDifficulty])
+
+  // AI Super-Block Auto Resolution for Zombie side
+  useEffect(() => {
+    if (gameState.pendingSuperBlock && gameState.pendingSuperBlock.side === 'zombies') {
+      soundManager.playSuperBlock()
+      const sp = gameState.pendingSuperBlock.superpower
+      const timer = setTimeout(() => {
+        dispatch({
+          type: 'PLAY_SUPERPOWER',
+          side: 'zombies',
+          superpowerId: sp.id,
+        })
+        soundManager.playAttackHit()
+
+        // Resume combat loop if paused waiting for Zombie Super-Block
+        if (nextLaneToExecuteRef.current !== null) {
+          const nextLane = nextLaneToExecuteRef.current
+          nextLaneToExecuteRef.current = null
+          setTimeout(() => executeLaneRef.current?.(nextLane), 600)
+        }
+      }, 1000)
+
+      return () => clearTimeout(timer)
+    }
+  }, [gameState.pendingSuperBlock])
+
+  // Sound cue on game end
+  useEffect(() => {
+    if (gameState.winner) {
+      if (gameState.winner === 'plants') {
+        soundManager.playVictory()
+      } else {
+        soundManager.playDefeat()
+      }
+    }
+  }, [gameState.winner])
+
+  const handleSelectCard = (card: CardType) => {
+    setSelectedCard(card.id === selectedCard?.id ? null : card)
+    soundManager.playCardSelect()
+  }
+
+  const handleSelectLane = (laneIndex: number) => {
+    setSelectedLaneIndex(laneIndex)
+
+    if (selectedCard && isPlayerPlantTurn) {
+      dispatch({
+        type: 'PLAY_CARD',
+        side: 'plants',
+        cardId: selectedCard.id,
+        laneIndex,
+      })
+      if (selectedCard.type === 'trick') {
+        soundManager.playAttackHit()
+      } else {
+        soundManager.playCardDrop()
+      }
+      setSelectedCard(null)
+    }
+  }
+
+  const handleDropCardToLane = (laneIndex: number, cardId: string) => {
+    const card = gameState.plantHand.find((c) => c.id === cardId)
+    if (card && isPlayerPlantTurn && card.cost <= gameState.plantHero.sun) {
+      dispatch({
+        type: 'PLAY_CARD',
+        side: 'plants',
+        cardId: card.id,
+        laneIndex,
+      })
+      if (card.type === 'trick') {
+        soundManager.playAttackHit()
+      } else {
+        soundManager.playCardDrop()
+      }
+      setSelectedCard(null)
+      setSelectedLaneIndex(undefined)
+    }
+  }
+
+  const handleNextPhase = () => {
+    soundManager.playPhaseChange()
+    dispatch({ type: 'NEXT_PHASE' })
+  }
+
+  // ========================================================
+  // SEQUENTIAL 5-LANE COMBAT SWEEP WITH PROJECTILES & VFX
+  // ========================================================
+  const handleStartCombat = () => {
+    if (isCombatResolving) return
+    setIsCombatResolving(true)
+    soundManager.playPhaseChange()
+
+    const executeLane = (idx: number) => {
+      if (idx >= 5) {
+        // Combat complete across all 5 lanes
+        setActiveCombatLaneIndex(undefined)
+        setIsCombatResolving(false)
+        nextLaneToExecuteRef.current = null
+        setTimeout(() => {
+          if (!gameStateRef.current.pendingSuperBlock && !gameStateRef.current.winner) {
+            dispatch({ type: 'NEXT_PHASE' })
+          }
+        }, 500)
+        return
+      }
+
+      // Check if match already has a winner before resolving lane
+      if (gameStateRef.current.winner) {
+        setActiveCombatLaneIndex(undefined)
+        setIsCombatResolving(false)
+        nextLaneToExecuteRef.current = null
+        return
+      }
+
+      setActiveCombatLaneIndex(idx)
+
+      // Calculate single lane combat results from the latest state
+      const { events, hasSuperBlock, winner } = resolveSingleLaneCombat(gameStateRef.current, idx)
+
+      if (events.length === 0) {
+        // Empty lane or no attacks; step lane for any environment triggers and proceed
+        dispatch({ type: 'STEP_COMBAT_LANE', laneIndex: idx })
+        setTimeout(() => executeLane(idx + 1), 320)
+        return
+      }
+
+      // Fire visual combat sequence for lane events
+      events.forEach((ev, evIdx) => {
+        const delay = evIdx * 400
+        setTimeout(() => {
+          const isPlant = ev.attackerSide === 'plants'
+
+          // 1. Fire attack projectile
+          if (isPlant) {
+            soundManager.playPeaShoot()
+          } else {
+            soundManager.playAttackHit()
+          }
+
+          const projId = `proj-${idx}-${Date.now()}-${evIdx}`
+          setProjectiles((prev) => [
+            ...prev,
+            {
+              id: projId,
+              laneIndex: idx,
+              sourceSide: ev.attackerSide,
+              targetType: ev.target,
+            },
+          ])
+
+          // Projectile arrives at target (after 350ms)
+          setTimeout(() => {
+            setProjectiles((prev) => prev.filter((p) => p.id !== projId))
+
+            // 2. Target impact & Floating Number
+            const floatId = `float-${idx}-${Date.now()}-${evIdx}`
+            let targetType: 'zombieHero' | 'plantHero' | 'zombieMinion' | 'plantMinion'
+            if (ev.target === 'hero') {
+              targetType = ev.targetSide === 'plants' ? 'plantHero' : 'zombieHero'
+            } else {
+              targetType = ev.targetSide === 'plants' ? 'plantMinion' : 'zombieMinion'
+            }
+
+            const floatText = ev.isBlocked
+              ? '🛡️ BLOCKED!'
+              : ev.damageDealt > 0
+              ? `-${ev.damageDealt}`
+              : ''
+
+            if (floatText) {
+              setFloatingTexts((prev) => [
+                ...prev,
+                {
+                  id: floatId,
+                  laneIndex: idx,
+                  target: targetType,
+                  text: floatText,
+                  type: ev.isBlocked ? 'block' : 'damage',
+                },
+              ])
+              setTimeout(() => {
+                setFloatingTexts((prev) => prev.filter((f) => f.id !== floatId))
+              }, 850)
+            }
+
+            // 3. Audio & Hero / Minion Hit Feedback
+            if (ev.isBlocked) {
+              soundManager.playShieldBlock()
+            } else if (ev.target === 'hero' && ev.damageDealt > 0) {
+              soundManager.playHeroDamage()
+              if (ev.targetSide === 'plants') {
+                setPlantHeroHurt(true)
+                setTimeout(() => setPlantHeroHurt(false), 450)
+              } else {
+                setZombieHeroHurt(true)
+                setTimeout(() => setZombieHeroHurt(false), 450)
+              }
+
+              if (ev.damageDealt >= 2) {
+                setIsScreenShaking(true)
+                setTimeout(() => setIsScreenShaking(false), 360)
+              }
+            } else if (ev.damageDealt > 0) {
+              soundManager.playAttackHit()
+            }
+          }, 350)
+        }, delay)
+      })
+
+      // At impact of attacks, dispatch STEP_COMBAT_LANE to synchronously update the board state!
+      const impactTime = Math.max(380, (events.length - 1) * 400 + 360)
+      setTimeout(() => {
+        dispatch({ type: 'STEP_COMBAT_LANE', laneIndex: idx })
+
+        // Check if lethal blow ended the game
+        if (winner) {
+          setActiveCombatLaneIndex(undefined)
+          setIsCombatResolving(false)
+          nextLaneToExecuteRef.current = null
+          return
+        }
+
+        // Check Super-Block interruption
+        if (hasSuperBlock) {
+          nextLaneToExecuteRef.current = idx + 1
+          soundManager.playSuperBlock()
+          // Combat pauses! Plant player sees SuperBlockModal, or Zombie AI auto-resolves.
+          return
+        }
+
+        // Continue to next lane
+        setTimeout(() => executeLane(idx + 1), 350)
+      }, impactTime)
+    }
+
+    executeLaneRef.current = executeLane
+    executeLane(0)
+  }
+
+  const handleRematch = () => {
+    setIsCombatResolving(false)
+    setActiveCombatLaneIndex(undefined)
+    nextLaneToExecuteRef.current = null
+    dispatch({
+      type: 'START_MATCH',
+      plantHeroId: selectedHeroes.plant,
+      zombieHeroId: selectedHeroes.zombie,
+      plantDeck: customPlantDeck,
+      zombieDeck: customZombieDeck,
+    })
+    setSelectedCard(null)
+    setSelectedLaneIndex(undefined)
+  }
+
+  // Super-Block Actions with Combat Resumption
+  const handlePlaySuperpower = () => {
+    if (gameState.pendingSuperBlock) {
+      const sp = gameState.pendingSuperBlock.superpower
+      dispatch({
+        type: 'PLAY_SUPERPOWER',
+        side: gameState.pendingSuperBlock.side,
+        superpowerId: sp.id,
+      })
+      soundManager.playSuperBlock()
+
+      // Resume combat loop if paused waiting for Super-Block
+      if (nextLaneToExecuteRef.current !== null) {
+        const nextLane = nextLaneToExecuteRef.current
+        nextLaneToExecuteRef.current = null
+        setTimeout(() => executeLaneRef.current?.(nextLane), 600)
+      }
+    }
+  }
+
+  const handleSaveSuperpower = () => {
+    if (gameState.pendingSuperBlock) {
+      dispatch({
+        type: 'SAVE_SUPERPOWER',
+        side: gameState.pendingSuperBlock.side,
+      })
+      soundManager.playCardDrop()
+
+      // Resume combat loop if paused waiting for Super-Block
+      if (nextLaneToExecuteRef.current !== null) {
+        const nextLane = nextLaneToExecuteRef.current
+        nextLaneToExecuteRef.current = null
+        setTimeout(() => executeLaneRef.current?.(nextLane), 600)
+      }
+    }
+  }
+
+  // Mulligan Confirm
+  const handleConfirmMulligan = (selectedIndices: number[]) => {
+    if (selectedIndices.length > 0) {
+      dispatch({
+        type: 'MULLIGAN_SWAP',
+        side: 'plants',
+        cardIndices: selectedIndices,
+      })
+    }
+    dispatch({ type: 'FINISH_MULLIGAN', side: 'plants' })
+    soundManager.playCardDrop()
+  }
+
+  if (currentScreen === 'menu') {
+    return (
+      <MainMenu
+        onStartGame={() => setCurrentScreen('battle')}
+        onOpenHeroSelect={() => setCurrentScreen('hero_select')}
+        onOpenDeckBuilder={() => setCurrentScreen('deck_builder')}
+      />
+    )
+  }
+
+  if (currentScreen === 'hero_select') {
+    return (
+      <HeroSelect
+        onSelectHeroes={handleStartWithHeroes}
+        onBack={() => setCurrentScreen('menu')}
+      />
+    )
+  }
+
+  if (currentScreen === 'deck_builder') {
+    return (
+      <DeckBuilder
+        onSaveDeck={handleSaveDeck}
+        onBack={() => setCurrentScreen('menu')}
+      />
+    )
+  }
+
+  const startingSuperpower = gameState.plantHand.find((c) => c.type === 'superpower')
+
   return (
-    <main className="game-shell">
-      <header className="game-header">
-        <img className="game-logo" src="/assets/board/Game_Logo.png" alt="Plants vs. Zombies Heroes" />
-        <div className="phase-tracker" aria-label="Match phases">
-          <span className="active">1. Zombie Minions</span>
-          <span>2. Plant Turn</span>
-          <span>3. Zombie Tricks</span>
-          <span>4. Combat</span>
-        </div>
-        <span className="preview-badge">Web Preview</span>
-      </header>
+    <div className={`pvz-game-application ${isScreenShaking ? 'is-screen-shaking' : ''}`}>
+      {/* Centered Vertical Battle Arena Stage */}
+      <div className="pvz-arena-stage">
+        <main className="pvz-vertical-stadium">
+          {/* 1. Top Zone: Opponent Arena (Super Brainz / Zombie Hero) */}
+          <HeroTopArena
+            hero={gameState.zombieHero}
+            side="zombies"
+            opponentHandCount={gameState.zombieHand.length}
+            phase={gameState.phase}
+            isHurt={zombieHeroHurt}
+            isTargetable={Boolean(selectedCard && selectedCard.type === 'trick' && isPlayerPlantTurn)}
+            onHeroClick={() => {
+              if (selectedCard && selectedCard.type === 'trick' && isPlayerPlantTurn) {
+                dispatch({
+                  type: 'PLAY_CARD',
+                  side: 'plants',
+                  cardId: selectedCard.id,
+                  laneIndex: 0,
+                  targetHero: true,
+                })
+                soundManager.playAttackHit()
+                setSelectedCard(null)
+              }
+            }}
+            onOpenCombatLog={() => setIsCombatLogOpen(true)}
+            unreadLogCount={gameState.combatLog.length}
+            isMuted={isMuted}
+            onToggleMute={toggleSound}
+            onReturnHome={() => setCurrentScreen('menu')}
+          />
 
-      <section className="battle-layout" aria-label="PvZ Heroes five-lane battle board">
-        <HeroPanel team="zombies" />
-
-        <section className="board-wrap" aria-label="Five-lane battlefield">
-          <img className="board-art" src="/assets/board/Board_Lawn_5_Lanes.png" alt="Five-lane game board" />
-          <div className="lane-grid">
-            {lanes.map((lane, index) => (
-              <button
-                className={`lane ${index === 2 ? 'water' : ''} ${playedLanes[index] ? 'occupied' : ''}`}
-                key={lane}
-                type="button"
-                onClick={() => playToLane(index)}
-                aria-label={`Deploy selected card to ${lane}`}
-              >
-                <span className="lane-number">{index + 1}</span>
-                {playedLanes[index] && <span className="deployed-card">{playedLanes[index]}</span>}
-                <span className="lane-name">{lane}</span>
-              </button>
-            ))}
+          {/* 2. Middle Zone: 5-Lane Battlefield Surface */}
+          <div className="pvz-board-arena-container">
+            <GameBoard
+              lanes={gameState.lanes}
+              selectedLaneIndex={selectedLaneIndex}
+              selectedCard={selectedCard}
+              selectedCardSide={selectedCard?.side}
+              activeCombatLaneIndex={activeCombatLaneIndex}
+              projectiles={projectiles}
+              floatingTexts={floatingTexts}
+              onSelectLane={handleSelectLane}
+              onDropCardToLane={handleDropCardToLane}
+            />
           </div>
-        </section>
 
-        <HeroPanel team="plants" />
-      </section>
+          {/* 3. Bottom Zone: Player Hero Arena (Green Shadow / Plant Hero) */}
+          <HeroBottomArena
+            hero={gameState.plantHero}
+            side="plants"
+            phase={gameState.phase}
+            isHurt={plantHeroHurt}
+            onSuperBlockClick={() => {
+              if (gameState.plantHero.blockMeter >= 8) {
+                soundManager.playSuperBlock()
+              } else {
+                soundManager.playClick()
+              }
+            }}
+          />
 
-      <section className="turn-console" aria-label="Plant player controls">
-        <div className="resource-counter">
-          <img src="/assets/traits/Resource_Brain.png" alt="" />
-          <span><strong>1</strong> / 1 Sun</span>
-        </div>
-        <p role="status" className="match-status">{status}</p>
-        <button type="button" className="end-turn" onClick={() => setStatus('Turn ended — engine integration pending.')}>End Plant Turn</button>
-      </section>
+          {/* 4. Player Hand Shelf with Iconic Circular Action Button */}
+          <footer className="pvz-player-hand-shelf">
+            {/* Card Selection Status Cue */}
+            <div className="hand-prompt-strip">
+              <span className="prompt-content">
+                {selectedCard
+                  ? `⭐ ${selectedCard.name} (${selectedCard.cost} ☀️) — Chạm vào làn đất để xuất trận!`
+                  : isPlayerPlantTurn
+                  ? '🌱 Lượt của bạn: Chọn lá bài hoặc kéo thả lên bàn đấu.'
+                  : gameState.phase === 'FIGHT'
+                  ? '⚔️ Nhấn Nút GIAO TRANH để bắt đầu đọ sức!'
+                  : '⏳ Đang chờ lượt đối thủ...'}
+              </span>
+            </div>
 
-      <section className="hand-section" aria-labelledby="hand-title">
-        <div className="hand-heading">
-          <div>
-            <span className="eyebrow">Player Hand</span>
-            <h1 id="hand-title">Choose a Plant</h1>
-          </div>
-          <span className="selection-state">{selectedCard ? `${selectedCard.name} selected` : 'No card selected'}</span>
-        </div>
-        <div className="card-hand">
-          {plantHand.map((card) => (
-            <button
-              className={`card ${selectedCard?.name === card.name ? 'selected' : ''}`}
-              key={card.name}
-              type="button"
-              onClick={() => {
-                setSelectedCard(card)
-                setStatus(`${card.name} selected. Choose a lane to deploy it.`)
-              }}
-              aria-pressed={selectedCard?.name === card.name}
-            >
-              <img src={card.image} alt={card.name} />
-              <span className="cost">{card.cost}</span>
-              <span className="card-title">{card.name}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-    </main>
+            {/* Hand Cards Arc and Circular Action Button */}
+            <div className="hand-and-action-cluster">
+              <div className="hand-cards-dock">
+                <Hand
+                  cards={gameState.plantHand}
+                  currentResource={gameState.plantHero.sun}
+                  selectedCardId={selectedCard?.id}
+                  isPlayerTurn={isPlayerPlantTurn}
+                  onSelectCard={handleSelectCard}
+                  side="plants"
+                />
+              </div>
+
+              {/* Big Circular PvZ Heroes Action Button (FIGHT! / GO! / WAITING) */}
+              <div className="arena-action-button-slot">
+                {gameState.phase === 'FIGHT' ? (
+                  <button
+                    className={`arena-turn-action-btn fight-active-btn ${
+                      isCombatResolving ? 'is-resolving-active' : ''
+                    }`}
+                    onClick={handleStartCombat}
+                    disabled={isCombatResolving}
+                    title="Bắt đầu giao tranh cả 5 làn!"
+                  >
+                    <span className="action-btn-icon">⚔️</span>
+                    <span className="action-btn-label">
+                      {isCombatResolving ? 'ĐANG ĐÁNH' : 'FIGHT!'}
+                    </span>
+                  </button>
+                ) : isPlayerPlantTurn ? (
+                  <button
+                    className="arena-turn-action-btn go-active-btn"
+                    onClick={handleNextPhase}
+                    title="Xong lượt ra quân Plant, chuyển sang Zombie Tricks!"
+                  >
+                    <span className="action-btn-icon">⏩</span>
+                    <span className="action-btn-label">GO!</span>
+                  </button>
+                ) : (
+                  <div
+                    className="arena-turn-waiting-bubble"
+                    title={
+                      gameState.phase === 'ZOMBIE_PLAY'
+                        ? 'Zombie đang tính toán ra quân...'
+                        : 'Zombie đang tung chiêu Tricks...'
+                    }
+                  >
+                    <span className="waiting-spinner-ring" />
+                    <span className="waiting-pill-label">
+                      {gameState.phase === 'ZOMBIE_PLAY' ? 'ZOMBIE' : 'TRICKS'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </footer>
+        </main>
+
+        {/* Slide-Out Battle Feed Drawer (Opened via 💬 button at top left) */}
+        <CombatLogDrawer
+          isOpen={isCombatLogOpen}
+          onClose={() => setIsCombatLogOpen(false)}
+          logs={gameState.combatLog}
+        />
+      </div>
+
+      {/* Mulligan Opening Hand Modal */}
+      {gameState.phase === 'MULLIGAN' && (
+        <MulliganModal
+          cards={gameState.plantHand}
+          superpower={startingSuperpower}
+          side="plants"
+          onConfirmMulligan={handleConfirmMulligan}
+        />
+      )}
+
+      {/* Super-Block Trigger Modal (Player Plants) */}
+      {gameState.pendingSuperBlock && gameState.pendingSuperBlock.side === 'plants' && (
+        <SuperBlockModal
+          side={gameState.pendingSuperBlock.side}
+          superpower={gameState.pendingSuperBlock.superpower}
+          onPlaySuperpower={handlePlaySuperpower}
+          onSaveSuperpower={handleSaveSuperpower}
+        />
+      )}
+
+      {/* Victory / Defeat Modal */}
+      {gameState.winner && (
+        <GameOverModal
+          winner={gameState.winner}
+          plantHeroName={gameState.plantHero.name}
+          zombieHeroName={gameState.zombieHero.name}
+          plantHeroAvatar={gameState.plantHero.avatar}
+          zombieHeroAvatar={gameState.zombieHero.avatar}
+          turnCount={gameState.turn}
+          onRematch={handleRematch}
+          onMainMenu={() => {
+            setCurrentScreen('menu')
+            handleRematch()
+          }}
+          onHeroSelect={() => {
+            setCurrentScreen('hero_select')
+            handleRematch()
+          }}
+        />
+      )}
+    </div>
   )
 }
 
