@@ -25,6 +25,7 @@ export interface CardData {
  tribe?: string
  armored?: number
  antiHero?: number
+ splashDamage?: number
  doubleStrike?: boolean
  amphibious?: boolean
  bullseye?: boolean
@@ -1041,6 +1042,7 @@ export const PLANT_CARDS: CardData[] = [
  hp: 6,
  health: 6,
  traits: ['Splash Damage 4'],
+ splashDamage: 4,
  rarity: 'Legendary',
  tribe: 'Corn Plant',
  assetPath: '/assets/cards/plants/Kernel Corn.png',

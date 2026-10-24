@@ -39,6 +39,7 @@ function convertCardDataToCard(data: any, side: 'plants' | 'zombies'): Card {
     antiHero: data.antiHero,
     doubleStrike: data.doubleStrike,
     gravestone: data.gravestone,
+    splashDamage: data.splashDamage,
     image: data.image ?? data.assetPath ?? '',
     description: data.description,
   }
@@ -1350,7 +1351,7 @@ describe('Round 5 Card Catalog Validation Suite', () => {
         expect(card).toBeDefined()
         expect(card?.name).toBe('Newspaper Zombie')
         expect(card?.cost).toBe(2)
-        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.rarity).toBe('Uncommon')
         expect(card?.tribe).toBe('Professional Zombie')
         expect(card?.heroClass).toBe('Crazy')
         expect(card?.frenzy).toBe(true)

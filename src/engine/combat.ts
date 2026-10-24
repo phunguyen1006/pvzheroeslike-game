@@ -594,15 +594,16 @@ export function resolveSingleLaneCombat(
       }
     }
 
-    // Splash Damage (Dark Matter Dragonfruit / Splash Damage trait)
+    // Splash Damage (Dark Matter Dragonfruit / Cob Cannon / Splash Damage trait)
     const splashTrait = plant.traits?.find(t => t.toLowerCase().includes('splash damage'))
-    let splashDmg = 0
-    if (plant.cardId === 'plant_dark_matter_dragonfruit' || splashTrait) {
-      splashDmg = 6
-      if (splashTrait) {
-        const match = splashTrait.match(/\d+/)
-        if (match) splashDmg = parseInt(match[0], 10)
-      }
+    let splashDmg = (plant as any).splashDamage || 0
+    if (plant.cardId === 'plant_dark_matter_dragonfruit') {
+      splashDmg = splashDmg || 6
+    } else if (plant.cardId === 'plant_cob_cannon' || plant.name.toLowerCase().includes('cob cannon')) {
+      splashDmg = splashDmg || 4
+    } else if (splashTrait) {
+      const match = splashTrait.match(/\d+/)
+      splashDmg = match ? parseInt(match[0], 10) : (splashDmg || 6)
     }
     if (splashDmg > 0 && plantCanAttack) {
       const adjIndices = [laneIndex - 1, laneIndex + 1].filter(idx => idx >= 0 && idx < updatedLanes.length)
@@ -1614,6 +1615,51 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
             description: `🥒 Captain Cucumber gây sát thương: Triệu hồi (Conjure) lá bài Huyền thoại [${conjured.name}] giảm 1 Sun (Giá: ${conjured.cost})!`,
           })
         }
+      }
+
+      // Splash Damage (Dark Matter Dragonfruit / Cob Cannon / Splash Damage trait)
+      const splashTrait = plant.traits?.find(t => t.toLowerCase().includes('splash damage'))
+      let splashDmg = (plant as any).splashDamage || 0
+      if (plant.cardId === 'plant_dark_matter_dragonfruit') {
+        splashDmg = splashDmg || 6
+      } else if (plant.cardId === 'plant_cob_cannon' || plant.name.toLowerCase().includes('cob cannon')) {
+        splashDmg = splashDmg || 4
+      } else if (splashTrait) {
+        const match = splashTrait.match(/\d+/)
+        splashDmg = match ? parseInt(match[0], 10) : (splashDmg || 6)
+      }
+      if (splashDmg > 0 && plantCanAttack) {
+        const adjIndices = [i - 1, i + 1].filter(idx => idx >= 0 && idx < updatedLanes.length)
+        adjIndices.forEach(adjIdx => {
+          const adjLane = updatedLanes[adjIdx]
+          if (adjLane.zombieMinion && adjLane.zombieMinion.currentHealth > 0) {
+            const isAdjInv = Boolean(adjLane.zombieMinion.isInvulnerable || adjLane.zombieMinion.invulnerableThisTurn)
+            const actualSplashDmg = isAdjInv ? 0 : splashDmg
+            if (!isAdjInv) {
+              adjLane.zombieMinion = {
+                ...adjLane.zombieMinion,
+                currentHealth: Math.max(0, adjLane.zombieMinion.currentHealth - actualSplashDmg),
+              }
+            }
+            events.push({
+              laneIndex: adjIdx,
+              attackerSide: 'plants',
+              attackerName: `${plant.name} (Splash Damage ${splashDmg})`,
+              target: 'minion',
+              targetSide: 'zombies',
+              damageDealt: actualSplashDmg,
+              isBlocked: false,
+              isLethal: adjLane.zombieMinion.currentHealth <= 0,
+              description: isAdjInv
+                ? `💥 ${adjLane.zombieMinion.name} tại làn ${adjIdx} Miễn thương (Invulnerable) trước Splash Damage!`
+                : `💥 ${plant.name} gây ${splashDmg} Splash Damage lan sang ${adjLane.zombieMinion.name} tại làn ${adjIdx}!`,
+            })
+            if (adjLane.zombieMinion.currentHealth <= 0) {
+              deadUnitsThisLane.push({ minion: adjLane.zombieMinion, laneIndex: adjIdx })
+              adjLane.zombieMinion = null
+            }
+          }
+        })
       }
 
       // Dusk Lobber: If on an Environment, attacks adjacent lanes as well!
