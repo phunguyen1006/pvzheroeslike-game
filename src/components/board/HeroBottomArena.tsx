@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import type { HeroState, Side, Phase } from '../../engine/types'
 import { ASSET_MANIFEST } from '../../data/assetsManifest'
 import { soundManager } from '../../audio/SoundManager'
+import { ComicSpeechBubble } from '../hero/ComicSpeechBubble'
 
 export interface HeroBottomArenaProps {
   hero: HeroState
@@ -9,6 +10,8 @@ export interface HeroBottomArenaProps {
   phase: Phase
   isHurt?: boolean
   floatingDamage?: string
+  activeEmote?: { text: string; emoji?: string } | null
+  onDismissEmote?: () => void
   onSuperBlockClick?: () => void
 }
 
@@ -18,6 +21,8 @@ export const HeroBottomArena: React.FC<HeroBottomArenaProps> = ({
   phase,
   isHurt = false,
   floatingDamage,
+  activeEmote,
+  onDismissEmote,
   onSuperBlockClick,
 }) => {
   const isPlant = side === 'plants'
@@ -134,6 +139,16 @@ export const HeroBottomArena: React.FC<HeroBottomArenaProps> = ({
           {/* Floating Damage Number */}
           {floatingDamage && (
             <div className="hero-floating-damage-burst">{floatingDamage}</div>
+          )}
+
+          {/* Comic Speech Bubble */}
+          {activeEmote && (
+            <ComicSpeechBubble
+              text={activeEmote.text}
+              emoji={activeEmote.emoji}
+              side={side}
+              onDismiss={onDismissEmote}
+            />
           )}
         </div>
 

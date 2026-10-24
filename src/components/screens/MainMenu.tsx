@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { soundManager } from '../../audio/SoundManager'
+import { SoundSettingsModal } from '../modals/SoundSettingsModal'
 
 export interface MainMenuProps {
   onStartGame: () => void
@@ -15,6 +16,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenCampaign,
 }) => {
   const [isMuted, setIsMuted] = useState(soundManager.getMuted())
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   const toggleSound = () => {
     const nextMute = !isMuted
@@ -71,6 +73,13 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         >
           {isMuted ? '🔇 Âm thanh: TẮT' : '🔊 Âm thanh: BẬT'}
         </button>
+        <button
+          className="audio-toggle-btn settings-menu-btn"
+          onClick={() => setIsSettingsOpen(true)}
+          title="Cài đặt âm lượng & âm thanh"
+        >
+          ⚙️ Cài đặt âm thanh
+        </button>
       </div>
 
       <div className="menu-content-card">
@@ -102,6 +111,15 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           <span className="meta-subtext">React 19 • TypeScript • Pure Web Audio SFX</span>
         </div>
       </div>
+
+      {/* Sound Settings Modal */}
+      <SoundSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => {
+          setIsSettingsOpen(false)
+          setIsMuted(soundManager.getMuted())
+        }}
+      />
     </div>
   )
 }

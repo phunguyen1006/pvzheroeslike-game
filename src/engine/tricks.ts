@@ -87,10 +87,38 @@ export function executeTrick(
     ? 'zombie_healthy_treat'
     : card.id.startsWith('zombie_sugary_treat')
       ? 'zombie_sugary_treat'
-      : card.id
+      : card.id.startsWith('plant_banana_bomb')
+        ? 'plant_banana_bomb'
+        : card.id
 
   switch (trickKey) {
     // === PLANT TRICKS ===
+    case 'plant_banana_bomb': {
+      // 1 damage to a target Zombie
+      if (targetLaneIndex !== undefined) {
+        const lane = updatedLanes[targetLaneIndex]
+        if (lane.zombieMinion) {
+          if (lane.zombieMinion.isInvulnerable || lane.zombieMinion.invulnerableThisTurn) {
+            message = `${lane.zombieMinion.name} Miễn thương (Invulnerable) nên không nhận sát thương từ Banana Bomb!`
+          } else {
+            const armor = lane.zombieMinion.armored || (lane.zombieMinion.traits?.includes('armored') ? 1 : 0)
+            const effectiveDmg = Math.max(0, 1 - armor)
+            lane.zombieMinion = {
+              ...lane.zombieMinion,
+              currentHealth: Math.max(0, lane.zombieMinion.currentHealth - effectiveDmg),
+            }
+            if (lane.zombieMinion.currentHealth <= 0) {
+              message = `Banana Bomb nổ tung tiêu diệt ${lane.zombieMinion.name}!`
+              lane.zombieMinion = null
+            } else {
+              message = `Banana Bomb gây ${effectiveDmg} sát thương lên ${lane.zombieMinion.name} (còn ${lane.zombieMinion.currentHealth} HP).`
+            }
+          }
+        }
+      }
+      break
+    }
+
     case 'plant_berry_blast': {
       // 3 damage to any zombie or zombie hero
       if (targetHero) {
@@ -100,15 +128,19 @@ export function executeTrick(
       } else if (targetLaneIndex !== undefined) {
         const lane = updatedLanes[targetLaneIndex]
         if (lane.zombieMinion) {
-          lane.zombieMinion = {
-            ...lane.zombieMinion,
-            currentHealth: Math.max(0, lane.zombieMinion.currentHealth - 3),
-          }
-          if (lane.zombieMinion.currentHealth <= 0) {
-            message = `Berry Blast tiêu diệt ${lane.zombieMinion.name}!`
-            lane.zombieMinion = null
+          if (lane.zombieMinion.isInvulnerable || lane.zombieMinion.invulnerableThisTurn) {
+            message = `${lane.zombieMinion.name} Miễn thương (Invulnerable) nên không nhận sát thương từ Berry Blast!`
           } else {
-            message = `Berry Blast gây 3 sát thương lên ${lane.zombieMinion.name} (còn ${lane.zombieMinion.currentHealth} HP).`
+            lane.zombieMinion = {
+              ...lane.zombieMinion,
+              currentHealth: Math.max(0, lane.zombieMinion.currentHealth - 3),
+            }
+            if (lane.zombieMinion.currentHealth <= 0) {
+              message = `Berry Blast tiêu diệt ${lane.zombieMinion.name}!`
+              lane.zombieMinion = null
+            } else {
+              message = `Berry Blast gây 3 sát thương lên ${lane.zombieMinion.name} (còn ${lane.zombieMinion.currentHealth} HP).`
+            }
           }
         }
       }
@@ -140,16 +172,20 @@ export function executeTrick(
     }
 
     case 'plant_cherry_bomb': {
-      // 4 damage to a zombie and zombies next door (skips untrickable)
+      // 4 damage to a zombie and zombies next door (skips untrickable, negated if invulnerable)
       if (targetLaneIndex !== undefined) {
         const lanesToHit = [targetLaneIndex - 1, targetLaneIndex, targetLaneIndex + 1]
         let hitNames: string[] = []
         lanesToHit.forEach(idx => {
           if (idx >= 0 && idx < updatedLanes.length && updatedLanes[idx].zombieMinion && !isUntrickable(updatedLanes[idx].zombieMinion)) {
             const z = updatedLanes[idx].zombieMinion!
-            z.currentHealth = Math.max(0, z.currentHealth - 4)
-            hitNames.push(z.name)
-            if (z.currentHealth <= 0) updatedLanes[idx].zombieMinion = null
+            if (!z.isInvulnerable && !z.invulnerableThisTurn) {
+              z.currentHealth = Math.max(0, z.currentHealth - 4)
+              hitNames.push(z.name)
+              if (z.currentHealth <= 0) updatedLanes[idx].zombieMinion = null
+            } else {
+              hitNames.push(`${z.name} (Miễn thương)`)
+            }
           }
         })
         message = `Cherry Bomb phát nổ gây 4 sát thương lan lên: ${hitNames.join(', ') || 'không có ai'}!`

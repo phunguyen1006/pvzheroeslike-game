@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import type { HeroState, Side, Phase } from '../../engine/types'
 import { ASSET_MANIFEST } from '../../data/assetsManifest'
 import { soundManager } from '../../audio/SoundManager'
+import { ComicSpeechBubble } from '../hero/ComicSpeechBubble'
 
 export interface HeroTopArenaProps {
   hero: HeroState
@@ -16,6 +17,9 @@ export interface HeroTopArenaProps {
   unreadLogCount?: number
   isMuted?: boolean
   onToggleMute?: () => void
+  onOpenSettings?: () => void
+  activeEmote?: { text: string; emoji?: string } | null
+  onDismissEmote?: () => void
   onReturnHome?: () => void
 }
 
@@ -32,6 +36,9 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
   unreadLogCount = 0,
   isMuted = false,
   onToggleMute,
+  onOpenSettings,
+  activeEmote,
+  onDismissEmote,
   onReturnHome,
 }) => {
   const isZombie = side === 'zombies'
@@ -140,6 +147,15 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
           >
             {isMuted ? '🔇' : '🔊'}
           </button>
+          {onOpenSettings && (
+            <button
+              className="arena-icon-btn settings-toggle-btn"
+              onClick={onOpenSettings}
+              title="Cài đặt âm thanh"
+            >
+              ⚙️
+            </button>
+          )}
         </div>
       </div>
 
@@ -169,6 +185,16 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
           {/* Floating Damage Number */}
           {floatingDamage && (
             <div className="hero-floating-damage-burst">{floatingDamage}</div>
+          )}
+
+          {/* Opponent Comic Speech Bubble */}
+          {activeEmote && (
+            <ComicSpeechBubble
+              text={activeEmote.text}
+              emoji={activeEmote.emoji}
+              side={side}
+              onDismiss={onDismissEmote}
+            />
           )}
         </div>
 

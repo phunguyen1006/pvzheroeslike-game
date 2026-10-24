@@ -454,6 +454,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         currentHealth: card.health,
         maxHealth: card.health,
         image: card.image,
+        tribe: card.tribe,
         traits: card.traits,
         amphibious: card.amphibious,
         bullseye: card.bullseye,
@@ -631,6 +632,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           ...curState,
           turn: nextTurn,
           phase: nextPhase,
+          lanes: curState.lanes.map(l => ({
+            ...l,
+            plantMinion: l.plantMinion ? { ...l.plantMinion, invulnerableThisTurn: false, isInvulnerable: false, damageTakenThisTurn: 0 } : null,
+            plantTeamUpMinion: l.plantTeamUpMinion ? { ...l.plantTeamUpMinion, invulnerableThisTurn: false, isInvulnerable: false, damageTakenThisTurn: 0 } : null,
+            zombieMinion: l.zombieMinion ? { ...l.zombieMinion, invulnerableThisTurn: false, isInvulnerable: false, damageTakenThisTurn: 0 } : null,
+          })),
           plantHero: {
             ...curState.plantHero,
             maxSun: newMaxSun,

@@ -938,4 +938,344 @@ describe('AI Opponent Engine Tactics Suite (Phase 7)', () => {
       expect(decision.reason).toContain('Going Viral buffs 2 zombies')
     })
   })
+
+  // =========================================================================
+  // 7. ROUND 8 ENHANCEMENTS: ADVANCED TACTICS, BRAIN RESERVATION, SUPERPOWERS & COMBO
+  // =========================================================================
+  describe('7. Round 8 Enhancements (Brain Reservation, Superpower Decisions, Mulligan & Combo)', () => {
+    // -----------------------------------------------------------------------
+    // A. Brain Reservation (reserveBrainsForTricks)
+    // -----------------------------------------------------------------------
+    describe('A. Brain Reservation for Tricks', () => {
+      it('reserves brains for Rocket Science against 4+ attack plant and passes if only expensive minion in hand', () => {
+        const state = setupState()
+        state.phase = 'ZOMBIE_PLAY'
+        state.zombieHero.brains = 4
+
+        // 4+ Attack Plant threatens Lane 2
+        state.lanes[2].plantMinion = createTestMinion({
+          instanceId: 'p_danger',
+          cardId: 'plant_gatling_pea',
+          name: 'Gatling Pea',
+          side: 'plants',
+          currentAttack: 5,
+          currentHealth: 4,
+        })
+
+        // Hand has Rocket Science (cost 3) and an expensive minion (cost 4)
+        const rocket = getCard('zombie_rocket_science')
+        const football = getCard('zombie_football_zombie') // cost 5
+        football.cost = 4
+        state.zombieHand = [rocket, football]
+
+        const reservation = reserveBrainsForTricks(state, state.zombieHand, 4, 'control', 'expert')
+        expect(reservation.reservedBrains).toBe(3)
+        expect(reservation.targetTrick?.id).toBe('zombie_rocket_science')
+
+        // AI decision in ZOMBIE_PLAY should pass to preserve brains
+        const decision = getAIDecision(state, 'zombies', { difficulty: 'expert', archetype: 'control' })
+        expect(decision.action).toBe('PASS')
+        expect(decision.reason).toContain('Reserving brains for Rocket Science')
+      })
+
+      it('plays affordable cheap minion while preserving remaining brains for Going Viral', () => {
+        const state = setupState()
+        state.phase = 'ZOMBIE_PLAY'
+        state.zombieHero.brains = 4
+
+        // Have a zombie on board so Going Viral reservation triggers
+        state.lanes[1].zombieMinion = createTestMinion({
+          instanceId: 'z_troop',
+          cardId: 'zombie_swabbie',
+          name: 'Swabbie',
+          side: 'zombies',
+          currentAttack: 1,
+          currentHealth: 1,
+        })
+
+        const viral = getCard('zombie_going_viral') // cost 3
+        const armWrestler = getCard('zombie_arm_wrestler') // cost 1
+        state.zombieHand = [viral, armWrestler]
+
+        // Reservation should ask for 3 brains
+        const reservation = reserveBrainsForTricks(state, state.zombieHand, 4, 'tempo', 'expert')
+        expect(reservation.reservedBrains).toBe(3)
+
+        // AI should play Arm Wrestler (cost 1 <= 4 - 3) while reserving 3 brains
+        const decision = getAIDecision(state, 'zombies', { difficulty: 'expert', archetype: 'tempo' })
+        expect(decision.action).toBe('PLAY_MINION')
+        expect(decision.card?.id).toBe('zombie_arm_wrestler')
+        expect(decision.reason).toContain('Preserving 3 brains for tricks')
+      })
+
+      it('reserves brains for lethal Brute Strength buff on an unblocked zombie', () => {
+        const state = setupState()
+        state.phase = 'ZOMBIE_PLAY'
+        state.zombieHero.brains = 3
+        state.plantHero.hp = 5
+
+        // Unblocked zombie with 2 attack (2 + 3 = 5 damage = lethal!)
+        state.lanes[2].zombieMinion = createTestMinion({
+          instanceId: 'z_finisher',
+          cardId: 'zombie_arm_wrestler',
+          name: 'Arm Wrestler',
+          side: 'zombies',
+          currentAttack: 2,
+          currentHealth: 2,
+        })
+
+        const brute = getCard('zombie_brute_strength') // cost 1
+        state.zombieHand = [brute]
+
+        const reservation = reserveBrainsForTricks(state, state.zombieHand, 3, 'aggro', 'expert')
+        expect(reservation.reservedBrains).toBe(brute.cost)
+        expect(reservation.targetTrick?.id).toBe('zombie_brute_strength')
+      })
+    })
+
+    // -----------------------------------------------------------------------
+    // B. Superpower & Super-Block Decisions (getAISuperpowerDecision)
+    // -----------------------------------------------------------------------
+    describe('B. Superpower Decisions & Threshold Rules', () => {
+      it('Heroic Health: saves when Zombie Hero is at 20 HP, plays when HP <= 15', () => {
+        const state = setupState()
+        const heroicHealth: Card = {
+          id: 'sp_heroic_health',
+          name: 'Heroic Health',
+          side: 'zombies',
+          cost: 0,
+          attack: 0,
+          health: 0,
+          type: 'superpower',
+          image: '/assets/sp.png',
+        }
+
+        // Full health: save
+        state.zombieHero.hp = 20
+        const saveDecision = getAISuperpowerDecision(state, 'zombies', heroicHealth, 'control')
+        expect(saveDecision.action).toBe('SAVE_SUPERPOWER')
+        expect(saveDecision.reason).toContain('Save Heroic Health')
+
+        // Damaged health (12 HP): play immediately
+        state.zombieHero.hp = 12
+        const playDecision = getAISuperpowerDecision(state, 'zombies', heroicHealth, 'control')
+        expect(playDecision.action).toBe('PLAY_SUPERPOWER')
+        expect(playDecision.reason).toContain('Heroic Health restores 6 HP')
+      })
+
+      it('Geyser: saves when Plant Hero is full HP and no plants damaged, plays when damaged', () => {
+        const state = setupState()
+        const geyser: Card = {
+          id: 'sp_geyser',
+          name: 'Geyser',
+          side: 'plants',
+          cost: 0,
+          attack: 0,
+          health: 0,
+          type: 'superpower',
+          image: '/assets/sp.png',
+        }
+
+        // Full health: save
+        state.plantHero.hp = 20
+        const saveDecision = getAISuperpowerDecision(state, 'plants', geyser, 'tempo')
+        expect(saveDecision.action).toBe('SAVE_SUPERPOWER')
+
+        // Damaged hero (14 HP): play
+        state.plantHero.hp = 14
+        const playDecision = getAISuperpowerDecision(state, 'plants', geyser, 'tempo')
+        expect(playDecision.action).toBe('PLAY_SUPERPOWER')
+        expect(playDecision.reason).toContain('Geyser heals')
+      })
+
+      it('Uncrackable: plays when facing massive incoming damage, saves when board is safe', () => {
+        const state = setupState()
+        const uncrackable: Card = {
+          id: 'sp_uncrackable',
+          name: 'Uncrackable',
+          side: 'plants',
+          cost: 0,
+          attack: 0,
+          health: 0,
+          type: 'superpower',
+          image: '/assets/sp.png',
+        }
+
+        // Safe board, full HP: save
+        state.plantHero.hp = 20
+        const saveDecision = getAISuperpowerDecision(state, 'plants', uncrackable, 'control')
+        expect(saveDecision.action).toBe('SAVE_SUPERPOWER')
+
+        // Lethal/Heavy danger: 6 unblocked zombie attack
+        state.lanes[1].zombieMinion = createTestMinion({
+          instanceId: 'z_danger',
+          cardId: 'zombie_all_star',
+          name: 'All-Star',
+          side: 'zombies',
+          currentAttack: 6,
+          currentHealth: 5,
+        })
+        const playDecision = getAISuperpowerDecision(state, 'plants', uncrackable, 'control')
+        expect(playDecision.action).toBe('PLAY_SUPERPOWER')
+        expect(playDecision.reason).toContain('Uncrackable shields Plant Hero')
+      })
+
+      it('Telepathy / Holoflora: plays when hand <= 8, saves when hand >= 9 to prevent hand overflow', () => {
+        const state = setupState()
+        const telepathy: Card = {
+          id: 'sp_telepathy',
+          name: 'Telepathy',
+          side: 'zombies',
+          cost: 0,
+          attack: 0,
+          health: 0,
+          type: 'superpower',
+          image: '/assets/sp.png',
+        }
+
+        // Hand has 4 cards (safe to draw 2)
+        state.zombieHand = [getCard('zombie_swabbie'), getCard('zombie_swabbie'), getCard('zombie_swabbie'), getCard('zombie_swabbie')]
+        const playDecision = getAISuperpowerDecision(state, 'zombies', telepathy, 'tempo')
+        expect(playDecision.action).toBe('PLAY_SUPERPOWER')
+        expect(playDecision.reason).toContain('draws 2 cards')
+
+        // Hand has 9 cards (drawing 2 would overflow 10-card hand limit)
+        state.zombieHand = Array(9).fill(getCard('zombie_swabbie'))
+        const saveDecision = getAISuperpowerDecision(state, 'zombies', telepathy, 'tempo')
+        expect(saveDecision.action).toBe('SAVE_SUPERPOWER')
+        expect(saveDecision.reason).toContain('avoid hand overflow')
+      })
+
+      it('Electrobolt: saves when enemy board is empty, strikes when target plant exists', () => {
+        const state = setupState()
+        const electrobolt: Card = {
+          id: 'sp_electrobolt',
+          name: 'Electrobolt',
+          side: 'zombies',
+          cost: 0,
+          attack: 0,
+          health: 0,
+          type: 'superpower',
+          image: '/assets/sp.png',
+        }
+
+        // Empty board: save
+        const saveDecision = getAISuperpowerDecision(state, 'zombies', electrobolt, 'control')
+        expect(saveDecision.action).toBe('SAVE_SUPERPOWER')
+        expect(saveDecision.reason).toContain('Save Electrobolt')
+
+        // Plant target present
+        state.lanes[2].plantMinion = createTestMinion({
+          instanceId: 'p_target',
+          cardId: 'plant_peashooter',
+          name: 'Peashooter',
+          side: 'plants',
+          currentAttack: 1,
+          currentHealth: 1,
+        })
+        const playDecision = getAISuperpowerDecision(state, 'zombies', electrobolt, 'control')
+        expect(playDecision.action).toBe('PLAY_SUPERPOWER')
+        expect(playDecision.targetLaneIndex).toBe(2)
+      })
+    })
+
+    // -----------------------------------------------------------------------
+    // C. Mulligan Strategy (getAIMulliganDecision)
+    // -----------------------------------------------------------------------
+    describe('C. Mulligan Decision & Curve Optimization', () => {
+      it('Aggro mulligans away 3-cost and 4-cost cards when missing a 1-drop', () => {
+        const c1_cost3 = { ...getCard('zombie_rocket_science'), cost: 3 }
+        const c2_cost4 = { ...getCard('zombie_football_zombie'), cost: 4 }
+        const c3_cost2 = { ...getCard('zombie_conga_zombie'), cost: 2 }
+        const c4_cost5 = { ...getCard('zombie_locust_swarm'), cost: 5 }
+
+        const hand = [c1_cost3, c2_cost4, c3_cost2, c4_cost5]
+        const decision = getAIMulliganDecision(hand, 'aggro')
+
+        // No 1-drop in hand -> Aggro swaps 3, 4, 5 cost cards to aggressively dig for 1-drop!
+        expect(decision.keepIndices).toEqual([2]) // keeps only the 2-cost card
+        expect(decision.swapIndices).toContain(0) // swaps 3-cost
+        expect(decision.swapIndices).toContain(1) // swaps 4-cost
+        expect(decision.swapIndices).toContain(3) // swaps 5-cost
+      })
+
+      it('Control keeps key removal spells when holding early defense', () => {
+        const c1_def = { ...getCard('zombie_arm_wrestler'), cost: 1 }
+        const c2_removal = { ...getCard('zombie_rocket_science'), cost: 3 }
+        const c3_cost5 = { ...getCard('zombie_football_zombie'), cost: 5 }
+
+        const hand = [c1_def, c2_removal, c3_cost5]
+        const decision = getAIMulliganDecision(hand, 'control')
+
+        // With 1-cost defense in hand, Control keeps Rocket Science and swaps heavy non-removal
+        expect(decision.keepIndices).toContain(0)
+        expect(decision.keepIndices).toContain(1)
+        expect(decision.swapIndices).toContain(2)
+      })
+
+      it('Combo keeps core synergy pieces Valkyrie and Trickster (with cheap tricks)', () => {
+        const valkyrie = { ...getCard('zombie_valkyrie'), cost: 4 }
+        const trickster = { ...getCard('zombie_trickster'), cost: 10 }
+        const cheapTrick = { ...getCard('zombie_bungee_plumber'), cost: 1, type: 'trick' as const }
+        const heavyMinion = { ...getCard('zombie_football_zombie'), cost: 5 }
+
+        const hand = [valkyrie, trickster, cheapTrick, heavyMinion]
+        const decision = getAIMulliganDecision(hand, 'combo')
+
+        expect(decision.keepIndices).toContain(0) // Valkyrie kept
+        expect(decision.keepIndices).toContain(1) // Trickster kept (holding cheapTrick)
+        expect(decision.keepIndices).toContain(2) // Cheap trick kept
+        expect(decision.swapIndices).toContain(3) // 5-cost swapped
+      })
+    })
+
+    // -----------------------------------------------------------------------
+    // D. Four Archetypes & Combo Integration
+    // -----------------------------------------------------------------------
+    describe('D. Four Archetypes & Combo Behavior', () => {
+      it('maps Huge-Gigantacus and Beta-Carrotina to the combo archetype', () => {
+        expect(getHeroDefaultArchetype('hero_huge_gigantacus')).toBe('combo')
+        expect(getHeroDefaultArchetype('hero_beta_carrotina')).toBe('combo')
+      })
+
+      it('evaluateBoardState evaluates combo archetype with card advantage weighting', () => {
+        const state = setupState()
+        state.zombieHand = [getCard('zombie_swabbie'), getCard('zombie_swabbie'), getCard('zombie_swabbie')]
+        state.plantHand = [] // Plant has 0 cards, Zombie has 3 cards (huge card advantage)
+
+        const scoreCombo = evaluateBoardState(state, 'zombies', 'combo')
+        const scoreAggro = evaluateBoardState(state, 'zombies', 'aggro')
+
+        // Combo heavily rewards card advantage (+4.0 per card difference)
+        expect(scoreCombo.score).toBeGreaterThan(scoreAggro.score)
+        expect(typeof scoreCombo.score).toBe('number')
+      })
+
+      it('Combo AI deploys engine minion Dr. Spacetime into a safe open lane', () => {
+        const state = setupState()
+        state.phase = 'ZOMBIE_PLAY'
+        state.zombieHero.brains = 3
+
+        // Lane 0 has a strong Plant
+        state.lanes[0].plantMinion = createTestMinion({
+          instanceId: 'p_danger',
+          cardId: 'plant_peashooter',
+          name: 'Peashooter',
+          side: 'plants',
+          currentAttack: 3,
+          currentHealth: 3,
+        })
+
+        // Lane 1, 2, 3 are open
+        const drSpacetime = getCard('zombie_dr_spacetime')
+        state.zombieHand = [drSpacetime]
+
+        const decision = getAIDecision(state, 'zombies', { difficulty: 'expert', archetype: 'combo' })
+        expect(decision.action).toBe('PLAY_MINION')
+        expect(decision.card?.id).toBe('zombie_dr_spacetime')
+        expect(decision.laneIndex).not.toBe(0) // Avoids lane 0, plays in safe open lane
+        expect(decision.reason).toContain('Combo AI deploys engine minion')
+      })
+    })
+  })
 })
