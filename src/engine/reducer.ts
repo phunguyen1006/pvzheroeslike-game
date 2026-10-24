@@ -541,8 +541,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         let curState = endTurnEnvRes.updatedState
 
         const nextTurn = curState.turn + 1
-        const newMaxSun = Math.min(20, nextTurn)
-        const newMaxBrains = Math.min(20, nextTurn)
+        const newMaxSun = Math.min(20, Math.max(curState.plantHero.maxSun + 1, nextTurn))
+        const newMaxBrains = Math.min(20, Math.max(curState.zombieHero.maxBrains + 1, nextTurn))
 
         // 2. Draw cards at start of turn
         const plantDraw = drawCard(curState.plantDeck, curState.plantHand)
@@ -556,11 +556,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             ...curState.plantHero,
             maxSun: newMaxSun,
             sun: newMaxSun,
+            invulnerable: false,
           },
           zombieHero: {
             ...curState.zombieHero,
             maxBrains: newMaxBrains,
             brains: newMaxBrains,
+            invulnerable: false,
           },
           plantDeck: plantDraw.newDeck,
           plantHand: plantDraw.newHand,

@@ -22,6 +22,12 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] Hoàn thiện cơ chế cascade trigger khi minion bị tiêu diệt (`triggerOnDeath` & `triggerOnMultipleDeaths` trong `src/engine/triggers.ts` cho Valkyrie in hand, Punish-Shroom, Hothead, Pear Cub, Gas Giant, Frankentuar, Sharktronic Sub với 9 unit tests chuyên sâu)
 - [x] Triển khai cơ chế Gravestone (Bia Mộ): minion ẩn danh `isGravestone: true`, tự động nứt vỡ lúc bắt đầu `ZOMBIE_TRICKS`, kích hoạt "When Revealed" abilities và helper `revealGravestones`
 - [x] [ĐỢT 3] Triển khai logic khả năng đặc biệt cho Cornucopia, Briar Rose, Disco-Tron 3000, Bad Moon Rising và Teleport (an toàn mảng rỗng, immutability, 125/125 tests pass)
+- [x] [ĐỢT 4] Triển khai logic kỹ năng 12 Superpowers và 4 Environments trong Core Engine:
+  - 6 Plant Superpowers (`precision_blast`, `sunburn`, `uncrackable`, `embiggen`, `whirlwind`, `geyser`)
+  - 6 Zombie Superpowers (`carried_away`, `slammin_smash`, `shrink_ray`, `brute_strength`, `dance_off`, `cut_down_to_size`)
+  - 4 Environments (`spikeweed_sector`, `bog_of_sunken_hope`, `laser_base_alpha`, `cone_zone`)
+  - Khởi tạo trait `invulnerable` trong HeroState, bảo lưu Sunburn `maxSun` vĩnh viễn, tích hợp Laser Base Alpha vào Combat Resolver
+  - 155/155 tests passed 100% và build sạch sẽ (`npm run build`)
 
 ### 🎨 UI Bot (`feature/ui`)
 - [x] Hiển thị huy hiệu chân Minion chân thực: Bullseye target reticle và Armored metal shield
