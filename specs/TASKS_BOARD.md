@@ -30,7 +30,7 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] Cải thiện visual feedback nạp 1-3 vạch nảy số (`+1`, `+2`, `+3` bounce badge, flashing pips/nubs, audio dings)
 - [x] Tích hợp kinetic shockwave VFX và âm thanh (Web Audio API) khi minion tấn công / Hero mất máu
 - [x] Hoàn thiện hệ thống kéo thả (Drag & Drop) thẻ bài: viền Glowing Pulse Ring động tại các làn hợp lệ, dimming 0.4 làn không thể đặt, hiệu ứng tiếp đất Card Drop Thud và âm thanh Web Audio (`playCardPickup`, `playCardPlace`, `playFightHorn`)
-- [ ] [ĐỢT 3] Thiết kế khối Bia Mộ (Gravestone) 3D đá Granite có vết nứt, huy hiệu ẩn danh `🪦 ? / ?` và animation nứt vỡ lúc Zombie Tricks
+- [x] [ĐỢT 3] Thiết kế khối Bia Mộ (Gravestone) 3D đá Granite có vết nứt, huy hiệu ẩn danh `🪦 ? / ?` và animation nứt vỡ lúc Zombie Tricks kèm SFX Web Audio `playGravestoneReveal`
 
 ### 🃏 Cards Bot (`feature/cards`)
 - [x] Bổ sung các thẻ bài thiếu: `zombie_browncoat`, `zombie_knight_living_dead`, `zombie_football_zombie`
