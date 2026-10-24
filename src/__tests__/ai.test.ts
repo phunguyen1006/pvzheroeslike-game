@@ -34,7 +34,7 @@ describe('Smart AI Decision Engine (Phase 5)', () => {
     it('deploys Arm Wrestler on Heights (lane 0) for lane advantage', () => {
       const state = setupTestState()
       state.phase = 'ZOMBIE_PLAY'
-      state.zombieHand = [getCard('zombie_arm_wrestler'), getCard('zombie_browncoat')]
+      state.zombieHand = [getCard('zombie_arm_wrestler'), getCard('zombie_conga_zombie')]
 
       const decision = getAIDecision(state, 'zombies', 'normal')
       expect(decision.action).toBe('PLAY_MINION')
@@ -48,15 +48,15 @@ describe('Smart AI Decision Engine (Phase 5)', () => {
       // Put a dangerous plant in lane 2
       state.lanes[2].plantMinion = {
         instanceId: 'threat_plant',
-        cardId: 'plant_repeater',
-        name: 'Repeater',
+        cardId: 'plant_dark_matter_dragonfruit',
+        name: 'Dark Matter Dragonfruit',
         side: 'plants',
         currentAttack: 5,
         baseAttack: 5,
         currentHealth: 4,
         maxHealth: 4,
       }
-      state.zombieHand = [getCard('zombie_knight_living_dead')]
+      state.zombieHand = [getCard('zombie_zombot_1000')]
 
       const decision = getAIDecision(state, 'zombies', 'normal')
       expect(decision.action).toBe('PLAY_MINION')
@@ -66,11 +66,11 @@ describe('Smart AI Decision Engine (Phase 5)', () => {
     it('exploits open lanes to deal direct damage when no threats exist', () => {
       const state = setupTestState()
       state.phase = 'ZOMBIE_PLAY'
-      state.zombieHand = [getCard('zombie_football_zombie')]
+      state.zombieHand = [getCard('zombie_ra_zombie')]
 
       const decision = getAIDecision(state, 'zombies', 'normal')
       expect(decision.action).toBe('PLAY_MINION')
-      expect(decision.card?.id).toBe('zombie_football_zombie')
+      expect(decision.card?.id).toBe('zombie_ra_zombie')
       expect(decision.laneIndex).toBeDefined()
     })
   })
@@ -180,7 +180,7 @@ describe('Smart AI Decision Engine (Phase 5)', () => {
       state.zombieHand = [
         getCard('zombie_swabbie'), // cost 0, amphibious
         getCard('zombie_arm_wrestler'), // cost 1
-        getCard('zombie_browncoat'), // cost 1
+        getCard('zombie_conga_zombie'), // cost 2
       ]
 
       const plan = getAITurnPlan(state, 'zombies', 'normal')
@@ -194,7 +194,7 @@ describe('Smart AI Decision Engine (Phase 5)', () => {
       const state = setupTestState()
       state.phase = 'ZOMBIE_PLAY'
       state.zombieHero.brains = 0
-      state.zombieHand = [getCard('zombie_knight_living_dead')] // cost 7
+      state.zombieHand = [getCard('zombie_zombot_1000')] // cost 9
 
       const plan = getAITurnPlan(state, 'zombies', 'normal')
       expect(plan.length).toBe(0)
