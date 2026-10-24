@@ -250,7 +250,7 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
                   (s, m) => s + (m.stars || 0),
                   0
                 )}
-                /30
+                /{ALL_CAMPAIGN_MISSIONS.length * 3}
               </span>
             </button>
 
@@ -268,7 +268,7 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
                   (s, m) => s + (m.stars || 0),
                   0
                 )}
-                /15
+                /{ALL_ZOMBIE_CAMPAIGN_MISSIONS.length * 3}
               </span>
             </button>
           </div>
@@ -333,11 +333,7 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
               >
                 <span className="chapter-tab-badge">{ch.badgeText}</span>
                 <span className="chapter-tab-name">
-                  {isZombie
-                    ? 'Tiến Công Ngoại Ô'
-                    : ch.id === 1
-                      ? 'Khủng Hoảng Ngoại Ô'
-                      : 'Đô Thị Zombie'}
+                  {ch.title.split('(')[0].trim()}
                 </span>
                 <span className="chapter-tab-stars">⭐ {chStars}/15</span>
                 {!isChUnlocked && <span className="chapter-tab-lock">🔒</span>}

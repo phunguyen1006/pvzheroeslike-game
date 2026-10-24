@@ -278,10 +278,10 @@ export function App() {
         }
 
         // 3. Campaign Victory Cinematic Trigger on Final Chapter Bosses
-        const isBossMission10 =
+        const isChapterClimaxBoss =
           activeCampaignMission.difficulty === 'boss' &&
-          activeCampaignMission.missionNumber === 10
-        if (isBossMission10 && gameState.winner === playerSide) {
+          (activeCampaignMission.missionNumber === 10 || activeCampaignMission.missionNumber === 15)
+        if (isChapterClimaxBoss && gameState.winner === playerSide) {
           setShowCinematicVictory(true)
         }
       }

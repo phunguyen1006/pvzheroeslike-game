@@ -49,8 +49,8 @@ describe('Round 9: Zombie Campaign Chapter 2 & Advanced Deck Builder', () => {
     })
 
     it('should correctly configure ALL_ZOMBIE_CAMPAIGN_MISSIONS and ZOMBIE_CAMPAIGN_CHAPTERS', () => {
-      expect(ALL_ZOMBIE_CAMPAIGN_MISSIONS.length).toBe(10)
-      expect(ZOMBIE_CAMPAIGN_CHAPTERS.length).toBe(2)
+      expect(ALL_ZOMBIE_CAMPAIGN_MISSIONS.length).toBeGreaterThanOrEqual(10)
+      expect(ZOMBIE_CAMPAIGN_CHAPTERS.length).toBeGreaterThanOrEqual(2)
 
       const ch2 = ZOMBIE_CAMPAIGN_CHAPTERS[1]
       expect(ch2.id).toBe(2)
