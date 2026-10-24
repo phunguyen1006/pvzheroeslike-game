@@ -571,6 +571,84 @@ export function triggerWhenPlayed(
       }
       break
     }
+
+    case 'plant_dandy_lion_king': {
+      // Dandy Lion King: Cut Zombie Hero's HP in half (loses Math.ceil(zombieHero.hp / 2) HP)
+      if (!updatedState.zombieHero.invulnerable) {
+        const dmg = Math.ceil(updatedState.zombieHero.hp / 2)
+        updatedState.zombieHero = {
+          ...updatedState.zombieHero,
+          hp: Math.max(0, updatedState.zombieHero.hp - dmg),
+        }
+        events.push(`🦁 Dandy Lion King xuất trận: Chém đôi Máu của Zombie Hero (mất ${dmg} HP, còn ${updatedState.zombieHero.hp} HP)!`)
+      }
+      break
+    }
+
+    case 'plant_onion_rings': {
+      // Onion Rings: Transform all Plant minion cards in hand into 4/4
+      let ringCount = 0
+      updatedState.plantHand = updatedState.plantHand.map(c => {
+        if (c.type === 'minion' || (c as any).type === 'plant') {
+          ringCount++
+          return {
+            ...c,
+            attack: 4,
+            health: 4,
+            hp: 4,
+          }
+        }
+        return c
+      })
+      events.push(`🧅 Onion Rings xuất trận: Biến toàn bộ ${ringCount} thẻ Plant minion trên tay thành 4/4!`)
+      break
+    }
+
+    case 'plant_kernel_pult': {
+      // Kernel-Pult: Throw butter at a zombie dealing 2 damage and freezing it
+      let targetLaneIdx = laneIndex
+      if (!updatedState.lanes[targetLaneIdx]?.zombieMinion) {
+        const occupied = updatedState.lanes
+          .map((l, idx) => (l.zombieMinion ? idx : -1))
+          .filter(idx => idx !== -1)
+        if (occupied.length > 0) {
+          targetLaneIdx = occupied[Math.floor(Math.random() * occupied.length)]
+        }
+      }
+      const targetLane = updatedState.lanes[targetLaneIdx]
+      if (targetLane?.zombieMinion) {
+        const z = targetLane.zombieMinion
+        const armor = z.armored || (z.traits?.includes('armored') ? 1 : 0)
+        const dmg = Math.max(0, 2 - armor)
+        z.currentHealth = Math.max(0, z.currentHealth - dmg)
+        events.push(`🧈 Kernel-Pult ném bơ gây ${dmg} sát thương lên ${z.name}!`)
+        if (z.currentHealth <= 0) {
+          events.push(`💥 ${z.name} đã bị Kernel-Pult tiêu diệt!`)
+          targetLane.zombieMinion = null
+        } else {
+          const freezeRes = freezeMinion(updatedState, targetLaneIdx, 'zombies')
+          updatedState = freezeRes.updatedState
+          events.push(...freezeRes.events)
+        }
+      }
+      break
+    }
+
+    case 'zombie_zombot_plank_walker': {
+      // Zombot Plank Walker: Destroy all environments on the board
+      let envCount = 0
+      updatedState.lanes.forEach(l => {
+        if (l.environment) {
+          envCount++
+          events.push(`🏴‍☠️ Zombot Plank Walker nghiền nát Môi trường [${l.environment.name}] tại ${l.name}!`)
+          l.environment = null
+        }
+      })
+      if (envCount === 0) {
+        events.push('🏴‍☠️ Zombot Plank Walker xuất trận sẵn sàng chiến đấu trên mặt nước!')
+      }
+      break
+    }
   }
 
   // 2. React to other minions on board

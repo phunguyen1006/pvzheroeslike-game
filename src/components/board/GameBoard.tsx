@@ -6,12 +6,19 @@ import { TurnRopeTimer, type TurnRopeTimerProps } from './TurnRopeTimer'
 import type { LaneState, Card as CardType, Minion as MinionType } from '../../engine/types'
 import { ASSET_MANIFEST } from '../../data/assetsManifest'
 
+export interface CombatAnimationState {
+  attacking?: { laneIndex: number; side: 'plants' | 'zombies' } | null
+  hit?: { laneIndex: number; side: 'plants' | 'zombies' } | null
+  dying?: { laneIndex: number; side: 'plants' | 'zombies' } | null
+}
+
 export interface GameBoardProps {
   lanes: LaneState[]
   selectedLaneIndex?: number
   selectedCard?: CardType | null
   selectedCardSide?: 'plants' | 'zombies'
   activeCombatLaneIndex?: number
+  combatAnimation?: CombatAnimationState
   projectiles?: Projectile[]
   floatingTexts?: FloatingTextItem[]
   shockwaves?: ShockwaveItem[]
@@ -29,6 +36,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   selectedCard,
   selectedCardSide,
   activeCombatLaneIndex,
+  combatAnimation,
   projectiles = [],
   floatingTexts = [],
   shockwaves = [],
@@ -62,20 +70,47 @@ export const GameBoard: React.FC<GameBoardProps> = ({
 
       {/* 5-Lane Battlefield Grid */}
       <div className="battlefield-5lanes-grid">
-        {lanes.map((lane) => (
-          <Lane
-            key={lane.index}
-            lane={lane}
-            isHighlighted={selectedLaneIndex === lane.index}
-            selectedCard={selectedCard}
-            selectedCardSide={selectedCardSide}
-            isCombatLane={activeCombatLaneIndex === lane.index}
-            onSelectLane={onSelectLane}
-            onDropCardToLane={onDropCardToLane}
-            onInspectMinion={onInspectMinion}
-            onInspectEnvironment={onInspectEnvironment}
-          />
-        ))}
+        {lanes.map((lane) => {
+          const isAttackingPlant =
+            combatAnimation?.attacking?.laneIndex === lane.index &&
+            combatAnimation?.attacking?.side === 'plants'
+          const isAttackingZombie =
+            combatAnimation?.attacking?.laneIndex === lane.index &&
+            combatAnimation?.attacking?.side === 'zombies'
+          const isHitPlant =
+            combatAnimation?.hit?.laneIndex === lane.index &&
+            combatAnimation?.hit?.side === 'plants'
+          const isHitZombie =
+            combatAnimation?.hit?.laneIndex === lane.index &&
+            combatAnimation?.hit?.side === 'zombies'
+          const isDyingPlant =
+            combatAnimation?.dying?.laneIndex === lane.index &&
+            combatAnimation?.dying?.side === 'plants'
+          const isDyingZombie =
+            combatAnimation?.dying?.laneIndex === lane.index &&
+            combatAnimation?.dying?.side === 'zombies'
+
+          return (
+            <Lane
+              key={lane.index}
+              lane={lane}
+              isHighlighted={selectedLaneIndex === lane.index}
+              selectedCard={selectedCard}
+              selectedCardSide={selectedCardSide}
+              isCombatLane={activeCombatLaneIndex === lane.index}
+              isAttackingPlant={isAttackingPlant}
+              isAttackingZombie={isAttackingZombie}
+              isHitPlant={isHitPlant}
+              isHitZombie={isHitZombie}
+              isDyingPlant={isDyingPlant}
+              isDyingZombie={isDyingZombie}
+              onSelectLane={onSelectLane}
+              onDropCardToLane={onDropCardToLane}
+              onInspectMinion={onInspectMinion}
+              onInspectEnvironment={onInspectEnvironment}
+            />
+          )
+        })}
       </div>
 
       {/* Combat VFX Layer (Projectiles, Shockwaves & Floating Numbers) */}

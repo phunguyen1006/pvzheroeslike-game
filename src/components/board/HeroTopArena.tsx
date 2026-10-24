@@ -10,6 +10,7 @@ export interface HeroTopArenaProps {
   opponentHandCount?: number
   phase: Phase
   isHurt?: boolean
+  isUsingSuperpower?: boolean
   floatingDamage?: string
   isTargetable?: boolean
   onHeroClick?: () => void
@@ -29,6 +30,7 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
   opponentHandCount = 4,
   phase,
   isHurt = false,
+  isUsingSuperpower = false,
   floatingDamage,
   isTargetable = false,
   onHeroClick,
@@ -42,6 +44,7 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
   onReturnHome,
 }) => {
   const isZombie = side === 'zombies'
+  const isLowHp = hero.hp <= 5 && hero.hp > 0
   const maxBlocks = 3
   const remainingBlocks = Math.max(0, maxBlocks - (hero.blockCount || 0))
   const blockMeterVal = hero.blockMeter || 0

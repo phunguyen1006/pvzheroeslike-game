@@ -118,7 +118,13 @@ export const ASSET_MANIFEST = {
       "Astrocado": "/assets/cards/plants/Sunflower.png",
       "Astrocado Pit": "/assets/cards/plants/Sunflower.png",
       "Cob Cannon": "/assets/cards/plants/Kernel Corn.png",
-      "Bird of Paradise": "/assets/cards/plants/The Great Zucchini.png"
+      "Bird of Paradise": "/assets/cards/plants/The Great Zucchini.png",
+      "Soul Patch": "/assets/cards/plants/Wall-Nut.png",
+      "Dandy Lion King": "/assets/cards/plants/Dark Matter Dragonfruit.png",
+      "Onion Rings": "/assets/cards/plants/Sunflower.png",
+      "Kernel-Pult": "/assets/cards/plants/Kernel Corn.png",
+      "Chomper": "/assets/cards/plants/Bonk Choy.png",
+      "Mushroom Grotto": "/assets/cards/plants/Planet of the Grapes.png"
     },
     "zombies": {
       "Area 22": "/assets/cards/zombies/Area 22.png",
@@ -165,7 +171,12 @@ export const ASSET_MANIFEST = {
       "Zombie Coach": "/assets/cards/zombies/Arm Wrestler.png",
       "Gadget Scientist": "/assets/cards/zombies/Dr. Spacetime.png",
       "Interdimensional Zombie": "/assets/cards/zombies/Dr. Spacetime.png",
-      "Space Cowboy": "/assets/cards/zombies/Swabbie.png"
+      "Space Cowboy": "/assets/cards/zombies/Swabbie.png",
+      "Binary Stars": "/assets/cards/zombies/Disco Zombie.png",
+      "Gargantuar's Feast": "/assets/cards/zombies/Bad Moon Rising.png",
+      "Jester": "/assets/cards/zombies/Conga Zombie.png",
+      "Zombot Plank Walker": "/assets/cards/zombies/Zombot 1000.png",
+      "Haunted Castle": "/assets/cards/zombies/Area 22.png"
     }
   },
   "traits": {

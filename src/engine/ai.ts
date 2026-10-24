@@ -1,4 +1,4 @@
-import type { GameState, Side, Card, LaneState } from './types'
+import type { GameState, Side, Card, LaneState, Minion } from './types'
 import { canPlayCardToLane } from './reducer'
 import { isUntrickable } from './abilities'
 
@@ -149,6 +149,7 @@ export function evaluateMinionThreat(lane: LaneState, enemySide: Side): number {
 
 /**
  * Checks whether an environment is considered dangerous and high-priority to override.
+ * Includes signature Chapter 2 environments: Pair Pearadise, Spikeweed Sector, Hot Lava, Venus Flytrap Planet.
  */
 export function isDangerousEnvironment(envId: string, side: Side): boolean {
   const id = envId.toLowerCase()
@@ -159,7 +160,10 @@ export function isDangerousEnvironment(envId: string, side: Side): boolean {
       id.includes('bog_of') ||
       id.includes('grapes') ||
       id.includes('solar_winds') ||
-      id.includes('red_plant_it')
+      id.includes('red_plant_it') ||
+      id.includes('pair_pearadise') ||
+      id.includes('venus_flytrap') ||
+      id.includes('hot_lava')
     )
   } else {
     // Dangerous Zombie environments that Plants want to override
@@ -168,9 +172,45 @@ export function isDangerousEnvironment(envId: string, side: Side): boolean {
       id.includes('area_22') ||
       id.includes('total_eclipse') ||
       id.includes('medulla_nebula') ||
-      id.includes('moon_base')
+      id.includes('moon_base') ||
+      id.includes('hunting_grounds')
     )
   }
+}
+
+/**
+ * Evaluates whether placing a minion in a given lane is hazardous due to hostile environments.
+ * For example: Placing a <= 2 HP Zombie in Spikeweed Sector or a 1 HP Zombie in Hot Lava.
+ */
+export function isEnvironmentHazardousForMinion(
+  lane: LaneState,
+  minion: Card | Minion,
+  side: Side
+): { hazardous: boolean; reason?: string } {
+  if (!lane.environment) return { hazardous: false }
+  const envId = lane.environment.id.toLowerCase()
+  const hp = 'health' in minion ? minion.health : (minion as Minion).currentHealth
+  const isArmored = Boolean(
+    (minion as any).armored ||
+    (minion as any).traits?.some((t: any) => typeof t === 'string' && t.toLowerCase().includes('armored'))
+  )
+
+  if (side === 'zombies') {
+    if (envId.includes('spikeweed') && hp <= 2 && !isArmored) {
+      return {
+        hazardous: true,
+        reason: `Spikeweed Sector deals 2 lethal damage to fragile zombie (${hp} HP) at combat start`,
+      }
+    }
+    if (envId.includes('hot_lava') && hp <= 1 && !isArmored) {
+      return {
+        hazardous: true,
+        reason: `Hot Lava deals 1 lethal damage to 1-HP zombie without Armored`,
+      }
+    }
+  }
+
+  return { hazardous: false }
 }
 
 /**
@@ -472,6 +512,21 @@ export function getAIMulliganDecision(
 }
 
 /**
+ * Smart Mulligan algorithm:
+ * Returns indices of cards in starting hand that should be swapped.
+ * Keeps 1-2 cost cards for a smooth curve.
+ * Swaps cards with cost >= 4 unless holding a Ramp card or core combo piece.
+ * Always keeps 0-cost / Signature Superpowers.
+ */
+export function chooseMulliganCards(
+  hand: Card[],
+  archetype: AIArchetype = 'tempo',
+  heroId?: string
+): number[] {
+  return getAIMulliganDecision(hand, archetype, heroId).swapIndices
+}
+
+/**
  * Superpower Decision Matrix:
  * Decides whether to play a Superpower immediately on Super-Block trigger, or save it to hand for later.
  */
@@ -484,6 +539,139 @@ export function getAISuperpowerDecision(
   const isZombie = side === 'zombies'
   const lanes = state.lanes
   const spId = superpower.id.toLowerCase()
+  const enemyHero = isZombie ? state.plantHero : state.zombieHero
+
+  // =========================================================================
+  // 0. IMMEDIATE SUPERPOWER LETHAL CALCULATION
+  // If the Superpower directly or combo-finishes the enemy hero, play immediately!
+  // =========================================================================
+
+  // A. Direct Face Burn Superpowers
+  if (spId.includes('stayin_alive') && enemyHero.hp <= 3) {
+    return {
+      action: 'PLAY_SUPERPOWER',
+      superpowerId: superpower.id,
+      targetHero: true,
+      reason: `Lethal Stayin' Alive burns Plant Hero (${enemyHero.hp} HP) for 3 fatal damage!`,
+    }
+  }
+
+  if (spId.includes('sunburn') && enemyHero.hp <= 2) {
+    return {
+      action: 'PLAY_SUPERPOWER',
+      superpowerId: superpower.id,
+      targetHero: true,
+      reason: `Lethal Sunburn strikes Zombie Hero (${enemyHero.hp} HP) for 2 fatal damage!`,
+    }
+  }
+
+  if (spId.includes('missile_madness') && enemyHero.hp <= 3) {
+    return {
+      action: 'PLAY_SUPERPOWER',
+      superpowerId: superpower.id,
+      targetHero: true,
+      reason: `Lethal Missile Madness delivers 3 fatal burst damage directly to Plant Hero!`,
+    }
+  }
+
+  if (spId.includes('precision_blast')) {
+    const middleLane = lanes[2]
+    if (!middleLane.zombieMinion && enemyHero.hp <= 5) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: 2,
+        reason: `Lethal Precision Blast fires 5 burst damage in middle lane to finish Zombie Hero!`,
+      }
+    }
+  }
+
+  if (spId.includes('power_pummel')) {
+    const openGroundLanes = [1, 2, 3].filter((idx) => !lanes[idx].zombieMinion)
+    if (openGroundLanes.length > 0 && openGroundLanes.length * 2 >= enemyHero.hp) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: `Lethal Power Pummel strikes through ${openGroundLanes.length} open ground lanes for ${openGroundLanes.length * 2} face damage to win!`,
+      }
+    }
+  }
+
+  // B. Minion Buff / Bonus Attack Lethal Superpowers
+  if (spId.includes('blazing_bark')) {
+    const unblockedPlant = lanes
+      .map((l, idx) => ({ l, idx }))
+      .find(
+        (x) =>
+          x.l.plantMinion &&
+          !x.l.zombieMinion &&
+          !x.l.plantMinion.isFrozen &&
+          x.l.plantMinion.currentAttack + 4 >= enemyHero.hp
+      )
+    if (unblockedPlant) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: unblockedPlant.idx,
+        reason: `Lethal Blazing Bark grants +4 attack to ${unblockedPlant.l.plantMinion!.name} for lethal face damage!`,
+      }
+    }
+  }
+
+  if (spId.includes('time_to_shine')) {
+    const unblockedPlant = lanes
+      .map((l, idx) => ({ l, idx }))
+      .find(
+        (x) =>
+          x.l.plantMinion &&
+          !x.l.zombieMinion &&
+          !x.l.plantMinion.isFrozen &&
+          x.l.plantMinion.currentAttack >= enemyHero.hp
+      )
+    if (unblockedPlant) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: unblockedPlant.idx,
+        reason: `Lethal Time to Shine bonus attack deals fatal blow of ${unblockedPlant.l.plantMinion!.currentAttack} to Zombie Hero!`,
+      }
+    }
+  }
+
+  if (spId.includes('brute_strength')) {
+    const unblockedZombie = lanes
+      .map((l, idx) => ({ l, idx }))
+      .find(
+        (x) =>
+          x.l.zombieMinion &&
+          !x.l.plantMinion &&
+          !x.l.zombieMinion.isFrozen &&
+          x.l.zombieMinion.currentAttack + 3 >= enemyHero.hp
+      )
+    if (unblockedZombie) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: unblockedZombie.idx,
+        reason: `Lethal Brute Strength buffs ${unblockedZombie.l.zombieMinion!.name} for game-ending face damage!`,
+      }
+    }
+  }
+
+  if (spId.includes('carried_away')) {
+    const openLaneIdx = lanes.findIndex((l) => !l.plantMinion)
+    const strongZombie = lanes.find(
+      (l) => l.zombieMinion && !l.zombieMinion.isFrozen && l.zombieMinion.currentAttack >= enemyHero.hp
+    )
+    if (openLaneIdx !== -1 && strongZombie) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: openLaneIdx,
+        reason: `Lethal Carried Away moves ${strongZombie.zombieMinion!.name} to open lane for direct lethal strike!`,
+      }
+    }
+  }
 
   // 1. Cut Down to Size (Destroy a Plant with 5 Attack or more)
   if (spId.includes('cut_down_to_size')) {
@@ -1273,6 +1461,320 @@ export function getAISuperpowerDecision(
   }
 }
 
+export interface MultiLaneLethalResult {
+  hasLethal: boolean
+  totalProjectedDamage: number
+  decision?: AIDecision
+  lethalSteps: string[]
+  unblockedLanes: number[]
+  strikethroughLanes: number[]
+}
+
+/**
+ * Multi-Lane Lethal Calculation Engine:
+ * Analyzes unblocked lanes, Strikethrough minions, direct face burn tricks,
+ * bonus attacks, and attack buffs to determine if game-winning lethal damage is achievable.
+ */
+export function calculateMultiLaneLethal(
+  state: GameState,
+  side: Side,
+  hand: Card[],
+  resource: number
+): MultiLaneLethalResult {
+  const isZombie = side === 'zombies'
+  const enemyHero = isZombie ? state.plantHero : state.zombieHero
+  const unblockedLanes: number[] = []
+  const strikethroughLanes: number[] = []
+  const lethalSteps: string[] = []
+
+  let boardFaceDamage = 0
+
+  // 1. Calculate guaranteed combat face damage from current minions on board
+  state.lanes.forEach((lane, idx) => {
+    const minion = isZombie ? lane.zombieMinion : lane.plantMinion
+    const blocker = isZombie ? lane.plantMinion : lane.zombieMinion
+
+    if (!minion || minion.isFrozen || minion.currentAttack <= 0) return
+
+    const hasStrikethrough = Boolean(
+      minion.strikethrough ||
+      (minion.traits && minion.traits.some((t: any) => typeof t === 'string' && t.toLowerCase().includes('strikethrough')))
+    )
+
+    if (!blocker) {
+      unblockedLanes.push(idx)
+      let faceDmg = minion.currentAttack
+      if (minion.antiHero) faceDmg += minion.antiHero
+      boardFaceDamage += faceDmg
+      lethalSteps.push(`Lane ${idx + 1}: Unblocked ${minion.name} strikes for ${faceDmg} face damage`)
+    } else if (hasStrikethrough) {
+      strikethroughLanes.push(idx)
+      boardFaceDamage += minion.currentAttack
+      lethalSteps.push(`Lane ${idx + 1}: Strikethrough ${minion.name} pierces ${blocker.name} for ${minion.currentAttack} face damage`)
+    }
+  })
+
+  let totalProjectedDamage = boardFaceDamage
+
+  // Check if board combat damage alone is already lethal!
+  if (totalProjectedDamage >= enemyHero.hp) {
+    return {
+      hasLethal: true,
+      totalProjectedDamage,
+      lethalSteps,
+      unblockedLanes,
+      strikethroughLanes,
+    }
+  }
+
+  // 2. Extra damage from playable hand tricks / abilities within resource budget
+  const playableTricks = hand.filter(
+    (c) => (c.type === 'trick' || c.type === 'superpower' || c.type === 'environment') && c.cost <= resource
+  )
+
+  let bestDecision: AIDecision | undefined
+
+  if (isZombie) {
+    // Check direct burn tricks
+    const bungee = playableTricks.find((c) => c.id === 'zombie_bungee_plumber')
+    if (bungee) {
+      if (totalProjectedDamage + 2 >= enemyHero.hp) {
+        totalProjectedDamage += 2
+        lethalSteps.push('Bungee Plumber deals 2 face damage')
+        bestDecision = {
+          action: 'PLAY_TRICK',
+          card: bungee,
+          targetHero: true,
+          reason: 'Lethal Bungee Plumber to face completes lethal sequence',
+        }
+        return {
+          hasLethal: true,
+          totalProjectedDamage,
+          decision: bestDecision,
+          lethalSteps,
+          unblockedLanes,
+          strikethroughLanes,
+        }
+      }
+    }
+
+    const finalMission = playableTricks.find((c) => c.id === 'zombie_final_mission')
+    if (finalMission) {
+      if (totalProjectedDamage + 4 >= enemyHero.hp) {
+        totalProjectedDamage += 4
+        lethalSteps.push('Final Mission deals 4 face damage')
+        bestDecision = {
+          action: 'PLAY_TRICK',
+          card: finalMission,
+          targetHero: true,
+          reason: 'Lethal Final Mission to face completes lethal sequence',
+        }
+        return {
+          hasLethal: true,
+          totalProjectedDamage,
+          decision: bestDecision,
+          lethalSteps,
+          unblockedLanes,
+          strikethroughLanes,
+        }
+      }
+    }
+
+    // Check bonus attack with Lurch for Lunch on unblocked or strikethrough zombie
+    const lurch = playableTricks.find((c) => c.id === 'zombie_lurch_for_lunch')
+    if (lurch) {
+      const candidates = [...unblockedLanes, ...strikethroughLanes]
+      for (const idx of candidates) {
+        const z = state.lanes[idx].zombieMinion!
+        if (totalProjectedDamage + z.currentAttack >= enemyHero.hp) {
+          totalProjectedDamage += z.currentAttack
+          lethalSteps.push(`Lurch for Lunch on ${z.name} deals ${z.currentAttack} bonus attack damage`)
+          bestDecision = {
+            action: 'PLAY_TRICK',
+            card: lurch,
+            laneIndex: idx,
+            reason: `Lethal Lurch for Lunch on ${z.name} in lane ${idx + 1}`,
+          }
+          return {
+            hasLethal: true,
+            totalProjectedDamage,
+            decision: bestDecision,
+            lethalSteps,
+            unblockedLanes,
+            strikethroughLanes,
+          }
+        }
+      }
+    }
+
+    // Check Brute Strength buff on unblocked/strikethrough zombie
+    const brute = playableTricks.find(
+      (c) => (c.id === 'zombie_brute_strength' || c.id === 'sp_brute_strength') && c.cost <= resource
+    )
+    if (brute) {
+      const candidates = [...unblockedLanes, ...strikethroughLanes]
+      for (const idx of candidates) {
+        const z = state.lanes[idx].zombieMinion!
+        if (totalProjectedDamage + 3 >= enemyHero.hp) {
+          totalProjectedDamage += 3
+          lethalSteps.push(`Brute Strength on ${z.name} adds +3 face damage`)
+          bestDecision = {
+            action: 'PLAY_TRICK',
+            card: brute,
+            laneIndex: idx,
+            reason: `Lethal Brute Strength buffs ${z.name} in lane ${idx + 1} for face lethal`,
+          }
+          return {
+            hasLethal: true,
+            totalProjectedDamage,
+            decision: bestDecision,
+            lethalSteps,
+            unblockedLanes,
+            strikethroughLanes,
+          }
+        }
+      }
+    }
+
+    // Check Area 22 buff (+2)
+    const area22 = playableTricks.find((c) => c.id === 'zombie_area_22')
+    if (area22) {
+      const candidates = [...unblockedLanes, ...strikethroughLanes]
+      for (const idx of candidates) {
+        const z = state.lanes[idx].zombieMinion!
+        if (totalProjectedDamage + 2 >= enemyHero.hp) {
+          totalProjectedDamage += 2
+          lethalSteps.push(`Area 22 on ${z.name} adds +2 face damage`)
+          bestDecision = {
+            action: 'PLAY_TRICK',
+            card: area22,
+            laneIndex: idx,
+            reason: `Lethal Area 22 buffs ${z.name} in lane ${idx + 1} for face lethal`,
+          }
+          return {
+            hasLethal: true,
+            totalProjectedDamage,
+            decision: bestDecision,
+            lethalSteps,
+            unblockedLanes,
+            strikethroughLanes,
+          }
+        }
+      }
+    }
+
+    // Check Going Viral (+1 to all unblocked/strikethrough zombies)
+    const viral = playableTricks.find((c) => c.id === 'zombie_going_viral')
+    if (viral) {
+      const eligibleZombiesCount = unblockedLanes.length + strikethroughLanes.length
+      if (eligibleZombiesCount > 0 && totalProjectedDamage + eligibleZombiesCount >= enemyHero.hp) {
+        totalProjectedDamage += eligibleZombiesCount
+        lethalSteps.push(`Going Viral adds +${eligibleZombiesCount} multi-lane face damage`)
+        bestDecision = {
+          action: 'PLAY_TRICK',
+          card: viral,
+          reason: 'Lethal Going Viral pushes multi-lane damage over the finish line',
+        }
+        return {
+          hasLethal: true,
+          totalProjectedDamage,
+          decision: bestDecision,
+          lethalSteps,
+          unblockedLanes,
+          strikethroughLanes,
+        }
+      }
+    }
+
+    // Check Laser Base Alpha giving Strikethrough to a blocked zombie
+    const laserBase = playableTricks.find((c) => c.id === 'zombie_laser_base_alpha')
+    if (laserBase) {
+      for (let idx = 0; idx < state.lanes.length; idx++) {
+        const lane = state.lanes[idx]
+        if (lane.zombieMinion && lane.plantMinion && !lane.zombieMinion.isFrozen && !strikethroughLanes.includes(idx)) {
+          if (totalProjectedDamage + lane.zombieMinion.currentAttack >= enemyHero.hp) {
+            totalProjectedDamage += lane.zombieMinion.currentAttack
+            lethalSteps.push(`Laser Base Alpha in lane ${idx + 1} grants Strikethrough for ${lane.zombieMinion.currentAttack} face damage`)
+            bestDecision = {
+              action: 'PLAY_TRICK',
+              card: laserBase,
+              laneIndex: idx,
+              reason: `Lethal Laser Base Alpha gives Strikethrough to ${lane.zombieMinion.name} for lethal pierce`,
+            }
+            return {
+              hasLethal: true,
+              totalProjectedDamage,
+              decision: bestDecision,
+              lethalSteps,
+              unblockedLanes,
+              strikethroughLanes,
+            }
+          }
+        }
+      }
+    }
+  } else {
+    // Plant side lethal check
+    const berryBlast = playableTricks.find((c) => c.id === 'plant_berry_blast')
+    if (berryBlast) {
+      if (totalProjectedDamage + 3 >= enemyHero.hp) {
+        totalProjectedDamage += 3
+        lethalSteps.push('Berry Blast deals 3 face damage')
+        bestDecision = {
+          action: 'PLAY_TRICK',
+          card: berryBlast,
+          targetHero: true,
+          reason: 'Lethal Berry Blast to face completes lethal sequence',
+        }
+        return {
+          hasLethal: true,
+          totalProjectedDamage,
+          decision: bestDecision,
+          lethalSteps,
+          unblockedLanes,
+          strikethroughLanes,
+        }
+      }
+    }
+
+    const plantFood = playableTricks.find((c) => c.id === 'plant_plant_food')
+    if (plantFood) {
+      const candidates = [...unblockedLanes, ...strikethroughLanes]
+      for (const idx of candidates) {
+        const p = state.lanes[idx].plantMinion!
+        const bonusDmg = p.currentAttack + 1
+        if (totalProjectedDamage + bonusDmg >= enemyHero.hp) {
+          totalProjectedDamage += bonusDmg
+          lethalSteps.push(`Plant Food on ${p.name} deals ${bonusDmg} bonus damage`)
+          bestDecision = {
+            action: 'PLAY_TRICK',
+            card: plantFood,
+            laneIndex: idx,
+            reason: `Lethal Plant Food bonus attack on ${p.name} in lane ${idx + 1}`,
+          }
+          return {
+            hasLethal: true,
+            totalProjectedDamage,
+            decision: bestDecision,
+            lethalSteps,
+            unblockedLanes,
+            strikethroughLanes,
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    hasLethal: totalProjectedDamage >= enemyHero.hp,
+    totalProjectedDamage,
+    decision: bestDecision,
+    lethalSteps,
+    unblockedLanes,
+    strikethroughLanes,
+  }
+}
+
 /**
  * Calculates whether the current side has a direct lethal line of play.
  */
@@ -1282,104 +1784,10 @@ function checkLethalPossibility(
   hand: Card[],
   resource: number
 ): AIDecision | null {
-  const enemyHero = side === 'zombies' ? state.plantHero : state.zombieHero
-
-  // 1. Check direct damage tricks & buff lines to face
-  if (side === 'zombies') {
-    // Bungee Plumber (2 dmg, cost 1)
-    const bungee = hand.find((c) => c.id === 'zombie_bungee_plumber' && c.cost <= resource)
-    if (bungee && enemyHero.hp <= 2) {
-      return { action: 'PLAY_TRICK', card: bungee, targetHero: true, reason: 'Lethal Bungee Plumber to face' }
-    }
-
-    // Final Mission (4 dmg, cost 2)
-    const finalMission = hand.find((c) => c.id === 'zombie_final_mission' && c.cost <= resource)
-    if (finalMission && enemyHero.hp <= 4) {
-      return { action: 'PLAY_TRICK', card: finalMission, targetHero: true, reason: 'Lethal Final Mission to face' }
-    }
-
-    // 2. Lethal Buffs / Bonus Attacks on Unblocked Zombie Attackers
-    for (let idx = 0; idx < state.lanes.length; idx++) {
-      const lane = state.lanes[idx]
-      if (lane.zombieMinion && !lane.plantMinion && !lane.zombieMinion.isFrozen) {
-        const currentAtk = lane.zombieMinion.currentAttack
-
-        // Lurch for Lunch (bonus attack immediately for currentAtk damage)
-        const lurch = hand.find((c) => c.id === 'zombie_lurch_for_lunch' && c.cost <= resource)
-        if (lurch && currentAtk >= enemyHero.hp) {
-          return {
-            action: 'PLAY_TRICK',
-            card: lurch,
-            laneIndex: idx,
-            reason: `Lethal Lurch for Lunch bonus attack to face from lane ${idx + 1}`,
-          }
-        }
-
-        // Brute Strength (+3 Attack to Zombie)
-        const brute = hand.find(
-          (c) => (c.id === 'zombie_brute_strength' || c.id === 'sp_brute_strength') && c.cost <= resource
-        )
-        if (brute && currentAtk + 3 >= enemyHero.hp) {
-          return {
-            action: 'PLAY_TRICK',
-            card: brute,
-            laneIndex: idx,
-            reason: `Lethal Brute Strength on unblocked zombie in lane ${idx + 1} for face damage`,
-          }
-        }
-
-        // Area 22 (+2 Attack & Frenzy)
-        const area22 = hand.find((c) => c.id === 'zombie_area_22' && c.cost <= resource)
-        if (area22 && currentAtk + 2 >= enemyHero.hp) {
-          return {
-            action: 'PLAY_TRICK',
-            card: area22,
-            laneIndex: idx,
-            reason: `Lethal Area 22 on unblocked zombie in lane ${idx + 1} for face damage`,
-          }
-        }
-      }
-
-      // Laser Base Alpha: Strikethrough on high-attack Zombie pierces blocker directly to face!
-      if (lane.zombieMinion && lane.plantMinion && !lane.zombieMinion.isFrozen && !lane.zombieMinion.strikethrough) {
-        const laserBase = hand.find((c) => c.id === 'zombie_laser_base_alpha' && c.cost <= resource)
-        if (laserBase && lane.zombieMinion.currentAttack >= enemyHero.hp) {
-          return {
-            action: 'PLAY_TRICK',
-            card: laserBase,
-            laneIndex: idx,
-            reason: `Lethal Laser Base Alpha grants Strikethrough to pierce through blocker for face lethal`,
-          }
-        }
-      }
-    }
-
-    // Going Viral: all zombies get +1 attack
-    const viral = hand.find((c) => c.id === 'zombie_going_viral' && c.cost <= resource)
-    if (viral) {
-      let totalUnblockedAtk = 0
-      state.lanes.forEach((l) => {
-        if (l.zombieMinion && !l.plantMinion && !l.zombieMinion.isFrozen) {
-          totalUnblockedAtk += l.zombieMinion.currentAttack + 1
-        }
-      })
-      if (totalUnblockedAtk >= enemyHero.hp && totalUnblockedAtk > 0) {
-        return {
-          action: 'PLAY_TRICK',
-          card: viral,
-          reason: 'Lethal Going Viral push across open lanes',
-        }
-      }
-    }
-  } else {
-    // Plant side lethal check
-    // Berry Blast (3 dmg, cost 2)
-    const berryBlast = hand.find((c) => c.id === 'plant_berry_blast' && c.cost <= resource)
-    if (berryBlast && enemyHero.hp <= 3) {
-      return { action: 'PLAY_TRICK', card: berryBlast, targetHero: true, reason: 'Lethal Berry Blast to face' }
-    }
+  const multiLane = calculateMultiLaneLethal(state, side, hand, resource)
+  if (multiLane.hasLethal && multiLane.decision) {
+    return multiLane.decision
   }
-
   return null
 }
 

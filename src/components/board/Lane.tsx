@@ -9,6 +9,12 @@ export interface LaneProps {
   selectedCard?: CardType | null
   selectedCardSide?: 'plants' | 'zombies'
   isCombatLane?: boolean
+  isAttackingPlant?: boolean
+  isAttackingZombie?: boolean
+  isHitPlant?: boolean
+  isHitZombie?: boolean
+  isDyingPlant?: boolean
+  isDyingZombie?: boolean
   onSelectLane: (laneIndex: number) => void
   onDropCardToLane?: (laneIndex: number, cardId: string) => void
   onInspectMinion?: (minion: MinionType) => void
@@ -21,6 +27,12 @@ export const Lane: React.FC<LaneProps> = ({
   selectedCard,
   selectedCardSide,
   isCombatLane = false,
+  isAttackingPlant = false,
+  isAttackingZombie = false,
+  isHitPlant = false,
+  isHitZombie = false,
+  isDyingPlant = false,
+  isDyingZombie = false,
   onSelectLane,
   onDropCardToLane,
   onInspectMinion,
@@ -261,6 +273,9 @@ export const Lane: React.FC<LaneProps> = ({
           isEligibleTarget={isCardPlayableHere && selectedCardSide === 'zombies'}
           unmetReason={selectedCardSide === 'zombies' ? unmetReason : undefined}
           isLanding={isLandingThud && Boolean(lane.zombieMinion)}
+          isAttacking={isAttackingZombie}
+          isHit={isHitZombie}
+          isDying={isDyingZombie}
           onClick={() => onSelectLane(lane.index)}
           onDropCard={handleDrop}
           onInspect={onInspectMinion}
@@ -313,12 +328,15 @@ export const Lane: React.FC<LaneProps> = ({
           isEligibleTarget={isCardPlayableHere && selectedCardSide === 'plants'}
           unmetReason={selectedCardSide === 'plants' ? unmetReason : undefined}
           isLanding={isLandingThud && Boolean(lane.plantMinion)}
+          isAttacking={isAttackingPlant}
+          isHit={isHitPlant}
+          isDying={isDyingPlant}
           onClick={() => onSelectLane(lane.index)}
           onDropCard={handleDrop}
           onInspect={onInspectMinion}
         />
 
-        {/* Team-Up Secondary Slot */}
+        {/* TeamUp Secondary Slot */}
         {(lane.plantTeamUpMinion || (lane.plantMinion?.teamUp && selectedCard?.side === 'plants')) && (
           <div className="teamup-slot-container">
             <MinionSlot
@@ -328,6 +346,9 @@ export const Lane: React.FC<LaneProps> = ({
               isActiveLane={isHighlighted && selectedCardSide === 'plants'}
               isEligibleTarget={isCardPlayableHere && selectedCardSide === 'plants'}
               isLanding={isLandingThud && Boolean(lane.plantTeamUpMinion)}
+              isAttacking={isAttackingPlant}
+              isHit={isHitPlant}
+              isDying={isDyingPlant}
               onClick={() => onSelectLane(lane.index)}
               onDropCard={handleDrop}
               onInspect={onInspectMinion}

@@ -41,6 +41,12 @@ export const CARD_FLAVOR_TEXTS: Record<string, string> = {
   plant_astrocado_pit: '"Chỉ là một hạt bơ nhỏ bé nằm yên dưới đất... nhưng đừng vội cười, nó sắp nảy mầm thành chiến binh vũ trụ đấy!"',
   plant_cob_cannon: '"Khẩu đại pháo ngô bắp hạt nhân tối thượng. Một phát bắn san phẳng chiến tuyến địch và thổi bay mọi thứ xung quanh."',
   plant_bird_of_paradise: '"Loài chim thiên đường kiêu sa bơi lội giữa hồ nước, mỗi sớm mai lại mang đến một phép màu siêu năng lực kỳ diệu."',
+  plant_soul_patch: '"Linh hồn bất diệt của đất mẹ hiền hòa. Dù bão tố hiểm nguy giáng xuống đầu tướng quân, cụm rễ thiêng liêng sẽ ôm trọn và gánh vác tất cả."',
+  plant_dandy_lion_king: '"Vị vua sư tử bồ công anh quyền uy cất tiếng gầm vang dội, khiến sinh lực của thủ lĩnh thây ma lập tức vỡ vụn làm đôi."',
+  plant_onion_rings: '"Vòng hành tây ma thuật chiên giòn rụm! Chỉ cần cắn một miếng, mọi mầm cây bé nhỏ trên tay đều phổng phao thành chiến binh 4/4."',
+  plant_kernel_pult: '"Một muỗng bơ béo ngậy ném chuẩn xác vào mặt Zombie. Vừa bỏng rát, vừa trơn trượt đến mức đông cứng không thể cử động."',
+  plant_chomper: '"Cái miệng háu ăn không đáy. Bất kể là xác sống tầm thường hay đại tướng giáp sắt, một cú ngoạm tử thần là tan thành mây khói."',
+  plant_mushroom_grotto: '"Hang nấm ẩm ướt rợp bóng mát, nơi nuôi dưỡng những bào tử nấm mọc lên mập mạp và kiên cường hơn bao giờ hết."',
 
   // Zombies
   zombie_swabbie: '"Hắn là thủy thủ cướp biển nhỏ bé nhất, nhưng sự dũng cảm khi lao ra giữa biển nước thì không ai sánh bằng."',
@@ -77,6 +83,11 @@ export const CARD_FLAVOR_TEXTS: Record<string, string> = {
   zombie_trick_or_treater: '"Cho kẹo hay bị ghẹo! Mỗi trò lừa lọc (Trick) của bạn là một gói kẹo tăng lực ngọt ngào gửi tới tay bài."',
   zombie_synchronized_swimmer: '"Vũ điệu bơi nghệ thuật dưới nước hoàn hảo đến mức có thể bắt chước sức mạnh của bất kỳ ai trên bờ."',
   zombie_space_cowboy: '"Cao bồi không gian lướt đi trên sao chổi. Cứ mỗi lần bắn trúng mặt Hero, hắn lại phi ngựa sang làn tiếp theo để bắn tiếp!"',
+  zombie_binary_stars: '"Cặp sao đôi vũ trụ xoay vần trên sàn nhảy disco. Khi hai ngôi sao hội tụ, mọi hỏa lực của quân đoàn Zombie đều nhân đôi sức tàn phá!"',
+  zombie_gargantuars_feast: '"Bàn tiệc thịnh soạn ngập tràn não tươi mở màn vào lúc nửa đêm, mời gọi ba gã khổng lồ Gargantuar hung hãn nhất bước ra từ bóng tối."',
+  zombie_jester: '"Tên hề xiếc quái đản luôn cười khúc khích. Đánh hắn một cú ư? Hắn sẽ ném trả lại chính xác lượng sát thương đó vào mặt bạn!"',
+  zombie_zombot_plank_walker: '"Chiến hạm hải tặc tương lai khổng lồ lướt trên mặt nước. Một khi cập bến, mọi công trình cảnh quan môi trường xung quanh đều sụp đổ tan tành."',
+  zombie_haunted_castle: '"Lâu đài ma quái rùng rợn chứa đầy lời nguyền u ám, tiếp thêm dũng khí và sức tấn công mãnh liệt cho bất kỳ thây ma nào bước vào."',
 }
 
 export function getCardFlavorText(cardId: string, cardName: string): string {
