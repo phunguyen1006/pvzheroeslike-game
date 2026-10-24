@@ -63,15 +63,19 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] [ĐỢT 3] Viết bộ test chuyên sâu `15. Legendary & Super-Rare Strategic Cards Suite` nâng tổng test lên 125/125 test cases pass 100%
 - [x] [ĐỢT 4] Mở rộng kiểm thử trí tuệ nhân tạo (AI Engine Tests) & Tích hợp Superpower / Environment Suite (155/155 tests pass)
 - [x] [ĐỢT 5 & 6] Bộ test chuyên sâu `20. Iconic Legendary & Super-Rare Powerhouses Suite` (Bananasaurus Rex Dino-Roar + Double Strike, Trickster Cost Reduction + Bonus Attack, Valkyrie Attack Scaling on-death, Dark Matter Dragonfruit Trick Surtax + Splash Damage 6, Brainana Brain-Drain, Zombot 1000 Board Wipe) nâng tổng test lên **173/173 tests pass 100%**!
-- [x] [ĐỢT 7] Hoàn thiện bộ test Campaign Mode & Deck Builder (`campaign_deck.test.ts`), Synergy Suite (`cards.test.ts`), AI Tactics (`ai_tactics.test.ts`), nâng tổng số test lên **289/289 tests pass 100%**!
+- [x] [ĐỢT 7] Hoàn thiện bộ test Campaign Mode & Deck Builder (`campaign_deck.test.ts`), Synergy Suite (`cards.test.ts`), AI Tactics (`ai_tactics.test.ts`), Conjure & Terrain Coordination (`terrain_conjure.test.ts`), nâng tổng số test lên **340/340 tests pass 100%**!
+- [ ] [ĐỢT 8] Đang triển khai bộ test mô phỏng trận đấu tự động toàn diện AI vs AI (`match_simulation.test.ts`) và stress test bão hòa bàn đấu 5 làn.
 
 ### 🗺️ Campaign & Deck Bot (`feature/campaign`)
 - [x] Triển khai Campaign Chapter 1 "Suburban Crisis" với 5 màn boss (Super Brainz, Impfinity, The Smash, Rustbolt, Professor Brainstorm).
 - [x] Hệ thống luật chơi đặc biệt: pre-placed minions, environments, starting sun/brains bonus.
 - [x] Hệ thống tính điểm 1-3 sao và lưu trữ tiến độ game qua LocalStorage.
 - [x] Giao diện 40-Card Deck Builder với biểu đồ phân bố cost (mana curve) và thống kê tribes.
+- [ ] [ĐỢT 8] Triển khai Chapter 2 "Zombie Metropolis" và tính năng Import/Export mã JSON bộ bài.
 
 ### 🧠 AI Bot (`feature/ai`)
 - [x] Hoàn thiện 3 phong cách AI: Aggro (tấn công trực diện làn trống), Control (bảo lưu Não cho Tricks removal), Tempo (kiểm soát bàn cân bằng).
 - [x] Ma trận quyết định Superpower và cây quyết định Mulligan thông minh.
 - [x] Tích hợp AI Tactics vào hệ thống chiến đấu tự động.
+- [x] [ĐỢT 7] Cơ chế ghi đè Môi trường đối thủ và tính toán Lethal Face Damage với Tricks (Brute Strength, Lurch for Lunch, Going Viral, Area 22, Laser Base Alpha).
+- [ ] [ĐỢT 8] Mở rộng ma trận quyết định cho 20 Signature Superpowers và hệ thống thoại tương tác chiến thuật (Dynamic Boss Dialogue Triggers).
