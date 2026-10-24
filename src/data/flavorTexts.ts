@@ -32,6 +32,11 @@ export const CARD_FLAVOR_TEXTS: Record<string, string> = {
   plant_cherry_bomb: '"Hai anh em sinh đôi luôn tranh cãi xem ai nổ to hơn. Kết quả là cả hai cùng nổ tan tành."',
   plant_shamrocket: '"May mắn của người Ireland kết hợp với tên lửa tầm nhiệt. Zombie to xác chỉ còn là dĩ vãng."',
   plant_the_great_zucchini: '"Một cái vung đũa phép biến hóa toàn bộ đoàn quân xác sống hùng hậu thành những cọng nấm tí hon đáng thương."',
+  plant_captain_cucumber: '"Thuyền trưởng dưa chuột hào phóng luôn tìm thấy những báu vật huyền thoại rẻ bất ngờ cho hạm đội của mình."',
+  plant_banana_launcher: '"Khẩu đại bác chuối tự động lên nòng mỗi bình minh. Hãy cẩn thận kẻo trượt vỏ chuối!"',
+  plant_banana_bomb: '"Nhỏ nhưng có võ. Một quả bom chuối thơm phức phát nổ ngay vào mặt Zombie ngơ ngác."',
+  plant_blooming_heart: '"Trái tim hoa hồng càng chịu phong ba bão táp, tình yêu và sức mạnh tấn công lại càng bùng cháy mãnh liệt."',
+  plant_sportacus: '"Đấu sĩ nấm giác đấu kiên cường. Đối thủ dùng mánh khóe bẩn thỉu (Tricks)? Nhận ngay một nắm đấm công lý vào mặt Zombie Hero!"',
 
   // Zombies
   zombie_swabbie: '"Hắn là thủy thủ cướp biển nhỏ bé nhất, nhưng sự dũng cảm khi lao ra giữa biển nước thì không ai sánh bằng."',
@@ -63,6 +68,10 @@ export const CARD_FLAVOR_TEXTS: Record<string, string> = {
   zombie_going_viral: '"Một dịch bệnh cuồng nộ lan truyền với tốc độ chóng mặt qua mạng xã hội của Zombie."',
   zombie_rocket_science: '"Đây không phải là trò đùa trẻ con, đây là KHOA HỌC TÊN LỬA dùng để thổi bay những Plant to xác!"',
   zombie_final_mission: '"Hi sinh một thuộc hạ trung thành để phóng tên lửa hạt nhân hủy diệt mục tiêu chỉ định."',
+  zombie_interdimensional_zombie: '"Nhảy qua các chiều không gian song song mỗi khi có thí nghiệm khoa học phát nổ, và trở lại với một hình hài hoàn toàn mới."',
+  zombie_kitchen_sink: '"Hắn mang theo tất cả mọi thứ: bồn rửa bát, cờ lê, giáp sắt, súng ngắm... Không một đặc tính chiến đấu nào hắn không có."',
+  zombie_trick_or_treater: '"Cho kẹo hay bị ghẹo! Mỗi trò lừa lọc (Trick) của bạn là một gói kẹo tăng lực ngọt ngào gửi tới tay bài."',
+  zombie_synchronized_swimmer: '"Vũ điệu bơi nghệ thuật dưới nước hoàn hảo đến mức có thể bắt chước sức mạnh của bất kỳ ai trên bờ."',
 }
 
 export function getCardFlavorText(cardId: string, cardName: string): string {

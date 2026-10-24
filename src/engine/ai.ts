@@ -1334,6 +1334,30 @@ export function getAIDecision(
       }
     }
 
+    // COMBO ARCHETYPE: Prioritizes protecting high-synergy engines (Dr. Spacetime, Valkyrie)
+    // or deploying cheap swarm units into open lanes to prepare for Going Viral / BMR finishers
+    if (archetype === 'combo') {
+      const comboEngine = playableMinions.find(
+        (m) =>
+          m.id === 'zombie_dr_spacetime' ||
+          m.id === 'zombie_valkyrie' ||
+          m.id === 'zombie_interdimensional_zombie' ||
+          m.id === 'zombie_zombology_teacher'
+      )
+      if (comboEngine) {
+        // Place engine in safe open lane if possible
+        const safeOpenLane = openLanes.find(({ lane }) => canPlayCardToLane(comboEngine, lane, 'zombies').allowed)
+        if (safeOpenLane) {
+          return {
+            action: 'PLAY_MINION',
+            card: comboEngine,
+            laneIndex: safeOpenLane.idx,
+            reason: `Combo AI deploys engine minion ${comboEngine.name} in safe open lane ${safeOpenLane.idx + 1}`,
+          }
+        }
+      }
+    }
+
     // D. Threat Mitigation: Block unblocked dangerous Plant lanes
     const threatenedLanes = state.lanes
       .map((lane, idx) => ({ lane, idx, threat: evaluateMinionThreat(lane, 'plants') }))

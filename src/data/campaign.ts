@@ -723,7 +723,8 @@ export function calculateMissionStars(
   playerHp: number,
   turnCount: number
 ): number {
-  if (winner !== 'plants') return 0
+  const expectedWinner = mission.faction || 'plants'
+  if (winner !== expectedWinner) return 0
 
   let stars = 1 // 1 star for clearing the mission
 
@@ -755,6 +756,21 @@ export function calculateMissionStars(
     if (playerHp >= 12) stars++
     if (turnCount <= 10) stars++
   } else if (mission.id === 'mission_10') {
+    if (playerHp >= 15) stars++
+    if (turnCount <= 12) stars++
+  } else if (mission.id === 'zombie_mission_1') {
+    if (playerHp >= 12) stars++
+    if (turnCount <= 8) stars++
+  } else if (mission.id === 'zombie_mission_2') {
+    if (playerHp >= 10) stars++
+    if (turnCount <= 10) stars++
+  } else if (mission.id === 'zombie_mission_3') {
+    if (playerHp >= 15) stars++
+    if (turnCount <= 10) stars++
+  } else if (mission.id === 'zombie_mission_4') {
+    if (playerHp >= 10) stars++
+    if (turnCount <= 8) stars++
+  } else if (mission.id === 'zombie_mission_5') {
     if (playerHp >= 15) stars++
     if (turnCount <= 12) stars++
   }

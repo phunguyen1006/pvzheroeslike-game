@@ -868,6 +868,42 @@ export const PLANT_CARDS: CardData[] = [
  description: 'Nấm tăng lực: Khi xuất trận, tất cả Nấm (Mushrooms) trên sân nhận +1 Tấn công và +1 Máu (+1/+1)!',
  heroClass: 'Kabloom',
  laneRequirement: 'ground'
+ },
+ {
+ id: 'plant_banana_launcher',
+ name: 'Banana Launcher',
+ team: 'plants',
+ type: 'plant',
+ cost: 2,
+ attack: 0,
+ hp: 3,
+ health: 3,
+ traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'Fruit Plant',
+ assetPath: '/assets/cards/plants/Bananasaurus Rex.png',
+ image: '/assets/cards/plants/Bananasaurus Rex.png',
+ description: 'Đầu mỗi lượt (Start of turn): Tạo 1 lá Chuối Pháo (Banana Bomb 1 Sun) vào tay bạn!',
+ heroClass: 'Kabloom',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'plant_banana_bomb',
+ name: 'Banana Bomb',
+ team: 'plants',
+ type: 'trick',
+ cost: 1,
+ attack: 0,
+ hp: 0,
+ health: 0,
+ traits: [],
+ rarity: 'Common',
+ tribe: 'Banana Trick',
+ assetPath: '/assets/cards/plants/Peashooter.png',
+ image: '/assets/cards/plants/Peashooter.png',
+ description: 'Bắn 1 quả chuối pháo gây 1 sát thương lên một Zombie chỉ định trên sân.',
+ heroClass: 'Kabloom',
+ laneRequirement: 'ground'
  }
 ];
 
@@ -1715,6 +1751,25 @@ export const ZOMBIE_CARDS: CardData[] = [
  image: '/assets/cards/zombies/Dr. Spacetime.png',
  gravestone: false,
  description: 'Nhà khoa học công nghệ: Khi xuất trận, tất cả Zombie thuộc tộc Khoa học (Science) lập tức tung một đòn tấn công phụ (Bonus Attack)!',
+ heroClass: 'Brainy',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'zombie_interdimensional_zombie',
+ name: 'Interdimensional Zombie',
+ team: 'zombies',
+ type: 'zombie',
+ cost: 1,
+ attack: 1,
+ hp: 3,
+ health: 3,
+ traits: [],
+ rarity: 'Legendary',
+ tribe: 'Science Zombie',
+ assetPath: '/assets/cards/zombies/Dr. Spacetime.png',
+ image: '/assets/cards/zombies/Dr. Spacetime.png',
+ gravestone: false,
+ description: 'Khi bạn chơi một lá bài Khoa học (Science minion hoặc Trick): Zombie này tự động dịch chuyển chiều không gian và biến hình (Transform) thành 1 Zombie ngẫu nhiên có Giá 3 Brains!',
  heroClass: 'Brainy',
  laneRequirement: 'ground'
  }

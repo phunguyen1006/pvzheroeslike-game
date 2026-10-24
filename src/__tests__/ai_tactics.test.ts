@@ -7,6 +7,7 @@ import {
   getAITurnPlan,
   getHeroDefaultArchetype,
   isDangerousEnvironment,
+  reserveBrainsForTricks,
 } from '../engine/ai'
 import { createInitialGameState } from '../engine/reducer'
 import { ALL_CARDS, getCardById } from '../data/cards'
