@@ -247,7 +247,9 @@ export function triggerOnDeath(
   // --- Galacta-Cactus (plant_galacta_cactus) ---
   if (deadMinion.cardId === 'plant_galacta_cactus' || deadMinion.name.toLowerCase() === 'galacta-cactus') {
     logs.push(`🌌 Galacta-Cactus phát nổ vũ trụ khi bị tiêu diệt: Gây 1 sát thương lên TẤT CẢ mọi thứ!`)
-    updatedState.lanes.forEach(lane => {
+    const galactaKilledUnits: { minion: Minion; laneIndex: number }[] = []
+
+    updatedState.lanes.forEach((lane, lIdx) => {
       if (lane.plantMinion && lane.plantMinion.instanceId !== deadMinion.instanceId && lane.plantMinion.currentHealth > 0) {
         lane.plantMinion = {
           ...lane.plantMinion,
@@ -255,6 +257,7 @@ export function triggerOnDeath(
         }
         if (lane.plantMinion.currentHealth <= 0) {
           logs.push(`💥 ${lane.plantMinion.name} bị Galacta-Cactus tiêu diệt!`)
+          galactaKilledUnits.push({ minion: lane.plantMinion, laneIndex: lIdx })
           lane.plantMinion = null
         }
       }
@@ -265,6 +268,7 @@ export function triggerOnDeath(
         }
         if (lane.plantTeamUpMinion.currentHealth <= 0) {
           logs.push(`💥 ${lane.plantTeamUpMinion.name} bị Galacta-Cactus tiêu diệt!`)
+          galactaKilledUnits.push({ minion: lane.plantTeamUpMinion, laneIndex: lIdx })
           lane.plantTeamUpMinion = null
         }
       }
@@ -277,10 +281,22 @@ export function triggerOnDeath(
         }
         if (lane.zombieMinion.currentHealth <= 0) {
           logs.push(`💥 ${lane.zombieMinion.name} bị Galacta-Cactus tiêu diệt!`)
+          galactaKilledUnits.push({ minion: lane.zombieMinion, laneIndex: lIdx })
           lane.zombieMinion = null
         }
       }
     })
+
+    // Cascade death triggers for any units destroyed by Galacta-Cactus
+    if (galactaKilledUnits.length > 0 && depth < maxDepth) {
+      const cascadeRes = triggerOnMultipleDeaths(updatedState, galactaKilledUnits, {
+        ...options,
+        depth: depth + 1,
+      })
+      updatedState = cascadeRes.updatedState
+      events.push(...cascadeRes.events)
+      logs.push(...cascadeRes.logs)
+    }
 
     const plantHeroDmg = applyHeroDamage(updatedState.plantHero, 1, true)
     updatedState.plantHero = plantHeroDmg.updatedHero
@@ -508,18 +524,34 @@ export function triggerOnDeath(
 }
 
 /**
- * Handles multiple simultaneous minion deaths sequentially
+ * Handles multiple simultaneous minion deaths sequentially.
+ * Enforces strict PvZ Heroes deterministic trigger resolution:
+ * 1. Left-to-right lane resolution (Lane 0 Heights through Lane 4 Water).
+ * 2. In the same lane: Plant minions resolve first, followed by Zombie minions.
  */
 export function triggerOnMultipleDeaths(
   state: GameState,
   deadUnits: { minion: Minion; laneIndex: number }[],
   options?: TriggerDeathOptions
 ): DeathTriggerResult {
+  // Deterministic PvZ Heroes trigger ordering
+  const sortedUnits = [...deadUnits].sort((a, b) => {
+    // 1. Lane index ascending
+    if (a.laneIndex !== b.laneIndex) {
+      return a.laneIndex - b.laneIndex
+    }
+    // 2. Plants before Zombies
+    if (a.minion.side !== b.minion.side) {
+      return a.minion.side === 'plants' ? -1 : 1
+    }
+    return 0
+  })
+
   let currentState = state
   const allEvents: CombatEvent[] = []
   const allLogs: string[] = []
 
-  for (const { minion, laneIndex } of deadUnits) {
+  for (const { minion, laneIndex } of sortedUnits) {
     const res = triggerOnDeath(currentState, minion, laneIndex, options)
     currentState = res.updatedState
     allEvents.push(...res.events)
