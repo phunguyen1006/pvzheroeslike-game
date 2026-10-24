@@ -38,6 +38,12 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
       unlocksNext: true,
       title: 'Tập sự Ngoại ô',
     },
+    comicDialogue: {
+      issueTitle: 'CÚ ĐẤM SIÊU NÃO TẬP KÍCH!',
+      issueTagline: 'Super Brainz đe dọa khu phố ngoại ô yên bình',
+      zombieHeroQuote: 'Hahaha! Mái tóc bồng bềnh và cú đấm Siêu Não của ta sẽ thổi bay toàn bộ đám cỏ rác của ngươi!',
+      plantHeroQuote: 'Cú đấm của ngươi không thể nhanh hơn phát đạn đậu chính xác từ Green Shadow đâu! Chuẩn bị nếm mùi thất bại đi!',
+    },
   },
   {
     id: 'mission_2',

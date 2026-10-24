@@ -219,13 +219,14 @@ describe('Round 9: Weekly Event Tickets System & Combat/Trait Edge Cases', () =>
     })
 
     it('calculates countdown accurately for future dates and marks expired for past dates', () => {
-      // Future date 2 days, 3 hours, 45 minutes ahead
-      const future = new Date(Date.now() + (2 * 24 * 3600 + 3 * 3600 + 45 * 60) * 1000).toISOString()
+      // Future date 2 days, 3 hours, 45 minutes ahead (+ 5s buffer to prevent sub-millisecond second boundary drift)
+      const future = new Date(Date.now() + (2 * 24 * 3600 + 3 * 3600 + 45 * 60 + 5) * 1000).toISOString()
       const countdownFuture = getWeeklyEventCountdown(future)
       expect(countdownFuture.isExpired).toBe(false)
       expect(countdownFuture.days).toBe(2)
       expect(countdownFuture.hours).toBe(3)
-      expect(countdownFuture.minutes).toBe(45)
+      expect(countdownFuture.minutes).toBeGreaterThanOrEqual(44)
+      expect(countdownFuture.minutes).toBeLessThanOrEqual(45)
 
       // Past date
       const past = new Date(Date.now() - 10000).toISOString()

@@ -225,6 +225,13 @@ export interface MissionRule {
   initialMinions?: { laneIndex: number; cardId: string; side: Side }[]
 }
 
+export interface ComicStoryDialogue {
+  plantHeroQuote: string
+  zombieHeroQuote: string
+  issueTitle?: string
+  issueTagline?: string
+}
+
 export interface CampaignMission {
   id: string
   chapter?: number
@@ -245,6 +252,7 @@ export interface CampaignMission {
     unlocksNext?: boolean
     title?: string
   }
+  comicDialogue?: ComicStoryDialogue
 }
 
 export interface WeeklyEventConfig {

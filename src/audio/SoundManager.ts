@@ -37,7 +37,7 @@ class SoundManager {
   }
 
   private loadFromStorage() {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return
+    if (typeof localStorage === 'undefined') return
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
@@ -61,7 +61,7 @@ class SoundManager {
   }
 
   public saveToStorage() {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return
+    if (typeof localStorage === 'undefined') return
     try {
       const settings: SoundSettings = {
         masterVolume: Math.round(this.masterVolume * 100),

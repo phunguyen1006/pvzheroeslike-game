@@ -426,6 +426,56 @@ export function resolveSingleLaneCombat(
       description: `${zombie.name} dealt ${dmgToPlant} damage to ${plant.name}${plant.currentHealth <= 0 ? ' (Destroyed)' : ''}`,
     })
 
+    // Blooming Heart: Gets +1 Attack when it deals damage
+    if (plant.cardId === 'plant_blooming_heart' && dmgToZombie > 0 && plant.currentHealth > 0) {
+      plant.currentAttack += 1
+      plant.baseAttack += 1
+      events.push({
+        laneIndex,
+        attackerSide: 'plants',
+        attackerName: 'Blooming Heart',
+        target: 'minion',
+        targetSide: 'plants',
+        damageDealt: 0,
+        isBlocked: false,
+        isLethal: false,
+        description: `🌸 Blooming Heart nhận +1 Tấn công sau khi gây sát thương (hiện là ${plant.currentAttack} ATK)!`,
+      })
+    }
+
+    // Captain Cucumber: Conjures a Legendary card discounted by 1 Sun when it deals damage
+    if (
+      (plant.cardId === 'plant_captain_cucumber' || plantTeamUp?.cardId === 'plant_captain_cucumber') &&
+      dmgToZombie > 0 &&
+      updatedPlantHand.length < 10
+    ) {
+      const dummyState: GameState = {
+        ...gameState,
+        plantHand: updatedPlantHand,
+      }
+      const conjureRes = conjureCard(dummyState, 'plants', {
+        count: 1,
+        filter: { rarity: 'Legendary' },
+        costDiscount: 1,
+        sourceName: 'Captain Cucumber',
+      })
+      updatedPlantHand = conjureRes.updatedState.plantHand
+      if (conjureRes.conjuredCards.length > 0) {
+        const conjured = conjureRes.conjuredCards[0]
+        events.push({
+          laneIndex,
+          attackerSide: 'plants',
+          attackerName: 'Captain Cucumber',
+          target: 'minion',
+          targetSide: 'plants',
+          damageDealt: 0,
+          isBlocked: false,
+          isLethal: false,
+          description: `🥒 Captain Cucumber gây sát thương: Triệu hồi (Conjure) lá bài Huyền thoại [${conjured.name}] giảm 1 Sun (Giá: ${conjured.cost})!`,
+        })
+      }
+    }
+
     // Splash Damage (Dark Matter Dragonfruit / Splash Damage trait)
     const splashTrait = plant.traits?.find(t => t.toLowerCase().includes('splash damage'))
     let splashDmg = 0
@@ -780,6 +830,52 @@ export function resolveSingleLaneCombat(
             isBlocked: false,
             isLethal: false,
             description: `🍇 Planet of the Grapes: Rút thêm 1 lá [${drawn.name}]!`,
+          })
+        }
+      }
+
+      // Blooming Heart: Gets +1 Attack when it deals damage
+      if (plant.cardId === 'plant_blooming_heart' && res.actualDamage > 0 && plant.currentHealth > 0) {
+        plant.currentAttack += 1
+        plant.baseAttack += 1
+        events.push({
+          laneIndex,
+          attackerSide: 'plants',
+          attackerName: 'Blooming Heart',
+          target: 'hero',
+          targetSide: 'plants',
+          damageDealt: 0,
+          isBlocked: false,
+          isLethal: false,
+          description: `🌸 Blooming Heart nhận +1 Tấn công sau khi đánh trúng Zombie Hero (hiện là ${plant.currentAttack} ATK)!`,
+        })
+      }
+
+      // Captain Cucumber: Conjures a Legendary card discounted by 1 Sun when it deals damage
+      if (plant.cardId === 'plant_captain_cucumber' && res.actualDamage > 0 && updatedPlantHand.length < 10) {
+        const dummyState: GameState = {
+          ...gameState,
+          plantHand: updatedPlantHand,
+        }
+        const conjureRes = conjureCard(dummyState, 'plants', {
+          count: 1,
+          filter: { rarity: 'Legendary' },
+          costDiscount: 1,
+          sourceName: 'Captain Cucumber',
+        })
+        updatedPlantHand = conjureRes.updatedState.plantHand
+        if (conjureRes.conjuredCards.length > 0) {
+          const conjured = conjureRes.conjuredCards[0]
+          events.push({
+            laneIndex,
+            attackerSide: 'plants',
+            attackerName: 'Captain Cucumber',
+            target: 'hero',
+            targetSide: 'plants',
+            damageDealt: 0,
+            isBlocked: false,
+            isLethal: false,
+            description: `🥒 Captain Cucumber đánh trúng Zombie Hero: Triệu hồi (Conjure) lá bài Huyền thoại [${conjured.name}] giảm 1 Sun (Giá: ${conjured.cost})!`,
           })
         }
       }
@@ -1282,6 +1378,39 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
         })
       }
 
+      // Captain Cucumber: Conjures a Legendary card discounted by 1 Sun when it deals damage
+      if (
+        (plant.cardId === 'plant_captain_cucumber' || plantTeamUp?.cardId === 'plant_captain_cucumber') &&
+        dmgToZombie > 0 &&
+        updatedPlantHand.length < 10
+      ) {
+        const dummyState: GameState = {
+          ...gameState,
+          plantHand: updatedPlantHand,
+        }
+        const conjureRes = conjureCard(dummyState, 'plants', {
+          count: 1,
+          filter: { rarity: 'Legendary' },
+          costDiscount: 1,
+          sourceName: 'Captain Cucumber',
+        })
+        updatedPlantHand = conjureRes.updatedState.plantHand
+        if (conjureRes.conjuredCards.length > 0) {
+          const conjured = conjureRes.conjuredCards[0]
+          events.push({
+            laneIndex: i,
+            attackerSide: 'plants',
+            attackerName: 'Captain Cucumber',
+            target: 'minion',
+            targetSide: 'plants',
+            damageDealt: 0,
+            isBlocked: false,
+            isLethal: false,
+            description: `🥒 Captain Cucumber gây sát thương: Triệu hồi (Conjure) lá bài Huyền thoại [${conjured.name}] giảm 1 Sun (Giá: ${conjured.cost})!`,
+          })
+        }
+      }
+
       // Dusk Lobber: If on an Environment, attacks adjacent lanes as well!
       if (plant.cardId === 'plant_dusk_lobber' && lane.environment && plantCanAttack) {
         const adjIndices = [i - 1, i + 1].filter(idx => idx >= 0 && idx < updatedLanes.length)
@@ -1591,6 +1720,35 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
             isLethal: false,
             description: `🌸 Blooming Heart nhận +1 Tấn công sau khi đánh trúng Zombie Hero (hiện là ${plant.currentAttack} ATK)!`,
           })
+        }
+
+        // Captain Cucumber: Conjures a Legendary card discounted by 1 Sun when it deals damage
+        if (plant.cardId === 'plant_captain_cucumber' && res.actualDamage > 0 && updatedPlantHand.length < 10) {
+          const dummyState: GameState = {
+            ...gameState,
+            plantHand: updatedPlantHand,
+          }
+          const conjureRes = conjureCard(dummyState, 'plants', {
+            count: 1,
+            filter: { rarity: 'Legendary' },
+            costDiscount: 1,
+            sourceName: 'Captain Cucumber',
+          })
+          updatedPlantHand = conjureRes.updatedState.plantHand
+          if (conjureRes.conjuredCards.length > 0) {
+            const conjured = conjureRes.conjuredCards[0]
+            events.push({
+              laneIndex: i,
+              attackerSide: 'plants',
+              attackerName: 'Captain Cucumber',
+              target: 'hero',
+              targetSide: 'plants',
+              damageDealt: 0,
+              isBlocked: false,
+              isLethal: false,
+              description: `🥒 Captain Cucumber đánh trúng Zombie Hero: Triệu hồi (Conjure) lá bài Huyền thoại [${conjured.name}] giảm 1 Sun (Giá: ${conjured.cost})!`,
+            })
+          }
         }
 
         // Double Strike bonus direct attack in open lane

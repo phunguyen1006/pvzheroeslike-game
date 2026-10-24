@@ -5,6 +5,7 @@
 
 import type { GameState, Side, Minion, Card, CombatEvent, HeroState } from './types'
 import { applyHeroDamage, triggerBonusAttack } from './combat'
+import { ALL_CARDS, ZOMBIE_CARDS } from '../data/cards'
 
 export interface AbilityTriggerResult {
   updatedState: GameState
@@ -577,6 +578,13 @@ export function triggerWhenPlayed(
       }
       events.push(`Arm Wrestler thấy Plant xuất hiện cùng làn: Gồng cơ bắp nhận +1/+1 (${lane.zombieMinion.currentAttack}/${lane.zombieMinion.currentHealth})!`)
     }
+  } else if (side === 'zombies') {
+    // Interdimensional Zombie: When you play a Science card (minion or trick): Transforms into a random 3-cost Zombie!
+    if (isScienceZombie(minion)) {
+      const sciRes = triggerWhenSciencePlayed(updatedState, minion, 'zombies', minion.instanceId)
+      updatedState = sciRes.updatedState
+      events.push(...sciRes.events)
+    }
   }
 
   return { updatedState, events }
@@ -665,6 +673,8 @@ export function triggerStartOfTurn(state: GameState, side: Side): AbilityTrigger
   let updatedState: GameState = {
     ...state,
     lanes: state.lanes.map(l => ({ ...l })),
+    plantHand: state.plantHand ? [...state.plantHand] : [],
+    zombieHand: state.zombieHand ? [...state.zombieHand] : [],
   }
   const events: string[] = []
 
@@ -702,6 +712,41 @@ export function triggerStartOfTurn(state: GameState, side: Side): AbilityTrigger
         events.push(`🌱 Doubled Mint nhân đôi chỉ số: Tăng lên ${newAtk} ATK / ${newHp} HP!`)
       }
     })
+
+    // 3. Banana Launcher: "Start of Turn: Add a Banana Bomb to your hand"
+    let bananaLauncherCount = 0
+    updatedState.lanes.forEach(l => {
+      if (l.plantMinion && l.plantMinion.cardId === 'plant_banana_launcher') {
+        bananaLauncherCount += 1
+      }
+      if (l.plantTeamUpMinion && l.plantTeamUpMinion.cardId === 'plant_banana_launcher') {
+        bananaLauncherCount += 1
+      }
+    })
+
+    if (bananaLauncherCount > 0) {
+      const plantHand = [...updatedState.plantHand]
+      for (let b = 0; b < bananaLauncherCount; b++) {
+        if (plantHand.length < 10) {
+          const bananaBombCard: Card = {
+            id: `plant_banana_bomb_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            name: 'Banana Bomb',
+            side: 'plants',
+            cost: 1,
+            attack: 0,
+            health: 0,
+            type: 'trick',
+            image: '/assets/cards/plants/Peashooter.png',
+            traits: [],
+            tribe: 'Banana Trick',
+            description: 'Bắn 1 quả chuối pháo gây 1 sát thương lên một Zombie chỉ định trên sân.',
+          }
+          plantHand.push(bananaBombCard)
+          events.push('🍌 Banana Launcher nạp đạn: Tạo 1 lá Chuối Pháo (Banana Bomb) vào tay bạn!')
+        }
+      }
+      updatedState.plantHand = plantHand
+    }
   }
 
   return { updatedState, events }
@@ -868,7 +913,86 @@ export function triggerWhenTrickPlayed(state: GameState, _trickCard: Card, caste
       updatedState.zombieHand = [...updatedState.zombieHand, treat]
       events.push(`🍬 Trick-or-Treater phát kẹo Treat: Thêm 1 lá [${treat.name}] vào tay Zombie!`)
     }
+
+    // Interdimensional Zombie: When you play a Science card (minion or trick)
+    const isScienceTrick =
+      Boolean(_trickCard.tribe?.toLowerCase().includes('science')) ||
+      _trickCard.name.toLowerCase().includes('science') ||
+      _trickCard.id.toLowerCase().includes('science') ||
+      _trickCard.id === 'zombie_teleport' ||
+      _trickCard.id === 'zombie_rocket_science'
+    if (isScienceTrick) {
+      const sciRes = triggerWhenSciencePlayed(updatedState, _trickCard, 'zombies')
+      updatedState = sciRes.updatedState
+      events.push(...sciRes.events)
+    }
   }
+
+  return { updatedState, events }
+}
+
+/**
+ * Triggered when a Science minion or Trick is played by the Zombie side
+ * Transforms any active Interdimensional Zombie on board into a random 3-cost Zombie
+ */
+export function triggerWhenSciencePlayed(
+  state: GameState,
+  _playedCard: Card | Minion,
+  side: Side,
+  excludeInstanceId?: string
+): AbilityTriggerResult {
+  if (side !== 'zombies') {
+    return { updatedState: state, events: [] }
+  }
+
+  let updatedState: GameState = {
+    ...state,
+    lanes: state.lanes.map(l => ({ ...l })),
+  }
+  const events: string[] = []
+
+  const candidate3CostZombies = ZOMBIE_CARDS.filter(
+    c => c.type === 'zombie' && c.cost === 3
+  )
+  const pool = candidate3CostZombies.length > 0
+    ? candidate3CostZombies
+    : ALL_CARDS.filter(c => c.team === 'zombies' && c.cost === 3)
+
+  updatedState.lanes.forEach(l => {
+    if (
+      l.zombieMinion &&
+      l.zombieMinion.cardId === 'zombie_interdimensional_zombie' &&
+      l.zombieMinion.instanceId !== excludeInstanceId
+    ) {
+      if (pool.length > 0) {
+        const transformedCard = pool[Math.floor(Math.random() * pool.length)]
+        l.zombieMinion = {
+          instanceId: `z_transformed_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          cardId: transformedCard.id,
+          name: transformedCard.name,
+          side: 'zombies',
+          currentAttack: transformedCard.attack,
+          baseAttack: transformedCard.attack,
+          currentHealth: transformedCard.hp ?? (transformedCard as any).health ?? 3,
+          maxHealth: transformedCard.hp ?? (transformedCard as any).health ?? 3,
+          image: transformedCard.image || transformedCard.assetPath || '',
+          traits: transformedCard.traits || [],
+          antiHero: transformedCard.antiHero,
+          armored: transformedCard.armored,
+          bullseye: transformedCard.bullseye,
+          deadly: transformedCard.deadly,
+          frenzy: transformedCard.frenzy,
+          strikethrough: transformedCard.strikethrough,
+          amphibious: transformedCard.amphibious,
+          tribe: transformedCard.tribe,
+          isFrozen: false,
+        }
+        events.push(
+          `🌀 Interdimensional Zombie dịch chuyển chiều không gian khi chơi Science: Biến hình (Transform) thành [${transformedCard.name}] (${transformedCard.attack}/${transformedCard.hp ?? 3})!`
+        )
+      }
+    }
+  })
 
   return { updatedState, events }
 }

@@ -1,10 +1,40 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { soundManager } from '../audio/SoundManager'
 import { HERO_EMOTE_OPTIONS } from '../components/hero/HeroEmotesBar'
 
+class MockLocalStorage {
+  private store: Record<string, string> = {}
+  getItem(key: string): string | null {
+    return this.store[key] ?? null
+  }
+  setItem(key: string, value: string): void {
+    this.store[key] = value
+  }
+  removeItem(key: string): void {
+    delete this.store[key]
+  }
+  clear(): void {
+    this.store = {}
+  }
+}
+
+const mockStorage = new MockLocalStorage()
+Object.defineProperty(globalThis, 'localStorage', {
+  value: mockStorage,
+  writable: true,
+  configurable: true,
+})
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'localStorage', {
+    value: mockStorage,
+    writable: true,
+    configurable: true,
+  })
+}
+
 describe('Sound Settings & Hero Emotes System', () => {
   beforeEach(() => {
-    localStorage.clear()
+    mockStorage.clear()
     soundManager.setSettings({
       masterVolume: 80,
       bgmVolume: 60,
