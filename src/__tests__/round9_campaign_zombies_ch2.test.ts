@@ -53,8 +53,8 @@ describe('Round 9: Zombie Campaign Chapter 2 & Advanced Deck Builder', () => {
       expect(ZOMBIE_CAMPAIGN_CHAPTERS.length).toBe(2)
 
       const ch2 = ZOMBIE_CAMPAIGN_CHAPTERS[1]
-      expect(ch2.id).toBe('zombie_ch_2')
-      expect(ch2.title).toContain('Chiến Tuyến Tương Lai')
+      expect(ch2.id).toBe(2)
+      expect(ch2.title).toContain('CHIẾN TUYẾN TƯƠNG LAI')
       expect(ch2.missions.length).toBe(5)
     })
 
@@ -72,9 +72,9 @@ describe('Round 9: Zombie Campaign Chapter 2 & Advanced Deck Builder', () => {
     it('should verify Mission Z6 (Solar Flare - Bùng Cháy Năng Lượng)', () => {
       const z6 = ZOMBIE_CHAPTER_2_MISSIONS.find((m) => m.id === 'zombie_mission_6')!
       expect(z6).toBeDefined()
-      expect(z6.name).toContain('Bùng Cháy Năng Lượng')
-      expect(z6.plantHero.id).toBe('solar_flare')
-      expect(z6.rule.specialRuleDescription).toContain('Pair Pearadise')
+      expect(z6.title).toContain('Bùng Cháy Năng Lượng')
+      expect(z6.bossHeroId).toBe('hero_solar_flare')
+      expect(z6.rule.description).toContain('Pair Pearadise')
       expect(z6.rule.startingSunBonus).toBe(1)
 
       const lanes = buildMissionLanes(z6)
@@ -86,46 +86,46 @@ describe('Round 9: Zombie Campaign Chapter 2 & Advanced Deck Builder', () => {
     it('should verify Mission Z7 (Wall-Knight - Pháo Đài Kiên Cố)', () => {
       const z7 = ZOMBIE_CHAPTER_2_MISSIONS.find((m) => m.id === 'zombie_mission_7')!
       expect(z7).toBeDefined()
-      expect(z7.name).toContain('Pháo Đài Kiên Cố')
-      expect(z7.plantHero.id).toBe('wall_knight')
-      expect(z7.rule.specialRuleDescription).toContain('Spikeweed Sector')
+      expect(z7.title).toContain('Pháo Đài Kiên Cố')
+      expect(z7.bossHeroId).toBe('hero_wall_knight')
+      expect(z7.rule.description).toContain('Spikeweed Sector')
 
       const lanes = buildMissionLanes(z7)
       expect(lanes[1].environment).toBeDefined()
       expect(lanes[1].environment?.id).toBe('plant_spikeweed_sector')
-      expect(lanes[1].plantMinion).toBeDefined()
-      expect(lanes[1].plantMinion?.name).toBe('Wall-Nut')
+      expect(lanes[0].plantMinion).toBeDefined()
+      expect(lanes[0].plantMinion?.name).toBe('Wall-Nut')
     })
 
     it('should verify Mission Z8 (Spudow - Mìn Nổ Bát Ngát)', () => {
       const z8 = ZOMBIE_CHAPTER_2_MISSIONS.find((m) => m.id === 'zombie_mission_8')!
       expect(z8).toBeDefined()
-      expect(z8.name).toContain('Mìn Nổ Bát Ngát')
-      expect(z8.plantHero.id).toBe('spudow')
-      expect(z8.rule.startingBrainBonus).toBe(1)
+      expect(z8.title).toContain('Mìn Nổ Bát Ngát')
+      expect(z8.bossHeroId).toBe('hero_spudow')
+      expect(z8.rule.startingBrainsBonus).toBe(1)
 
       const lanes = buildMissionLanes(z8)
-      expect(lanes[1].environment?.id).toBe('plant_hot_lava')
-      expect(lanes[3].environment?.id).toBe('plant_hot_lava')
+      expect(lanes[0].environment?.id).toBe('plant_hot_lava')
+      expect(lanes[2].environment?.id).toBe('plant_hot_lava')
     })
 
     it('should verify Mission Z9 (Chompzilla - Đầm Lầy Nuốt Chửng)', () => {
       const z9 = ZOMBIE_CHAPTER_2_MISSIONS.find((m) => m.id === 'zombie_mission_9')!
       expect(z9).toBeDefined()
-      expect(z9.name).toContain('Đầm Lầy Nuốt Chửng')
-      expect(z9.plantHero.id).toBe('chompzilla')
+      expect(z9.title).toContain('Đầm Lầy Nuốt Chửng')
+      expect(z9.bossHeroId).toBe('hero_chompzilla')
 
       const lanes = buildMissionLanes(z9)
-      expect(lanes[2].environment?.id).toBe('plant_venus_flytrap_planet')
+      expect(lanes[1].environment?.id).toBe('plant_venus_flytrap_planet')
     })
 
     it('should verify Mission Z10 Boss (Citron - Bức Tường Bất Khả Xâm Phạm)', () => {
       const z10 = ZOMBIE_CHAPTER_2_MISSIONS.find((m) => m.id === 'zombie_mission_10')!
       expect(z10).toBeDefined()
-      expect(z10.name).toContain('Bức Tường Bất Khả Xâm Phạm')
-      expect(z10.plantHero.id).toBe('citron')
-      expect(z10.zombieHero.id).toBe('z_mech')
-      expect(z10.rule.startingBrainBonus).toBe(2)
+      expect(z10.title).toContain('Bức Tường Bất Khả Xâm Phạm')
+      expect(z10.bossHeroId).toBe('hero_citron')
+      expect(z10.playerHeroId).toBe('hero_zmech')
+      expect(z10.rule.startingBrainsBonus).toBe(2)
 
       const lanes = buildMissionLanes(z10)
       expect(lanes[4].plantMinion).toBeDefined()
@@ -134,18 +134,18 @@ describe('Round 9: Zombie Campaign Chapter 2 & Advanced Deck Builder', () => {
 
     it('should correctly calculate stars for Zombie Chapter 2 missions', () => {
       const z6 = ZOMBIE_CHAPTER_2_MISSIONS[0]
-      // Victory with 16 HP in 6 turns -> 3 stars (win, hp >= 15, turns <= 7)
-      expect(calculateMissionStars(z6, true, 16, 6)).toBe(3)
-      // Victory with 12 HP in 8 turns -> 2 stars (win, hp >= 10, but turns > 7)
-      expect(calculateMissionStars(z6, true, 12, 8)).toBe(2)
+      // Victory with 16 HP in 6 turns -> 3 stars (win, hp >= 12, turns <= 9)
+      expect(calculateMissionStars(z6, 'zombies', 16, 6)).toBe(3)
+      // Victory with 12 HP in 10 turns -> 2 stars (win, hp >= 12, but turns > 9)
+      expect(calculateMissionStars(z6, 'zombies', 12, 10)).toBe(2)
       // Loss -> 0 stars
-      expect(calculateMissionStars(z6, false, 0, 10)).toBe(0)
+      expect(calculateMissionStars(z6, 'plants', 0, 10)).toBe(0)
 
       const z10 = ZOMBIE_CHAPTER_2_MISSIONS[4]
-      // Boss victory with 16 HP in 7 turns -> 3 stars (win, hp >= 15, turns <= 8)
-      expect(calculateMissionStars(z10, true, 16, 7)).toBe(3)
-      // Boss victory with 8 HP in 10 turns -> 1 star (win only)
-      expect(calculateMissionStars(z10, true, 8, 10)).toBe(1)
+      // Boss victory with 16 HP in 7 turns -> 3 stars (win, hp >= 15, clear chapter)
+      expect(calculateMissionStars(z10, 'zombies', 16, 7)).toBe(3)
+      // Boss victory with 8 HP in 10 turns -> 2 star (win + clear chapter)
+      expect(calculateMissionStars(z10, 'zombies', 8, 10)).toBe(2)
     })
   })
 
