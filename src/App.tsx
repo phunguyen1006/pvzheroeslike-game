@@ -15,6 +15,7 @@ import { CombatLogDrawer } from './components/ui/CombatLogDrawer'
 import { GameOverModal } from './components/ui/GameOverModal'
 import { SuperBlockModal } from './components/ui/SuperBlockModal'
 import { MulliganModal } from './components/ui/MulliganModal'
+import { PhaseBanner } from './components/ui/PhaseBanner'
 import { MainMenu } from './components/screens/MainMenu'
 import { HeroSelect } from './components/screens/HeroSelect'
 import { DeckBuilder } from './components/screens/DeckBuilder'
@@ -522,6 +523,15 @@ export function App() {
     <div className={`pvz-game-application ${isScreenShaking ? 'is-screen-shaking' : ''}`}>
       {/* Centered Vertical Battle Arena Stage */}
       <div className="pvz-arena-stage">
+        {/* Dynamic Comic Phase Transition Banner & Top Phase Flow */}
+        <PhaseBanner
+          phase={gameState.phase}
+          turn={gameState.turn}
+          isCombatResolving={isCombatResolving}
+          onNextPhase={handleNextPhase}
+          onStartCombat={handleStartCombat}
+        />
+
         <main className="pvz-vertical-stadium">
           {/* 1. Top Zone: Opponent Arena (Super Brainz / Zombie Hero) */}
           <HeroTopArena

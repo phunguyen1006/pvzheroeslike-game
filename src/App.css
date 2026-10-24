@@ -5857,6 +5857,730 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
+/* ========================================================
+   MULLIGAN SCREEN (BỐC BÀI ĐẦU TRẬN & 3D CARD FLIP)
+   ======================================================== */
+
+.mulligan-screen-backdrop {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.92) 0%, rgba(2, 6, 23, 0.98) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1250;
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+  animation: mulliganFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes mulliganFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.mulligan-ambient-rays {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1400px;
+  height: 1400px;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(34, 197, 94, 0.12) 0deg 12deg,
+    rgba(234, 179, 8, 0.1) 12deg 24deg,
+    transparent 24deg 36deg
+  );
+  border-radius: 50%;
+  animation: mulliganRaysSpin 40s linear infinite;
+  mask-image: radial-gradient(circle at center, black 25%, transparent 70%);
+  -webkit-mask-image: radial-gradient(circle at center, black 25%, transparent 70%);
+  pointer-events: none;
+}
+
+@keyframes mulliganRaysSpin {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.mulligan-screen-card {
+  position: relative;
+  background: linear-gradient(165deg, #1e293b 0%, #0f172a 55%, #020617 100%);
+  border-radius: 30px;
+  padding: 28px 36px 36px;
+  max-width: 780px;
+  width: 94%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  border: 3.5px solid #22c55e;
+  box-shadow:
+    0 0 60px rgba(34, 197, 94, 0.35),
+    0 25px 60px rgba(0, 0, 0, 0.95),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  z-index: 10;
+  animation: mulliganPopupBounce 0.42s cubic-bezier(0.18, 0.89, 0.32, 1.25) forwards;
+}
+
+@keyframes mulliganPopupBounce {
+  0% { transform: scale(0.7) translateY(40px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.mulligan-screen-card.zombies-theme {
+  border-color: #a855f7;
+  box-shadow:
+    0 0 60px rgba(168, 85, 247, 0.4),
+    0 25px 60px rgba(0, 0, 0, 0.95),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25);
+}
+
+/* Comic Header */
+.mulligan-comic-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+
+.mulligan-title-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.25), transparent);
+  padding: 4px 24px;
+}
+
+.ribbon-icon {
+  font-size: 2rem;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.8));
+  animation: ribbonIconBob 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes ribbonIconBob {
+  0% { transform: translateY(0) rotate(-4deg); }
+  100% { transform: translateY(-5px) rotate(4deg); }
+}
+
+.mulligan-comic-title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 2.1rem;
+  letter-spacing: 0.05em;
+  background: linear-gradient(180deg, #ffffff 0%, #bbf7d0 45%, #4ade80 80%, #16a34a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.9));
+  margin: 0;
+  transform: skewX(-4deg);
+}
+
+.zombies-theme .mulligan-comic-title {
+  background: linear-gradient(180deg, #ffffff 0%, #e9d5ff 45%, #c084fc 80%, #9333ea 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.mulligan-sub-guidance {
+  font-size: 0.94rem;
+  color: #cbd5e1;
+  margin: 0;
+  max-width: 580px;
+  line-height: 1.45;
+}
+
+.mulligan-sub-guidance strong {
+  color: #facc15;
+}
+
+/* 4 Cards Row Stage with 3D Flip */
+.mulligan-cards-stage {
+  perspective: 1200px;
+  width: 100%;
+}
+
+.mulligan-cards-row {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.mulligan-card-slot-wrap {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  perspective: 1000px;
+}
+
+.mulligan-card-slot-wrap:hover {
+  transform: translateY(-8px) scale(1.04);
+}
+
+/* 3D Flipper Box */
+.card-flipper-3d {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.is-card-flipping .card-flipper-3d {
+  transform: rotateY(180deg);
+}
+
+.card-flipper-front,
+.card-flipper-back {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 14px;
+}
+
+.card-flipper-front {
+  position: relative;
+  transform: rotateY(0deg);
+}
+
+.card-flipper-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 3px solid #facc15;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pvz-card-back-pattern {
+  width: 80%;
+  height: 80%;
+  border: 2px dashed rgba(250, 204, 21, 0.5);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(234, 179, 8, 0.2) 0%, transparent 70%);
+}
+
+.card-back-emblem {
+  font-size: 2.8rem;
+  animation: emblemPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes emblemPulse {
+  0% { transform: scale(0.9); }
+  100% { transform: scale(1.15); }
+}
+
+/* Marked for Redraw */
+.mulligan-card-slot-wrap.is-marked-redraw .card-flipper-front {
+  filter: brightness(0.65) saturate(0.7);
+  opacity: 0.82;
+}
+
+.mulligan-cross-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, rgba(239, 68, 68, 0.65) 0%, rgba(185, 28, 28, 0.85) 100%);
+  border-radius: 14px;
+  border: 3px solid #ef4444;
+  box-shadow:
+    0 0 25px rgba(239, 68, 68, 0.8),
+    inset 0 0 15px rgba(0, 0, 0, 0.8);
+  animation: crossOverlayPop 0.24s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+  z-index: 20;
+}
+
+@keyframes crossOverlayPop {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.cross-badge-circle {
+  width: 44px;
+  height: 44px;
+  background: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+  margin-bottom: 6px;
+}
+
+.cross-badge-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.cross-badge-label {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.88rem;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  text-shadow: 0 2px 4px #000;
+  text-transform: uppercase;
+}
+
+/* Marked to Keep */
+.mulligan-card-slot-wrap.is-marked-keep .card-flipper-front {
+  filter: drop-shadow(0 0 12px rgba(34, 197, 94, 0.45));
+}
+
+.mulligan-keep-pill {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  border: 1.5px solid #86efac;
+  border-radius: 999px;
+  padding: 3px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.7);
+  z-index: 15;
+}
+
+.keep-check-icon {
+  font-weight: 900;
+  color: #ffffff;
+  font-size: 0.82rem;
+}
+
+.keep-label {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.74rem;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+}
+
+/* Superpower Guaranteed Showcase */
+.mulligan-superpower-showcase {
+  position: relative;
+  background: rgba(15, 23, 42, 0.85);
+  border: 2px solid #eab308;
+  border-radius: 18px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 620px;
+  box-shadow:
+    0 0 20px rgba(234, 179, 8, 0.25),
+    inset 0 1px 3px rgba(255, 255, 255, 0.2);
+}
+
+.sp-showcase-badge {
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #ca8a04 0%, #a16207 100%);
+  border: 1.5px solid #fef08a;
+  border-radius: 999px;
+  padding: 2px 10px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
+}
+
+.sp-icon {
+  font-size: 0.82rem;
+}
+
+.sp-badge-text {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: #fef08a;
+}
+
+.sp-showcase-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.sp-card-thumbnail {
+  width: 44px;
+  height: 44px;
+  background: #020617;
+  border: 2px solid #facc15;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.4);
+}
+
+.sp-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.sp-fallback-icon {
+  font-size: 1.5rem;
+}
+
+.sp-details-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.sp-name-line {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.05rem;
+  color: #facc15;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.sp-desc-line {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  line-height: 1.35;
+}
+
+.sp-fixed-tag {
+  background: rgba(234, 179, 8, 0.2);
+  border: 1px solid #eab308;
+  border-radius: 8px;
+  padding: 4px 10px;
+  flex-shrink: 0;
+}
+
+.sp-fixed-tag span {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.72rem;
+  color: #fde047;
+  letter-spacing: 0.05em;
+}
+
+/* Mulligan Action Bar & Big Action Button */
+.mulligan-actions-bar {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.mulligan-confirm-action-btn {
+  position: relative;
+  background: linear-gradient(180deg, #4ade80 0%, #22c55e 35%, #16a34a 75%, #15803d 100%);
+  border: 3.5px solid #ffffff;
+  border-radius: 20px;
+  padding: 16px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  cursor: pointer;
+  box-shadow:
+    0 10px 30px rgba(22, 163, 74, 0.55),
+    0 5px 15px rgba(0, 0, 0, 0.8),
+    inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: hidden;
+  width: 100%;
+  max-width: 520px;
+}
+
+.mulligan-confirm-action-btn.has-redraws {
+  background: linear-gradient(180deg, #facc15 0%, #eab308 35%, #ca8a04 75%, #a16207 100%);
+  box-shadow:
+    0 10px 30px rgba(202, 138, 4, 0.55),
+    0 5px 15px rgba(0, 0, 0, 0.8),
+    inset 0 2px 4px rgba(255, 255, 255, 0.6);
+}
+
+.mulligan-confirm-action-btn:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow:
+    0 14px 38px rgba(34, 197, 94, 0.8),
+    0 6px 18px rgba(0, 0, 0, 0.9),
+    inset 0 2px 6px rgba(255, 255, 255, 0.8);
+}
+
+.mulligan-confirm-action-btn.has-redraws:hover:not(:disabled) {
+  box-shadow:
+    0 14px 38px rgba(250, 204, 21, 0.8),
+    0 6px 18px rgba(0, 0, 0, 0.9),
+    inset 0 2px 6px rgba(255, 255, 255, 0.8);
+}
+
+.mulligan-confirm-action-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+
+.btn-sheen-sweep {
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 70%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  transform: skewX(-25deg);
+  animation: buttonShineSweep 2.5s infinite;
+  pointer-events: none;
+}
+
+.confirm-btn-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.confirm-btn-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.confirm-main-title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85);
+}
+
+.has-redraws .confirm-main-title {
+  color: #451a03;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.confirm-sub-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: -1px;
+}
+
+.has-redraws .confirm-sub-title {
+  color: #78350f;
+}
+
+
+/* ========================================================
+   COMIC PHASE BANNER (DẢI BANNER COMIC TRƯỢT NGANG MÀN HÌNH)
+   ======================================================== */
+
+.comic-phase-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1300;
+  pointer-events: none;
+  overflow: hidden;
+  animation: comicOverlayFade 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes comicOverlayFade {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Comic Action Speed Lines */
+.comic-speed-lines {
+  position: absolute;
+  inset: 0;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.12) 0deg 8deg,
+    transparent 8deg 24deg
+  );
+  mask-image: radial-gradient(circle at center, transparent 30%, black 85%);
+  -webkit-mask-image: radial-gradient(circle at center, transparent 30%, black 85%);
+  animation: speedLinesZoom 1.5s ease-out forwards;
+}
+
+@keyframes speedLinesZoom {
+  0% { transform: scale(0.6); opacity: 0; }
+  15% { transform: scale(1.1); opacity: 0.9; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+/* Comic Banner Ribbon (Trượt ngang màn hình & Rung chuyển) */
+.comic-banner-ribbon {
+  position: relative;
+  width: 120vw;
+  margin-left: -10vw;
+  padding: 22px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: skewX(-10deg) rotate(-1.5deg);
+  border-top: 5px solid #000000;
+  border-bottom: 5px solid #000000;
+  box-shadow:
+    0 15px 45px rgba(0, 0, 0, 0.9),
+    inset 0 4px 10px rgba(255, 255, 255, 0.5),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.6);
+  animation: comicRibbonSlide 1.5s cubic-bezier(0.18, 0.89, 0.32, 1.25) forwards;
+  overflow: hidden;
+}
+
+@keyframes comicRibbonSlide {
+  0% {
+    transform: translateX(110vw) skewX(-10deg) rotate(-1.5deg) scale(0.85);
+    opacity: 0;
+  }
+  20% {
+    transform: translateX(0) skewX(-10deg) rotate(-1.5deg) scale(1.08);
+    opacity: 1;
+  }
+  30% {
+    transform: translateX(0) skewX(-10deg) rotate(-1.5deg) scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: translateX(0) skewX(-10deg) rotate(-1.5deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-110vw) skewX(-10deg) rotate(-1.5deg) scale(0.9);
+    opacity: 0;
+  }
+}
+
+/* Thematic Ribbon Colors */
+.comic-banner-ribbon.theme-zombie-play {
+  background: linear-gradient(90deg, #581c87 0%, #7e22ce 25%, #9333ea 50%, #7e22ce 75%, #581c87 100%);
+  border-color: #c084fc;
+}
+
+.comic-banner-ribbon.theme-plant-play {
+  background: linear-gradient(90deg, #14532d 0%, #16a34a 25%, #22c55e 50%, #16a34a 75%, #14532d 100%);
+  border-color: #facc15;
+}
+
+.comic-banner-ribbon.theme-zombie-tricks {
+  background: linear-gradient(90deg, #7c2d12 0%, #ea580c 25%, #f97316 50%, #ea580c 75%, #7c2d12 100%);
+  border-color: #fbbf24;
+}
+
+.comic-banner-ribbon.theme-fight {
+  background: linear-gradient(90deg, #7f1d1d 0%, #dc2626 25%, #ef4444 50%, #dc2626 75%, #7f1d1d 100%);
+  border-color: #fef08a;
+  box-shadow:
+    0 0 60px rgba(239, 68, 68, 0.8),
+    0 20px 50px rgba(0, 0, 0, 0.95);
+}
+
+.comic-ribbon-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: comicShineSweep 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes comicShineSweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.comic-banner-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  transform: skewX(10deg); /* Counteract parent skew */
+  z-index: 2;
+}
+
+.comic-phase-icon,
+.comic-phase-icon-tail {
+  font-size: 3.5rem;
+  line-height: 1;
+  filter: drop-shadow(4px 4px 0 #000) drop-shadow(0 0 20px rgba(255, 255, 255, 0.8));
+  animation: comicIconBounce 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes comicIconBounce {
+  0% { transform: scale(0.9) rotate(-6deg); }
+  100% { transform: scale(1.18) rotate(6deg); }
+}
+
+.comic-text-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.comic-phase-title {
+  font-family: var(--font-display);
+  font-weight: 950;
+  font-size: 3.4rem;
+  letter-spacing: 0.08em;
+  margin: 0;
+  line-height: 1;
+  color: #ffffff;
+  text-transform: uppercase;
+  text-shadow:
+    5px 5px 0 #000000,
+    -3px -3px 0 #000000,
+    3px -3px 0 #000000,
+    -3px 3px 0 #000000,
+    0 10px 24px rgba(0, 0, 0, 0.9);
+  animation: comicTitlePulse 0.8s ease-in-out infinite alternate;
+}
+
+.theme-fight .comic-phase-title {
+  color: #fef08a;
+  text-shadow:
+    6px 6px 0 #7f1d1d,
+    -3px -3px 0 #000,
+    3px -3px 0 #000,
+    -3px 3px 0 #000,
+    0 0 30px #f59e0b;
+}
+
+@keyframes comicTitlePulse {
+  0% { transform: scale(0.98); }
+  100% { transform: scale(1.05); }
+}
+
+.comic-phase-subtitle {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  text-shadow: 2px 2px 0 #000000, -1px -1px 0 #000000;
+  margin-top: 4px;
+}
+
+
 
 
 
