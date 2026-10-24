@@ -371,6 +371,195 @@ export const EVENT_SHOWCASE_LIST: EventShowcaseConfig[] = [
 
 export const PUZZLE_STORAGE_KEY = 'pvz_puzzle_party_completed_v1'
 export const SHOWCASE_STORAGE_KEY = 'pvz_event_showcase_completed_v1'
+export const DAILY_CHALLENGES_STORAGE_KEY = 'pvz_daily_challenges_v1'
+
+export interface DailyChallengeItem {
+  id: string
+  title: string
+  description: string
+  targetCount: number
+  currentCount: number
+  rewardGems: number
+  rewardCoins: number
+  isCompleted: boolean
+  isClaimed: boolean
+  metricType: 'win_match' | 'deal_hero_damage' | 'play_trick' | 'play_minion'
+}
+
+export interface DailyChallengesData {
+  date: string
+  challenges: DailyChallengeItem[]
+  lastUpdated: string
+}
+
+export function createDefaultDailyChallenges(dateStr: string): DailyChallengesData {
+  return {
+    date: dateStr,
+    challenges: [
+      {
+        id: `daily_win_${dateStr}`,
+        title: 'Chiến Binh Bất Bại',
+        description: 'Chiến thắng 1 trận đấu bất kỳ trong ngày',
+        targetCount: 1,
+        currentCount: 0,
+        rewardGems: 60,
+        rewardCoins: 250,
+        isCompleted: false,
+        isClaimed: false,
+        metricType: 'win_match',
+      },
+      {
+        id: `daily_dmg_${dateStr}`,
+        title: 'Sức Mạnh Công Phá',
+        description: 'Gây tổng cộng 20 sát thương lên Hero đối phương',
+        targetCount: 20,
+        currentCount: 0,
+        rewardGems: 80,
+        rewardCoins: 350,
+        isCompleted: false,
+        isClaimed: false,
+        metricType: 'deal_hero_damage',
+      },
+      {
+        id: `daily_trick_${dateStr}`,
+        title: 'Bậc Thầy Biến Hóa',
+        description: 'Sử dụng 3 lá bài Phép (Tricks) trong các trận đấu',
+        targetCount: 3,
+        currentCount: 0,
+        rewardGems: 70,
+        rewardCoins: 300,
+        isCompleted: false,
+        isClaimed: false,
+        metricType: 'play_trick',
+      },
+    ],
+    lastUpdated: new Date().toISOString(),
+  }
+}
+
+export function loadDailyChallenges(): DailyChallengesData {
+  try {
+    const today = new Date().toISOString().slice(0, 10)
+    if (typeof localStorage === 'undefined') return createDefaultDailyChallenges(today)
+    const raw = localStorage.getItem(DAILY_CHALLENGES_STORAGE_KEY)
+    if (!raw) {
+      const initData = createDefaultDailyChallenges(today)
+      saveDailyChallenges(initData)
+      return initData
+    }
+    const data: DailyChallengesData = JSON.parse(raw)
+    if (data.date !== today) {
+      const freshData = createDefaultDailyChallenges(today)
+      saveDailyChallenges(freshData)
+      return freshData
+    }
+    return data
+  } catch (err) {
+    console.error('Failed to load daily challenges', err)
+    return createDefaultDailyChallenges(new Date().toISOString().slice(0, 10))
+  }
+}
+
+export function saveDailyChallenges(data: DailyChallengesData): void {
+  try {
+    if (typeof localStorage === 'undefined') return
+    localStorage.setItem(DAILY_CHALLENGES_STORAGE_KEY, JSON.stringify(data))
+  } catch (err) {
+    console.error('Failed to save daily challenges', err)
+  }
+}
+
+export function updateDailyChallengesOnMatchOver(options: {
+  winner: Side | null
+  playerSide: Side
+  damageDealtToEnemyHero?: number
+  tricksPlayed?: number
+  minionsPlayed?: number
+}): { updated: boolean; newlyCompletedCount: number } {
+  const data = loadDailyChallenges()
+  let updated = false
+  let newlyCompletedCount = 0
+
+  const isWin = options.winner === options.playerSide
+  const heroDmg = options.damageDealtToEnemyHero || 0
+  const tricks = options.tricksPlayed || 0
+  const minions = options.minionsPlayed || 0
+
+  data.challenges.forEach((challenge) => {
+    if (challenge.isCompleted) return
+
+    let increment = 0
+    if (challenge.metricType === 'win_match' && isWin) {
+      increment = 1
+    } else if (challenge.metricType === 'deal_hero_damage') {
+      increment = heroDmg
+    } else if (challenge.metricType === 'play_trick') {
+      increment = tricks
+    } else if (challenge.metricType === 'play_minion') {
+      increment = minions
+    }
+
+    if (increment > 0) {
+      challenge.currentCount = Math.min(challenge.targetCount, challenge.currentCount + increment)
+      updated = true
+      if (challenge.currentCount >= challenge.targetCount) {
+        challenge.isCompleted = true
+        newlyCompletedCount++
+      }
+    }
+  })
+
+  if (updated) {
+    data.lastUpdated = new Date().toISOString()
+    saveDailyChallenges(data)
+  }
+
+  return { updated, newlyCompletedCount }
+}
+
+export function claimDailyChallengeReward(challengeId: string): {
+  success: boolean
+  gemsAwarded: number
+  coinsAwarded: number
+} | null {
+  const data = loadDailyChallenges()
+  const challenge = data.challenges.find((c) => c.id === challengeId)
+  if (!challenge || !challenge.isCompleted || challenge.isClaimed) return null
+
+  challenge.isClaimed = true
+  data.lastUpdated = new Date().toISOString()
+  saveDailyChallenges(data)
+
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const currentGems = Number(localStorage.getItem('pvz_player_gems') || '0')
+      localStorage.setItem('pvz_player_gems', String(currentGems + challenge.rewardGems))
+
+      const currentCoins = Number(localStorage.getItem('pvz_player_coins') || '0')
+      localStorage.setItem('pvz_player_coins', String(currentCoins + challenge.rewardCoins))
+    }
+  } catch (err) {
+    console.error('Failed to update wallet for daily challenge', err)
+  }
+
+  return {
+    success: true,
+    gemsAwarded: challenge.rewardGems,
+    coinsAwarded: challenge.rewardCoins,
+  }
+}
+
+export function getDailyChallengesBadgeCount(): {
+  readyToClaimCount: number
+  pendingCount: number
+  totalUncompleted: number
+} {
+  const data = loadDailyChallenges()
+  const readyToClaimCount = data.challenges.filter((c) => c.isCompleted && !c.isClaimed).length
+  const pendingCount = data.challenges.filter((c) => !c.isCompleted).length
+  const totalUncompleted = readyToClaimCount + pendingCount
+  return { readyToClaimCount, pendingCount, totalUncompleted }
+}
 
 export function loadCompletedPuzzles(): string[] {
   try {

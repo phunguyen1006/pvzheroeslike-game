@@ -11,6 +11,9 @@ export interface MinionSlotProps {
   isEligibleTarget?: boolean
   unmetReason?: string
   isLanding?: boolean
+  isAttacking?: boolean
+  isHit?: boolean
+  isDying?: boolean
   onClick?: () => void
   onDropCard?: (cardId: string) => void
   onInspect?: (minion: MinionType) => void
@@ -24,6 +27,9 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
   isEligibleTarget = false,
   unmetReason,
   isLanding = false,
+  isAttacking = false,
+  isHit = false,
+  isDying = false,
   onClick,
   onDropCard,
   onInspect,
@@ -179,15 +185,25 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
     onClick?.()
   }
 
+  const isAttackingNow = Boolean(minion.isAttacking || isAttacking)
+  const isHitNow = Boolean(minion.isHit || isHit)
+  const isDyingNow = Boolean(isDying)
+
   return (
     <div
       className={`minion-board-slot occupied-minion-slot ${side}-slot ${
         isGravestone ? 'gravestone-slot' : ''
       } ${
         isTeamUp ? 'teamup-slot' : ''
-      } ${minion.isFrozen ? 'is-frozen-slot' : ''} ${minion.isHit ? 'is-hit-pulse' : ''} ${
-        minion.isAttacking ? 'is-attacking-lunge' : ''
-      } ${isLanding ? 'is-minion-landing' : ''} ${isShattering ? 'gravestone-shattering' : ''}`}
+      } ${minion.isFrozen ? 'is-frozen-slot' : ''} ${isHitNow ? 'is-hit-pulse' : ''} ${
+        isAttackingNow
+          ? isPlant
+            ? 'is-attacking-lunge-up'
+            : 'is-attacking-lunge-down'
+          : ''
+      } ${isDyingNow ? 'is-dying-scatter' : ''} ${
+        isLanding ? 'is-minion-landing' : ''
+      } ${isShattering ? 'gravestone-shattering' : ''}`}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
       onPointerDown={handlePointerDown}
@@ -271,6 +287,20 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
               <div className="gravestone-stone-chunk chunk-4">🪨</div>
               <div className="gravestone-stone-chunk chunk-5">💨</div>
               <div className="gravestone-shatter-dust" />
+            </div>
+          )}
+
+          {/* Minion Death Explode & Scatter VFX with particles */}
+          {isDyingNow && (
+            <div className="minion-death-scatter-container" aria-hidden="true">
+              <div className="death-shockwave-ring" />
+              <div className="death-dust-smoke" />
+              <div className="death-particle p1">💥</div>
+              <div className="death-particle p2">✨</div>
+              <div className="death-particle p3">💨</div>
+              <div className="death-particle p4">💥</div>
+              <div className="death-particle p5">✨</div>
+              <div className="death-particle p6">💨</div>
             </div>
           )}
 

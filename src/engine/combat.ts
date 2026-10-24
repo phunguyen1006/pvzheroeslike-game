@@ -1134,9 +1134,17 @@ export function resolveSingleLaneCombat(
     winner = finalState.winner
   }
 
+  const now = Date.now()
+  const round = gameState.turn ?? 1
+  const stampedEvents: CombatEvent[] = events.map(e => ({
+    timestamp: e.timestamp ?? now,
+    roundNumber: e.roundNumber ?? round,
+    ...e,
+  }))
+
   return {
     updatedState: finalState,
-    events,
+    events: stampedEvents,
     hasSuperBlock: finalState.pendingSuperBlock !== null && finalState.pendingSuperBlock !== gameState.pendingSuperBlock,
     winner,
   }
@@ -2050,6 +2058,14 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
     winner = 'plants'
   }
 
+  const now = Date.now()
+  const round = gameState.turn ?? 1
+  const stampedEvents: CombatEvent[] = events.map(e => ({
+    timestamp: e.timestamp ?? now,
+    roundNumber: e.roundNumber ?? round,
+    ...e,
+  }))
+
   return {
     updatedState: {
       ...gameState,
@@ -2065,7 +2081,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
       pendingSuperBlock,
     },
     result: {
-      events,
+      events: stampedEvents,
       plantHeroDamageTaken,
       zombieHeroDamageTaken,
       winner,
@@ -2399,7 +2415,42 @@ export function triggerBonusAttack(
   updatedState.pendingSuperBlock = pendingSuperBlock
   updatedState.combatLog = [...logs, ...updatedState.combatLog]
 
-  return { updatedState, events, logs }
+  const now = Date.now()
+  const round = state.turn ?? 1
+  const stampedEvents: CombatEvent[] = events.map(e => ({
+    timestamp: e.timestamp ?? now,
+    roundNumber: e.roundNumber ?? round,
+    ...e,
+  }))
+
+  return { updatedState, events: stampedEvents, logs }
 }
 
 export const executeBonusAttack = triggerBonusAttack
+
+/**
+ * Formats an array of CombatEvents into human-readable log summaries.
+ */
+export function formatCombatLog(events: CombatEvent[]): string[] {
+  if (!events || events.length === 0) return []
+
+  return events.map((event) => {
+    const roundPrefix = event.roundNumber !== undefined ? `[Lượt ${event.roundNumber}] ` : ''
+    const lanePrefix = event.laneIndex >= 0 ? `[Làn ${event.laneIndex + 1}] ` : ''
+    const targetName = event.target === 'hero'
+      ? (event.targetSide === 'plants' ? 'Plant Hero' : 'Zombie Hero')
+      : 'Minion'
+
+    if (event.isBlocked) {
+      return `${roundPrefix}${lanePrefix}🛡️ ${event.attackerName} (${event.attackerSide}) tấn công ${targetName} nhưng đã bị Chặn đòn (Blocked)!`
+    }
+
+    if (event.damageDealt > 0) {
+      const lethalNote = event.isLethal ? ' (Hạ gục!)' : ''
+      const descNote = event.description ? ` - ${event.description}` : ''
+      return `${roundPrefix}${lanePrefix}⚔️ ${event.attackerName} gây ${event.damageDealt} sát thương lên ${targetName}${lethalNote}${descNote}`
+    }
+
+    return `${roundPrefix}${lanePrefix}${event.description || `${event.attackerName} kích hoạt hành động.`}`
+  })
+}

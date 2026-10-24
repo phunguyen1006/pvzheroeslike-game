@@ -146,6 +146,8 @@ export interface CombatEvent {
   isLethal: boolean
   traitsTriggered?: Trait[]
   description: string
+  timestamp?: number
+  roundNumber?: number
 }
 
 export interface CombatResult {
@@ -284,6 +286,54 @@ export interface WeeklyEventProgress {
 export interface CampaignProgress {
   unlockedMissionNumber: number
   completedMissions: Record<string, { stars: number; completedAt: string }>
+}
+
+export interface MatchResult {
+  winner: Side | null
+  winningSide?: Side | null
+  turnsTaken: number
+  playerSide?: Side
+  plantHeroHp?: number
+  zombieHeroHp?: number
+  superpowersUsed?: number
+  damageDealtInTurn?: Record<number, number> | number[]
+  maxDamageDealtInOneTurn?: number
+  totalDamageDealt?: number
+  [key: string]: any
+}
+
+export interface ChallengeUpdate {
+  challengeId: string
+  title: string
+  description?: string
+  progress: number
+  target: number
+  isCompleted: boolean
+  rewardGems?: number
+  rewardDescription?: string
+}
+
+export interface DailyChallenge {
+  id: string
+  title: string
+  description: string
+  type: 'win_faction' | 'damage_in_turn' | 'use_superpower' | 'win_turns' | string
+  target: number
+  currentProgress: number
+  isCompleted: boolean
+  rewardGems: number
+  requiredSide?: Side
+  maxTurns?: number
+  minDamage?: number
+  superpowerCount?: number
+}
+
+export interface ReplaySnapshot {
+  turn: number
+  phase: Phase
+  state: GameState
+  action: GameAction
+  timestamp?: number
 }
 
 export interface SavedDeck {

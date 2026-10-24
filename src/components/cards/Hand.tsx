@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Card } from './Card'
 import type { Card as CardType } from '../../engine/types'
 
@@ -26,6 +26,42 @@ export const Hand: React.FC<HandProps> = ({
   onInspectCard,
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  const [newlyDrawnKeys, setNewlyDrawnKeys] = useState<Set<string>>(new Set())
+  const prevCardsRef = useRef<CardType[]>(cards)
+  const isInitialMount = useRef(true)
+
+  // Animated Card Draw Effect: Detect new cards drawn and trigger slide-in + 1.5s gold glow
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      prevCardsRef.current = cards
+      return
+    }
+
+    const prevCards = prevCardsRef.current
+    if (cards.length > prevCards.length) {
+      const addedKeys = new Set<string>()
+      // Check cards appended or inserted
+      for (let i = prevCards.length; i < cards.length; i++) {
+        addedKeys.add(`${cards[i].id}-${i}`)
+      }
+      cards.forEach((c, idx) => {
+        if (!prevCards.some((pc) => pc === c)) {
+          addedKeys.add(`${c.id}-${idx}`)
+        }
+      })
+
+      if (addedKeys.size > 0) {
+        setNewlyDrawnKeys(addedKeys)
+        const timer = setTimeout(() => {
+          setNewlyDrawnKeys(new Set())
+        }, 1500)
+        prevCardsRef.current = cards
+        return () => clearTimeout(timer)
+      }
+    }
+    prevCardsRef.current = cards
+  }, [cards])
 
   const totalCards = cards.length
   const centerIndex = (totalCards - 1) / 2
@@ -57,12 +93,14 @@ export const Hand: React.FC<HandProps> = ({
           const finalScale = isHovered ? 1.32 : isSelected ? 1.12 : 1.0
           const finalZIndex = isHovered ? 300 : isSelected ? 200 : index + 10
 
+          const isNewlyDrawn = newlyDrawnKeys.has(`${card.id}-${index}`)
+
           return (
             <div
               key={`${card.id}-${index}`}
               className={`fan-card-slot ${isSelected ? 'slot-selected' : ''} ${
                 isPlayable ? 'slot-playable' : ''
-              }`}
+              } ${isNewlyDrawn ? 'card-slot-newly-drawn' : ''}`}
               style={{
                 transform: `translateX(${overlapOffset}px) translateY(${finalTranslateY}px) rotate(${finalRotation}deg) scale(${finalScale})`,
                 zIndex: finalZIndex,
@@ -82,6 +120,7 @@ export const Hand: React.FC<HandProps> = ({
                 onDragEndCard?.()
               }}
             >
+              {isNewlyDrawn && <div className="new-card-gold-glow" aria-hidden="true" />}
               <Card
                 card={card}
                 isSelected={isSelected}
