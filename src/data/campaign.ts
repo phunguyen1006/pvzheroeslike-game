@@ -1557,6 +1557,21 @@ export function calculateMissionStars(
   } else if (mission.id === 'mission_10') {
     if (playerHp >= 15) stars++
     if (turnCount <= 12) stars++
+  } else if (mission.id === 'mission_11') {
+    if (playerHp >= 12) stars++
+    if (turnCount <= 9) stars++
+  } else if (mission.id === 'mission_12') {
+    if (playerHp >= 14) stars++
+    if (turnCount <= 8) stars++
+  } else if (mission.id === 'mission_13') {
+    if (playerHp >= 12) stars++
+    if (turnCount <= 8) stars++
+  } else if (mission.id === 'mission_14') {
+    if (playerHp >= 15) stars++
+    if (turnCount <= 7) stars++
+  } else if (mission.id === 'mission_15') {
+    if (playerHp >= 15) stars++
+    if (turnCount <= 10) stars++
   } else if (mission.id === 'zombie_mission_1') {
     if (playerHp >= 12) stars++
     if (turnCount <= 8) stars++
@@ -1587,6 +1602,21 @@ export function calculateMissionStars(
   } else if (mission.id === 'zombie_mission_10') {
     if (playerHp >= 15) stars++
     if (turnCount <= 12) stars++
+  } else if (mission.id === 'zombie_mission_11') {
+    if (playerHp >= 12) stars++
+    if (turnCount <= 8) stars++
+  } else if (mission.id === 'zombie_mission_12') {
+    if (playerHp >= 14) stars++
+    if (turnCount <= 8) stars++
+  } else if (mission.id === 'zombie_mission_13') {
+    if (playerHp >= 12) stars++
+    if (turnCount <= 8) stars++
+  } else if (mission.id === 'zombie_mission_14') {
+    if (playerHp >= 15) stars++
+    if (turnCount <= 8) stars++
+  } else if (mission.id === 'zombie_mission_15') {
+    if (playerHp >= 15) stars++
+    if (turnCount <= 10) stars++
   }
 
   return Math.min(3, stars)
