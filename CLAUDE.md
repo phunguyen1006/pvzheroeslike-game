@@ -14,19 +14,19 @@ Dự án này áp dụng mô hình **Multi-Session Worktree (1 Bot Tổng + 4 Bo
 ---
 
 ## 2. PHÂN ĐỊNH PHẠM VI TỪNG BOT (BOUNDARIES)
-- 👑 **Bot Tổng (Master - Branch \`main\` - Thư mục gốc):**
-  - Quản lý roadmap, viết specs trong \`specs/\`.
-  - Cập nhật Data Contracts (\`src/engine/types.ts\`).
+- 👑 **Bot Tổng (Master - Branch `main` - Thư mục gốc repo):**
+  - Quản lý roadmap, viết specs trong `specs/`.
+  - Cập nhật Data Contracts (`src/engine/types.ts`).
   - Review & Merge code từ các nhánh feature, giải quyết conflicts.
-- ⚔️ **Engine Bot (Worktree \`../pvz-engine\` - Branch \`feature/engine\`):**
-  - Chỉ sửa \`src/engine/\` và \`src/types/\`.
+- ⚔️ **Engine Bot (Worktree `.worktrees/engine` - Branch `feature/engine`):**
+  - Chỉ sửa `src/engine/` và `src/types/`.
   - Chuyên trách: Turn Phases, Combat Calculation, Block Meter, Traits logic, Cascade Triggers.
-- 🎨 **UI Bot (Worktree \`../pvz-ui\` - Branch \`feature/ui\`):**
-  - Chỉ sửa \`src/components/\`, \`src/App.tsx\`, \`src/index.css\`.
+- 🎨 **UI Bot (Worktree `.worktrees/ui` - Branch `feature/ui`):**
+  - Chỉ sửa `src/components/`, `src/App.tsx`, `src/index.css`.
   - Chuyên trách: Bàn đấu 5 làn, hiệu ứng VFX, drag & drop thẻ bài, Modals, Audio triggers.
-- 🃏 **Cards Bot (Worktree \`../pvz-cards\` - Branch \`feature/cards\`):**
-  - Chỉ sửa \`src/data/\`, \`src/engine/environments.ts\`.
+- 🃏 **Cards Bot (Worktree `.worktrees/cards` - Branch `feature/cards`):**
+  - Chỉ sửa `src/data/`, `src/engine/environments.ts`.
   - Chuyên trách: Thêm bài mới, hero superpowers, archetypes deck, trait mappings.
-- 🧪 **QA Bot (Worktree \`../pvz-qa\` - Branch \`feature/qa\`):**
-  - Chỉ sửa \`src/__tests__/\` và \`src/engine/ai.ts\`.
+- 🧪 **QA Bot (Worktree `.worktrees/qa` - Branch `feature/qa`):**
+  - Chỉ sửa `src/__tests__/` và `src/engine/ai.ts`.
   - Chuyên trách: Vitest test coverage, test edge-cases, cải thiện thuật toán AI đối thủ.
