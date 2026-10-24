@@ -1066,7 +1066,7 @@ export const ZOMBIE_CHAPTER_2_MISSIONS: CampaignMission[] = [
     ],
     rewards: {
       gems: 1000,
-      unlocksNext: false,
+      unlocksNext: true,
       title: 'Chúa Tể Thây Ma Vũ Trụ',
     },
     comicDialogue: {
@@ -1080,9 +1080,239 @@ export const ZOMBIE_CHAPTER_2_MISSIONS: CampaignMission[] = [
   },
 ]
 
+export const ZOMBIE_CHAPTER_3_MISSIONS: CampaignMission[] = [
+  {
+    id: 'zombie_mission_11',
+    chapter: 3,
+    missionNumber: 11,
+    faction: 'zombies',
+    playerHeroId: 'hero_the_smash',
+    title: 'Nhiệm Vụ 11: Nắm Đấm Cỏ Cây Nổi Loạn',
+    subtitle: 'Đối đầu Grass Knuckles - Nắm Đấm Thép',
+    storyIntro:
+      'Grass Knuckles chặn đường hành quân của Thây Ma bằng nắm đấm thép! Zomboss lập tức triển khai trạm Area 22 (+2/+2 & Frenzy) tại Làn 3 cho The Smash để đập tan mọi chướng ngại vật!',
+    bossHeroId: 'hero_grass_knuckles',
+    bossHeroName: 'Grass Knuckles',
+    bossHeroAvatar: '/assets/heroes/plants/Grass Knuckles.png',
+    difficulty: 'normal',
+    rule: {
+      id: 'zrule_mission_11',
+      name: 'Khu Vực Area 22 & Nắm Đấm Thép',
+      description:
+        'Làn 3 (Ground) có sẵn Area 22 (+2/+2 & Frenzy cho Thây Ma); Bạn nhận +1 Não (Brains) khởi đầu!',
+      startingBrainsBonus: 1,
+      startingSunBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 2, environmentCardId: 'zombie_area_22' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đập tan nắm đấm của Grass Knuckles',
+      '⭐⭐ Kết thúc trận với Zombie Hero còn ít nhất 12 HP',
+      '⭐⭐⭐ Giành chiến thắng trong vòng 8 lượt đấu',
+    ],
+    rewards: {
+      gems: 300,
+      unlocksNext: true,
+      title: 'Nắm Đấm Vô Địch',
+    },
+    comicDialogue: {
+      issueTitle: 'ĐẠI CHIẾN NẮM ĐẤM THÉP!',
+      issueTagline: 'The Smash cuồng nộ vs Grass Knuckles cơ bắp',
+      plantHeroQuote:
+        'Nắm đấm của Grass Knuckles đấm bay mọi đội quân xác sống! Các ngươi không vượt qua được bức tường này!',
+      zombieHeroQuote:
+        'Graaaagh! Area 22 ban tặng sức mạnh Frenzy cuồng bạo! Nắm đấm của The Smash sẽ nghiền nát tất cả!',
+    },
+  },
+  {
+    id: 'zombie_mission_12',
+    chapter: 3,
+    missionNumber: 12,
+    faction: 'zombies',
+    playerHeroId: 'hero_immorticia',
+    title: 'Nhiệm Vụ 12: Đóa Hoa Hồng Gai Ma Thuật',
+    subtitle: 'Đối đầu Rose - Phù Thủy Gai Góc',
+    storyIntro:
+      'Phù thủy Rose giăng bẫy gai Spikeweed Sector tại Làn 1 biến đổi mọi sinh linh! Immorticia đáp trả bằng trạm Laser Base Alpha (Deadly & Strikethrough) tại Làn 3!',
+    bossHeroId: 'hero_rose',
+    bossHeroName: 'Rose',
+    bossHeroAvatar: '/assets/heroes/plants/Rose.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'zrule_mission_12',
+      name: 'Vườn Gai Ma Thuật & Căn Cứ Laser Base Alpha',
+      description:
+        'Làn 1 có Spikeweed Sector; Làn 3 có Laser Base Alpha (Deadly & Strikethrough); Cả 2 phe nhận +1 Năng lượng!',
+      startingBrainsBonus: 1,
+      startingSunBonus: 1,
+      initialEnvironments: [
+        { laneIndex: 0, environmentCardId: 'plant_spikeweed_sector' },
+        { laneIndex: 2, environmentCardId: 'zombie_laser_base_alpha' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Giải trừ ma thuật biến hình của Rose',
+      '⭐⭐ Bảo toàn lượng máu của Zombie Hero từ 14 HP trở lên',
+      '⭐⭐⭐ Giành chiến thắng trong vòng 8 lượt đấu',
+    ],
+    rewards: {
+      gems: 350,
+      unlocksNext: true,
+      title: 'Pháp Sư Tối Thượng',
+    },
+    comicDialogue: {
+      issueTitle: 'MA THUẬT HOA HỒNG GAI!',
+      issueTagline: 'Cuộc đấu pháp thuật giữa Immorticia và Rose',
+      plantHeroQuote:
+        'Ma thuật biến hình Goatify của ta sẽ biến những xác sống hung hãn nhất thành những chú dê hiền lành!',
+      zombieHeroQuote:
+        'Tia laser chết chóc từ Laser Base Alpha kết hợp cùng bầy dơi đêm sẽ xé toạc tấm màn nhung ảo thuật của ngươi!',
+    },
+  },
+  {
+    id: 'zombie_mission_13',
+    chapter: 3,
+    missionNumber: 13,
+    faction: 'zombies',
+    playerHeroId: 'hero_super_brainz',
+    title: 'Nhiệm Vụ 13: Cây Nấm Bóng Đêm Sát Thủ',
+    subtitle: 'Đối đầu Nightcap - Ninja Nấm Ninja',
+    storyIntro:
+      'Ninja Nấm Nightcap cùng bầy Astro-Shroom phục kích tại Làn 1 xả đạn Bullseye liên tục! Zomboss lập tức thiết lập trạm Moon Base Z (Overshoot 3) tại Làn 2 để phản công dữ dội!',
+    bossHeroId: 'hero_nightcap',
+    bossHeroName: 'Nightcap',
+    bossHeroAvatar: '/assets/heroes/plants/Nightcap.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'zrule_mission_13',
+      name: 'Rừng Nấm Sát Thủ & Trạm Mặt Trăng Moon Base Z',
+      description:
+        'Làn 1 có 1 Astro-Shroom phe Cây Trồng; Làn 2 có sẵn Moon Base Z (Overshoot 3 cho Zombie); Bạn nhận +1 Não khởi đầu!',
+      startingBrainsBonus: 1,
+      startingSunBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 1, environmentCardId: 'zombie_moon_base_z' },
+      ],
+      initialMinions: [
+        { laneIndex: 0, cardId: 'plant_astro_shroom', side: 'plants' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Bắt sống Ninja Nấm Nightcap',
+      '⭐⭐ Kết thúc trận với Zombie Hero còn ít nhất 12 HP',
+      '⭐⭐⭐ Giành thắng lợi trong vòng 8 lượt đấu',
+    ],
+    rewards: {
+      gems: 400,
+      unlocksNext: true,
+      title: 'Bóng Ma Vô Ảnh',
+    },
+    comicDialogue: {
+      issueTitle: 'BÓNG ĐÊM NINJA NẤM!',
+      issueTagline: 'Ám sát trong sương mù vs Pháo bắn tỉa Moon Base Z',
+      plantHeroQuote:
+        'Trong bóng tối, không ai nghe thấy tiếng ngươi kêu cứu! Đạn Bullseye của Astro-Shroom sẽ xuyên thủng mọi giáp trụ!',
+      zombieHeroQuote:
+        'Hahaha! Siêu anh hùng Super Brainz bay vút lên bầu trời với Moon Base Z! Đòn Overshoot sẽ thiêu rụi cả khu rừng nấm!',
+    },
+  },
+  {
+    id: 'zombie_mission_14',
+    chapter: 3,
+    missionNumber: 14,
+    faction: 'zombies',
+    playerHeroId: 'hero_rustbolt',
+    title: 'Nhiệm Vụ 14: Ngọn Lửa Cuồng Bạo',
+    subtitle: 'Đối đầu Captain Combustible - Ngọn Lửa Bùng Nổ',
+    storyIntro:
+      'Captain Combustible bùng cháy với Red Plant-It (+5/+5) tại Làn 1 sẵn sàng thiêu rụi tất cả! Rustbolt kích hoạt mạng lưới Medulla Nebula tại Làn 2 để tích trữ Brains không giới hạn phản kích!',
+    bossHeroId: 'hero_captain_combustible',
+    bossHeroName: 'Captain Combustible',
+    bossHeroAvatar: '/assets/heroes/plants/Captain Combustible.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'zrule_mission_14',
+      name: 'Bão Lửa Red Plant-It & Mạng Lưới Medulla',
+      description:
+        'Làn 1 có Red Plant-It (+5/+5 cho Cây Trồng); Làn 2 có Medulla Nebula (+2 Brains cho Zombie); Cả hai bên khởi đầu +2 Năng lượng!',
+      startingBrainsBonus: 2,
+      startingSunBonus: 2,
+      initialEnvironments: [
+        { laneIndex: 0, environmentCardId: 'plant_red_plant_it' },
+        { laneIndex: 1, environmentCardId: 'zombie_medulla_nebula' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Dập tắt cơn cuồng nộ của Captain Combustible',
+      '⭐⭐ Giữ vững Zombie Hero với ít nhất 15 HP còn lại',
+      '⭐⭐⭐ Tiêu diệt Captain Combustible trước lượt 8',
+    ],
+    rewards: {
+      gems: 500,
+      unlocksNext: true,
+      title: 'Kẻ Dập Lửa Vĩ Đại',
+    },
+    comicDialogue: {
+      issueTitle: 'BÃO LỬA BÙNG NỔ CUỒNG LOẠN!',
+      issueTagline: 'Captain Combustible bùng cháy dữ dội trên Red Plant-It',
+      plantHeroQuote:
+        'Ta đang bốc cháy với sức mạnh cuồng nộ vô tận! Red Plant-It biến mỗi đòn tấn công thành thảm họa hủy diệt!',
+      zombieHeroQuote:
+        'Giáp titan của Rustbolt cách nhiệt hoàn hảo! Medulla Nebula cấp năng lượng dồi dào, ta sẽ dập tắt ngọn lửa của ngươi!',
+    },
+  },
+  {
+    id: 'zombie_mission_15',
+    chapter: 3,
+    missionNumber: 15,
+    faction: 'zombies',
+    playerHeroId: 'hero_huge_gigantacus',
+    title: 'Nhiệm Vụ 15: Cà Rốt Không Gian Tối Cao',
+    subtitle: 'ĐẠI CHIẾN BOSS CUỐI CHAPTER 3 ZOMBIE: Beta-Carrotina Tối Thượng',
+    storyIntro:
+      'Đại tướng không gian Beta-Carrotina kích hoạt lá chắn bất hoại Force Field tại Làn 1 bảo vệ trạm chỉ huy! Huge-Gigantacus dẫn đầu hạm đội Zomboss với Laser Base Alpha tại Làn 3 mở ra trận chiến tối thượng chiếm lĩnh dải ngân hà!',
+    bossHeroId: 'hero_beta_carrotina',
+    bossHeroName: 'Beta-Carrotina',
+    bossHeroAvatar: '/assets/heroes/plants/Beta-Carrotina.png',
+    difficulty: 'boss',
+    rule: {
+      id: 'zrule_mission_15',
+      name: 'Lá Chắn Force Field & Căn Cứ Hư Không Laser Base Alpha',
+      description:
+        'Làn 1 có Force Field (Cây Trồng bất tử!); Làn 3 có Laser Base Alpha (Deadly & Strikethrough); Zombie nhận +3 Não, Cây nhận +2 Mặt trời!',
+      startingBrainsBonus: 3,
+      startingSunBonus: 2,
+      initialEnvironments: [
+        { laneIndex: 0, environmentCardId: 'plant_force_field' },
+        { laneIndex: 2, environmentCardId: 'zombie_laser_base_alpha' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Chinh phục trạm không gian của Beta-Carrotina',
+      '⭐⭐ Kết thúc trận chiến với Zombie Hero còn từ 15 HP trở lên',
+      '⭐⭐⭐ Hoàn thành xuất sắc toàn bộ Chiến dịch Zombie Chapter 3!',
+    ],
+    rewards: {
+      gems: 1200,
+      unlocksNext: false,
+      title: 'Chúa Tể Đa Vũ Trụ Thây Ma',
+    },
+    comicDialogue: {
+      issueTitle: 'ĐẠI CHIẾN NGÂN HÀ BETA-CARROTINA!',
+      issueTagline: 'Trận chiến đỉnh cao vũ trụ: Khiên Bất Tử vs Laser Base Alpha',
+      plantHeroQuote:
+        'Lá chắn Force Field bảo vệ hạt giống tương lai của nhân loại! Không một Thây Ma nào được phép bước vào không gian!',
+      zombieHeroQuote:
+        'Hahaha! Hạm đội Huge-Gigantacus đã bao vây toàn bộ trạm không gian! Laser Base Alpha sẽ bốc hơi bức tường của ngươi!',
+    },
+  },
+]
+
 export const ALL_ZOMBIE_CAMPAIGN_MISSIONS: CampaignMission[] = [
   ...ZOMBIE_CHAPTER_1_MISSIONS,
   ...ZOMBIE_CHAPTER_2_MISSIONS,
+  ...ZOMBIE_CHAPTER_3_MISSIONS,
 ]
 
 export interface CampaignChapter {
@@ -1113,6 +1343,15 @@ export const CAMPAIGN_CHAPTERS: CampaignChapter[] = [
     badgeText: 'CHAPTER 2',
     missions: CHAPTER_2_MISSIONS,
   },
+  {
+    id: 3,
+    title: 'CHIẾN TRƯỜNG ĐA VŨ TRỤ (GALACTIC MULTIVERSE)',
+    subtitle: 'Chapter 3: Trận quyết chiến ngoài không gian',
+    description:
+      'Tiến vào dải ngân hà với hạm đội Huge-Gigantacus, nữ hoàng Neptuna, giáo sư Brainstorm, cỗ máy Z-Mech V2 và trùm cuối Super Brainz Tối Thượng!',
+    badgeText: 'CHAPTER 3',
+    missions: CHAPTER_3_MISSIONS,
+  },
 ]
 
 export const ZOMBIE_CAMPAIGN_CHAPTERS: CampaignChapter[] = [
@@ -1133,6 +1372,15 @@ export const ZOMBIE_CAMPAIGN_CHAPTERS: CampaignChapter[] = [
       'Quân đoàn Zombie tiến vào pháo đài tương lai Future Citadel! Đối đầu với Solar Flare ánh dương, Wall-Knight bãi chông, Spudow biển lửa, Chompzilla hồi máu và Đại tướng Citron tối thượng!',
     badgeText: 'ZOMBIE CH. 2',
     missions: ZOMBIE_CHAPTER_2_MISSIONS,
+  },
+  {
+    id: 3,
+    title: 'CHINH PHỤC ĐA VŨ TRỤ (MULTIVERSE CONQUEST)',
+    subtitle: 'Chapter 3: Đánh chiếm trạm không gian vũ trụ',
+    description:
+      'Quân đoàn Zombie đổ bộ vào trạm không gian! Đập tan võ đài Grass Knuckles, ma thuật hoa hồng Rose, ninja Nightcap, ngọn lửa Captain Combustible và Đại tướng Beta-Carrotina Tối Thượng!',
+    badgeText: 'ZOMBIE CH. 3',
+    missions: ZOMBIE_CHAPTER_3_MISSIONS,
   },
 ]
 
