@@ -30,6 +30,18 @@ export function hasAmphibiousTrait(c: Card): boolean {
 }
 
 /**
+ * Checks whether a card possesses a specific trait case-insensitively.
+ */
+export function hasCardTrait(c: Card, traitName: string): boolean {
+  const tLower = traitName.toLowerCase()
+  return Boolean(
+    (c as any)[traitName] ||
+    (c as any)[tLower] ||
+    c.traits?.some((t: any) => typeof t === 'string' && t.toLowerCase().includes(tLower))
+  )
+}
+
+/**
  * Evaluates the danger of an enemy minion on the board.
  * Higher score = higher priority to block or eliminate.
  */
@@ -112,7 +124,7 @@ export function getAIDecision(
     }
 
     const randomCard = playableCards[Math.floor(Math.random() * playableCards.length)]
-    if (randomCard.type === 'minion') {
+    if (isMinionCard(randomCard)) {
       const openLanes = state.lanes
         .map((lane, idx) => ({ lane, idx }))
         .filter(({ lane }) => canPlayCardToLane(randomCard, lane, side).allowed)
@@ -133,7 +145,7 @@ export function getAIDecision(
   // 1. ZOMBIE AI: MINION PHASE (ZOMBIE_PLAY)
   // ========================================================
   if (isZombie && state.phase === 'ZOMBIE_PLAY') {
-    const playableMinions = playableCards.filter((c) => c.type === 'minion')
+    const playableMinions = playableCards.filter(isMinionCard)
     if (playableMinions.length === 0) return { action: 'PASS' }
 
     // Check if we should hold back some Brains for a strong Trick in hand
@@ -173,9 +185,7 @@ export function getAIDecision(
     }
 
     // A. Priority: Amphibious on Water Lane (Lane index 4)
-    const amphMinion = playableMinions.find(
-      (c) => c.amphibious || c.traits?.includes('amphibious')
-    )
+    const amphMinion = playableMinions.find(hasAmphibiousTrait)
     const waterLane = state.lanes[4]
     if (amphMinion && !waterLane.zombieMinion) {
       return {
@@ -207,8 +217,8 @@ export function getAIDecision(
       for (const { lane, idx } of threatenedLanes) {
         // Find best blocker (highest HP or Armored/Deadly)
         const sortedBlockers = [...playableMinions].sort((a, b) => {
-          const aArmored = a.armored || a.traits?.includes('armored') ? 3 : 0
-          const bArmored = b.armored || b.traits?.includes('armored') ? 3 : 0
+          const aArmored = hasCardTrait(a, 'armored') ? 3 : 0
+          const bArmored = hasCardTrait(b, 'armored') ? 3 : 0
           return b.health + bArmored - (a.health + aArmored)
         })
 
@@ -234,8 +244,8 @@ export function getAIDecision(
     if (openLanes.length > 0) {
       // Pick highest attack or Bullseye/Frenzy minion for face pressure
       const aggressor = [...playableMinions].sort((a, b) => {
-        const aBullseye = a.bullseye || a.traits?.includes('bullseye') ? 2 : 0
-        const bBullseye = b.bullseye || b.traits?.includes('bullseye') ? 2 : 0
+        const aBullseye = hasCardTrait(a, 'bullseye') ? 2 : 0
+        const bBullseye = hasCardTrait(b, 'bullseye') ? 2 : 0
         return b.attack + bBullseye - (a.attack + aBullseye)
       })[0]
 
@@ -460,10 +470,10 @@ export function getAIDecision(
     }
 
     // D. Minions Placement
-    const playableMinions = playableCards.filter((c) => c.type === 'minion')
+    const playableMinions = playableCards.filter(isMinionCard)
     if (playableMinions.length > 0) {
       // Prioritize Amphibious on Water Lane
-      const amph = playableMinions.find((c) => c.amphibious || c.traits?.includes('amphibious'))
+      const amph = playableMinions.find(hasAmphibiousTrait)
       if (amph && !state.lanes[4].plantMinion) {
         return {
           action: 'PLAY_MINION',
@@ -561,7 +571,7 @@ export function getAITurnPlan(
 
     // Mark lane as occupied in simulation
     const updatedLanes = simulatedState.lanes.map((l) => ({ ...l }))
-    if (decision.laneIndex !== undefined && decision.card?.type === 'minion') {
+    if (decision.laneIndex !== undefined && decision.card && isMinionCard(decision.card)) {
       const targetLane = updatedLanes[decision.laneIndex]
       if (isZombie) {
         targetLane.zombieMinion = {
