@@ -3,7 +3,7 @@
  * Handles card triggers: When Played, When Hurt, Start of Turn, Dino-Roar, When Destroyed
  */
 
-import type { GameState, Side, Minion, Card, CombatEvent } from './types'
+import type { GameState, Side, Minion, Card, CombatEvent, HeroState } from './types'
 import { applyHeroDamage } from './combat'
 
 export interface AbilityTriggerResult {
@@ -670,4 +670,192 @@ export function revealGravestones(state: GameState): {
     updatedState,
     events,
   }
+}
+
+export interface FreezeResult {
+  updatedState: GameState
+  events: string[]
+}
+
+/**
+ * Freeze a minion at laneIndex for side
+ * - Sets isFrozen: true
+ * - If target is a Zombie:
+ *   + All Snowdrops on Plants side get +2/+2
+ *   + If Winter Squash is on Plants side, the frozen Zombie is destroyed immediately
+ */
+export function freezeMinion(
+  state: GameState,
+  laneIndex: number,
+  side: Side
+): FreezeResult {
+  let updatedState: GameState = {
+    ...state,
+    lanes: state.lanes.map(l => ({ ...l })),
+  }
+  const events: string[] = []
+  const lane = updatedState.lanes[laneIndex]
+
+  if (!lane) {
+    events.push(`Làn ${laneIndex} không tồn tại!`)
+    return { updatedState: state, events }
+  }
+
+  const targetMinion = side === 'zombies' ? lane.zombieMinion : (lane.plantMinion || lane.plantTeamUpMinion)
+  if (!targetMinion) {
+    events.push(`Không có minion ${side} tại ${lane.name} để đóng băng!`)
+    return { updatedState: state, events }
+  }
+
+  targetMinion.isFrozen = true
+  events.push(`❄️ ${targetMinion.name} tại ${lane.name} đã bị Đóng băng (Frozen)!`)
+
+  // Freeze Synergies (when a Zombie is frozen)
+  if (side === 'zombies') {
+    // 1. Snowdrop synergy (+2/+2 to every Snowdrop)
+    updatedState.lanes.forEach(l => {
+      if (l.plantMinion && (l.plantMinion.cardId === 'plant_snowdrop' || l.plantMinion.name.toLowerCase().includes('snowdrop'))) {
+        l.plantMinion = {
+          ...l.plantMinion,
+          currentAttack: l.plantMinion.currentAttack + 2,
+          baseAttack: l.plantMinion.baseAttack + 2,
+          currentHealth: l.plantMinion.currentHealth + 2,
+          maxHealth: l.plantMinion.maxHealth + 2,
+        }
+        events.push(`🌸 Snowdrop (${l.plantMinion.name}) hấp thụ sương tuyết: Nhận +2/+2 (${l.plantMinion.currentAttack}/${l.plantMinion.currentHealth})!`)
+      }
+      if (l.plantTeamUpMinion && (l.plantTeamUpMinion.cardId === 'plant_snowdrop' || l.plantTeamUpMinion.name.toLowerCase().includes('snowdrop'))) {
+        l.plantTeamUpMinion = {
+          ...l.plantTeamUpMinion,
+          currentAttack: l.plantTeamUpMinion.currentAttack + 2,
+          baseAttack: l.plantTeamUpMinion.baseAttack + 2,
+          currentHealth: l.plantTeamUpMinion.currentHealth + 2,
+          maxHealth: l.plantTeamUpMinion.maxHealth + 2,
+        }
+        events.push(`🌸 Snowdrop Team-Up (${l.plantTeamUpMinion.name}) hấp thụ sương tuyết: Nhận +2/+2 (${l.plantTeamUpMinion.currentAttack}/${l.plantTeamUpMinion.currentHealth})!`)
+      }
+    })
+
+    // 2. Winter Squash synergy (destroy the frozen zombie immediately)
+    const hasWinterSquash = updatedState.lanes.some(
+      l => (l.plantMinion && (l.plantMinion.cardId === 'plant_winter_squash' || l.plantMinion.name.toLowerCase().includes('winter squash'))) ||
+           (l.plantTeamUpMinion && (l.plantTeamUpMinion.cardId === 'plant_winter_squash' || l.plantTeamUpMinion.name.toLowerCase().includes('winter squash')))
+    )
+    if (hasWinterSquash) {
+      events.push(`🎃 Winter Squash giáng đòn nghiền nát: Tiêu diệt ngay Zombie bị đóng băng (${targetMinion.name})!`)
+      lane.zombieMinion = null
+    }
+  }
+
+  return { updatedState, events }
+}
+
+/**
+ * Checks if a minion or hero has the untrickable trait (immune to enemy tricks and superpowers)
+ */
+export function isUntrickable(unit: Minion | HeroState | null | undefined): boolean {
+  if (!unit) return false
+  if ('traits' in unit && Array.isArray(unit.traits) && unit.traits.includes('untrickable')) return true
+  return Boolean(unit.untrickable)
+}
+
+export interface TransformResult {
+  updatedState: GameState
+  transformedMinion: Minion | null
+  events: string[]
+}
+
+/**
+ * Transforms a minion into a new minion based on newCard
+ * Preserves lane status, resets buffs/damage, triggers lane environment & When Played abilities
+ */
+export function transformMinion(
+  state: GameState,
+  laneIndex: number,
+  side: Side,
+  newCard: Card
+): TransformResult {
+  let updatedState: GameState = {
+    ...state,
+    lanes: state.lanes.map(l => ({ ...l })),
+  }
+  const events: string[] = []
+  const lane = updatedState.lanes[laneIndex]
+
+  if (!lane) {
+    events.push(`Làn ${laneIndex} không tồn tại để biến hình!`)
+    return { updatedState: state, transformedMinion: null, events }
+  }
+
+  const oldMinion = side === 'plants' ? lane.plantMinion : lane.zombieMinion
+  if (!oldMinion) {
+    events.push(`Không có minion ${side} tại ${lane.name} để biến hình!`)
+    return { updatedState: state, transformedMinion: null, events }
+  }
+
+  const transformedMinion: Minion = {
+    instanceId: `${newCard.id}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    cardId: newCard.id,
+    name: newCard.name,
+    side,
+    currentAttack: newCard.attack,
+    baseAttack: newCard.attack,
+    currentHealth: newCard.health,
+    maxHealth: newCard.health,
+    image: newCard.image,
+    traits: newCard.traits ? [...newCard.traits] : [],
+    amphibious: Boolean(newCard.amphibious || newCard.traits?.includes('amphibious')),
+    bullseye: Boolean(newCard.bullseye || newCard.traits?.includes('bullseye')),
+    teamUp: Boolean(newCard.teamUp || newCard.traits?.includes('teamUp')),
+    frenzy: Boolean(newCard.frenzy || newCard.traits?.includes('frenzy')),
+    deadly: Boolean(newCard.deadly || newCard.traits?.includes('deadly')),
+    strikethrough: Boolean(newCard.strikethrough || newCard.traits?.includes('strikethrough')),
+    armored: newCard.armored ?? (newCard.traits?.includes('armored') ? 1 : 0),
+    freeze: Boolean(newCard.freeze || newCard.traits?.includes('freeze')),
+    antiHero: newCard.antiHero,
+    doubleStrike: Boolean(newCard.doubleStrike || newCard.traits?.includes('doubleStrike')),
+    gravestone: Boolean(newCard.gravestone || newCard.traits?.includes('gravestone')),
+    untrickable: Boolean(newCard.untrickable || newCard.traits?.includes('untrickable')),
+  }
+
+  if (side === 'plants') {
+    lane.plantMinion = transformedMinion
+  } else {
+    lane.zombieMinion = transformedMinion
+  }
+
+  events.push(`🌀 Biến hình: ${oldMinion.name} tại ${lane.name} đã biến đổi thành [${transformedMinion.name}] (${transformedMinion.currentAttack}/${transformedMinion.currentHealth})!`)
+
+  // Check lane environment continuous effects on newly transformed minion
+  if (lane.environment) {
+    if (lane.environment.id === 'zombie_laser_base_alpha' && side === 'zombies') {
+      transformedMinion.deadly = true
+      transformedMinion.strikethrough = true
+      events.push(`Laser Base Alpha: ${transformedMinion.name} nhận Deadly và Strikethrough!`)
+    } else if (lane.environment.id === 'zombie_cone_zone' && side === 'zombies') {
+      transformedMinion.currentHealth += 3
+      transformedMinion.maxHealth += 3
+      events.push(`Cone Zone: ${transformedMinion.name} nhận thêm +3 Máu!`)
+    } else if (lane.environment.id === 'plant_bog_of_sunken_hope') {
+      if (side === 'plants' && (transformedMinion.amphibious || transformedMinion.traits?.includes('amphibious'))) {
+        transformedMinion.currentAttack += 2
+        transformedMinion.baseAttack += 2
+        transformedMinion.currentHealth += 2
+        transformedMinion.maxHealth += 2
+        events.push(`Bog of Sunken Hope: Thủy quân ${transformedMinion.name} nhận +2/+2!`)
+      } else if (side === 'zombies' && !transformedMinion.amphibious && !transformedMinion.traits?.includes('amphibious')) {
+        transformedMinion.currentAttack = Math.max(0, transformedMinion.currentAttack - 2)
+        events.push(`Bog of Sunken Hope làm sa lầy: ${transformedMinion.name} bị giảm 2 Tấn công (-2 ATK)!`)
+      }
+    }
+  }
+
+  // Trigger When Played abilities of the newly transformed minion
+  const whenPlayedRes = triggerWhenPlayed(updatedState, transformedMinion, laneIndex, side)
+  updatedState = whenPlayedRes.updatedState
+  if (whenPlayedRes.events.length > 0) {
+    events.push(...whenPlayedRes.events)
+  }
+
+  return { updatedState, transformedMinion, events }
 }

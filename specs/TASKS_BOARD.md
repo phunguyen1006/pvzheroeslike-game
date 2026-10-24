@@ -39,6 +39,7 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] [ĐỢT 3] Thiết kế khối Bia Mộ (Gravestone) 3D đá Granite có vết nứt, huy hiệu ẩn danh `🪦 ? / ?` và animation nứt vỡ lúc Zombie Tricks kèm SFX Web Audio `playGravestoneReveal`
 - [x] [ĐỢT 4] Superpower Choice Modal khi Super-Block nổ (Play Now vs Keep in Hand, 360° rotating radiant sunburst, golden sheen sweep & emerald button, Web Audio fanfare) và Hiệu ứng Địa hình Môi trường đa tầng trên 5 làn đấu (Lane Environment Visuals: Spikeweed undulating thorns, Laser Base Alpha sci-fi neon scanning grid, Bog of Doom swamp mist & bubbles, Solar Winds sunbeams, Total Eclipse lunar shadow)
 - [x] [ĐỢT 5] Giao diện Mulligan (MulliganScreen 4 lá khởi đầu + 1 Superpower cố định, hiệu ứng 3D Card Flip khi đổi bài, toggle dấu chéo đỏ ❌ "Đổi lá này", nút xác nhận animation sáng quét và Web Audio API soundManager.playCardPickup) & Comic Phase Banner trượt ngang màn hình (Typography 3D viền đen dày, nghiêng phong cách comic, màu sắc và hiệu ứng tia tốc độ riêng biệt cho 4 phases, tự động kích hoạt soundManager.playFightHorn khi sang phase FIGHT)
+- [x] [ĐỢT 6] Màn hình Comic Intro đối thoại kịch tính (Green Shadow vs Super Brainz) và Màn hình GameOverModal kết thúc vinh quang/thất bại với hiệu ứng pháo hoa, vương miện 3D và thống kê trận đấu
 
 ### 🃏 Cards Bot (`feature/cards`)
 - [x] Bổ sung các thẻ bài thiếu: `zombie_browncoat`, `zombie_knight_living_dead`, `zombie_football_zombie`
@@ -47,10 +48,11 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] [ĐỢT 3] Mở rộng kho thẻ bài Plants và Zombies với các lá Super-Rare và Legendary (Wall-Nut, Briar Rose, Cornucopia, Teleport, Bad Moon Rising, Disco-Tron 3000)
 - [x] [ĐỢT 4] Triển khai hệ thống Thẻ bài Siêu Năng Lực (Hero Superpowers & Signature Superpowers) và Thẻ Môi Trường (Environments) - 71 cards catalog
 - [x] [ĐỢT 5] Thêm Brainana (Legendary Banana) và Dark Matter Dragonfruit (Legendary Dragon)
+- [x] [ĐỢT 6] Bổ sung Dino-Roar (Bananasaurus Rex, Raiding Raptor, Aloeosaurus) & Evolution (Gatling Pea, Warlord)
 
 ### 🧪 QA Bot (`feature/qa`)
 - [x] Thêm helper kiểm tra trait (`hasCardTrait`) và fixtures fallback cho thẻ bài AI
 - [x] Nâng tổng số test lên 112/112 test suite pass 100% (thêm test Double Strike, Armored 2, Bullseye Super-Block bypass, cascade on-death triggers, Gravestone reveal)
 - [x] [ĐỢT 3] Viết bộ test chuyên sâu `15. Legendary & Super-Rare Strategic Cards Suite` nâng tổng test lên 125/125 test cases pass 100%
 - [x] [ĐỢT 4] Mở rộng kiểm thử trí tuệ nhân tạo (AI Engine Tests) & Tích hợp Superpower / Environment Suite (155/155 tests pass)
-- [ ] [ĐỢT 5] Bộ test chuyên sâu cho Brainana, Dark Matter Dragonfruit và Mulligan Re-draw logic
+- [x] [ĐỢT 5 & 6] Bộ test chuyên sâu `20. Iconic Legendary & Super-Rare Powerhouses Suite` (Bananasaurus Rex Dino-Roar + Double Strike, Trickster Cost Reduction + Bonus Attack, Valkyrie Attack Scaling on-death, Dark Matter Dragonfruit Trick Surtax + Splash Damage 6, Brainana Brain-Drain, Zombot 1000 Board Wipe) nâng tổng test lên **173/173 tests pass 100%**!

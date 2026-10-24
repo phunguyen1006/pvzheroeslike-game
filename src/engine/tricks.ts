@@ -1,7 +1,7 @@
 import type { GameState, HeroState, Side, Card } from './types'
 import { applyHeroDamage } from './combat'
 import { drawCard } from './reducer'
-import { triggerWhenTrickPlayed } from './abilities'
+import { triggerWhenTrickPlayed, isUntrickable } from './abilities'
 
 export interface TrickResult {
   updatedState: GameState
@@ -17,6 +17,47 @@ export function executeTrick(
   _targetMinionSide?: Side,
   targetHero?: boolean
 ): TrickResult {
+  // Untrickable check for enemy targeted tricks
+  if (side === 'plants') {
+    if (targetHero && isUntrickable(state.zombieHero)) {
+      return {
+        updatedState: state,
+        success: false,
+        message: 'Zombie Hero có đặc tính Untrickable, miễn nhiễm với mọi Trick của Plants!',
+      }
+    }
+    if (targetLaneIndex !== undefined && state.lanes[targetLaneIndex]?.zombieMinion) {
+      const targetZombie = state.lanes[targetLaneIndex].zombieMinion!
+      const offensivePlantTricks = ['plant_berry_blast', 'plant_squash', 'plant_shamrocket', 'plant_spring_bean']
+      if (offensivePlantTricks.includes(card.id) && isUntrickable(targetZombie)) {
+        return {
+          updatedState: state,
+          success: false,
+          message: `${targetZombie.name} có đặc tính Untrickable, miễn nhiễm với mọi Trick của Plants!`,
+        }
+      }
+    }
+  } else if (side === 'zombies') {
+    if (targetHero && isUntrickable(state.plantHero)) {
+      return {
+        updatedState: state,
+        success: false,
+        message: 'Plant Hero có đặc tính Untrickable, miễn nhiễm với mọi Trick của Zombies!',
+      }
+    }
+    if (targetLaneIndex !== undefined && state.lanes[targetLaneIndex]?.plantMinion) {
+      const targetPlant = state.lanes[targetLaneIndex].plantMinion!
+      const offensiveZombieTricks = ['zombie_bungee_plumber', 'zombie_locust_swarm', 'zombie_rocket_science']
+      if (offensiveZombieTricks.includes(card.id) && isUntrickable(targetPlant)) {
+        return {
+          updatedState: state,
+          success: false,
+          message: `${targetPlant.name} có đặc tính Untrickable, miễn nhiễm với mọi Trick của Zombies!`,
+        }
+      }
+    }
+  }
+
   let updatedState = { ...state }
   const hero = side === 'plants' ? state.plantHero : state.zombieHero
 
@@ -93,12 +134,12 @@ export function executeTrick(
     }
 
     case 'plant_cherry_bomb': {
-      // 4 damage to a zombie and zombies next door
+      // 4 damage to a zombie and zombies next door (skips untrickable)
       if (targetLaneIndex !== undefined) {
         const lanesToHit = [targetLaneIndex - 1, targetLaneIndex, targetLaneIndex + 1]
         let hitNames: string[] = []
         lanesToHit.forEach(idx => {
-          if (idx >= 0 && idx < updatedLanes.length && updatedLanes[idx].zombieMinion) {
+          if (idx >= 0 && idx < updatedLanes.length && updatedLanes[idx].zombieMinion && !isUntrickable(updatedLanes[idx].zombieMinion)) {
             const z = updatedLanes[idx].zombieMinion!
             z.currentHealth = Math.max(0, z.currentHealth - 4)
             hitNames.push(z.name)
@@ -204,12 +245,16 @@ export function executeTrick(
     }
 
     case 'zombie_weed_spray': {
-      // Destroy all plants with 2 Attack or less
+      // Destroy all plants with 2 Attack or less (skips untrickable)
       let destroyed: string[] = []
       updatedLanes.forEach(lane => {
-        if (lane.plantMinion && lane.plantMinion.currentAttack <= 2) {
+        if (lane.plantMinion && lane.plantMinion.currentAttack <= 2 && !isUntrickable(lane.plantMinion)) {
           destroyed.push(lane.plantMinion.name)
           lane.plantMinion = null
+        }
+        if (lane.plantTeamUpMinion && lane.plantTeamUpMinion.currentAttack <= 2 && !isUntrickable(lane.plantTeamUpMinion)) {
+          destroyed.push(lane.plantTeamUpMinion.name)
+          lane.plantTeamUpMinion = null
         }
       })
       message = `Weed Spray diệt sạch cỏ dại: ${destroyed.join(', ') || 'Không có ai'}!`

@@ -579,7 +579,15 @@ export function resolveSingleLaneCombat(
     if (plantCanAttack) {
       const plantHasBullseye = Boolean(plant.bullseye || plant.traits?.includes('bullseye'))
       const plantHasDoubleStrike = Boolean(plant.doubleStrike || plant.traits?.includes('doubleStrike'))
-      let totalDmg = plant.currentAttack
+      let plantAntiHero = plant.antiHero ?? 0
+      if (!plantAntiHero && plant.traits) {
+        const trait = plant.traits.find(t => t.toLowerCase().includes('anti-hero') || t.toLowerCase().includes('antihero'))
+        if (trait) {
+          const match = trait.match(/\d+/)
+          plantAntiHero = match ? parseInt(match[0], 10) : 2
+        }
+      }
+      let totalDmg = plant.currentAttack + plantAntiHero
       if (plantTeamUp && !plantTeamUp.isFrozen) {
         totalDmg += plantTeamUp.currentAttack
       }
@@ -665,7 +673,16 @@ export function resolveSingleLaneCombat(
     // ========================================================
     if (zombieCanAttack) {
       const zombieHasBullseye = Boolean(zombie.bullseye || zombie.traits?.includes('bullseye'))
-      const res = applyHeroDamage(currentPlantHero, zombie.currentAttack, zombieHasBullseye)
+      let zombieAntiHero = zombie.antiHero ?? 0
+      if (!zombieAntiHero && zombie.traits) {
+        const trait = zombie.traits.find(t => t.toLowerCase().includes('anti-hero') || t.toLowerCase().includes('antihero'))
+        if (trait) {
+          const match = trait.match(/\d+/)
+          zombieAntiHero = match ? parseInt(match[0], 10) : 2
+        }
+      }
+      const totalAttack = zombie.currentAttack + zombieAntiHero
+      const res = applyHeroDamage(currentPlantHero, totalAttack, zombieHasBullseye)
       currentPlantHero = res.updatedHero
       events.push({
         laneIndex,
@@ -1300,4 +1317,265 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
       winner,
     },
   }
+}
+
+export interface BonusAttackResult {
+  updatedState: GameState
+  events: CombatEvent[]
+  logs: string[]
+}
+
+/**
+ * Trigger an immediate out-of-sequence Bonus Attack for a minion at laneIndex
+ */
+export function triggerBonusAttack(
+  state: GameState,
+  laneIndex: number,
+  side: Side
+): BonusAttackResult {
+  let updatedState: GameState = {
+    ...state,
+    lanes: state.lanes.map(l => ({ ...l })),
+  }
+  const events: CombatEvent[] = []
+  const logs: string[] = []
+  const lane = updatedState.lanes[laneIndex]
+
+  if (!lane) {
+    logs.push(`Làn ${laneIndex} không tồn tại để thực hiện Bonus Attack!`)
+    return { updatedState: state, events, logs }
+  }
+
+  const attacker = side === 'plants' ? (lane.plantMinion || lane.plantTeamUpMinion) : lane.zombieMinion
+  if (!attacker) {
+    logs.push(`Không có minion ${side} tại ${lane.name} để thực hiện Bonus Attack!`)
+    return { updatedState: state, events, logs }
+  }
+
+  if (attacker.isFrozen) {
+    logs.push(`${attacker.name} đang bị đóng băng (Frozen), không thể thực hiện Bonus Attack!`)
+    return { updatedState: state, events, logs }
+  }
+
+  if (attacker.currentAttack <= 0) {
+    logs.push(`${attacker.name} có 0 Tấn công, Bonus Attack không gây sát thương.`)
+    return { updatedState: state, events, logs }
+  }
+
+  logs.push(`💥 ${attacker.name} tại ${lane.name} thực hiện đòn Tấn công thêm (Bonus Attack)!`)
+
+  const attackerHasDeadly = Boolean(attacker.deadly || attacker.traits?.includes('deadly') || (side === 'zombies' && lane.environment?.id === 'zombie_laser_base_alpha'))
+  const attackerHasBullseye = Boolean(attacker.bullseye || attacker.traits?.includes('bullseye'))
+  const attackerHasStrikethrough = Boolean(attacker.strikethrough || attacker.traits?.includes('strikethrough') || (side === 'zombies' && lane.environment?.id === 'zombie_laser_base_alpha'))
+  const attackerHasFrenzy = Boolean(attacker.frenzy || attacker.traits?.includes('frenzy'))
+
+  let pendingSuperBlock = updatedState.pendingSuperBlock || null
+
+  if (side === 'plants') {
+    const zombie = lane.zombieMinion
+    if (zombie && zombie.currentHealth > 0) {
+      const zArmored = zombie.armored ?? (zombie.traits?.includes('armored') ? 1 : 0)
+      const dmg = Math.max(0, attacker.currentAttack - zArmored)
+      zombie.currentHealth = attackerHasDeadly ? 0 : Math.max(0, zombie.currentHealth - dmg)
+      const isLethal = zombie.currentHealth <= 0
+
+      events.push({
+        laneIndex,
+        attackerSide: 'plants',
+        attackerName: `${attacker.name} (Bonus Attack)`,
+        target: 'minion',
+        targetSide: 'zombies',
+        damageDealt: dmg,
+        isBlocked: false,
+        isLethal,
+        description: `⚡ ${attacker.name} Bonus Attack gây ${dmg} sát thương lên ${zombie.name}${isLethal ? ' (Tiêu diệt!)' : ''}`,
+      })
+      logs.push(`⚡ ${attacker.name} Bonus Attack gây ${dmg} sát thương lên ${zombie.name}${isLethal ? ' (Tiêu diệt!)' : ''}`)
+
+      if (isLethal) {
+        lane.zombieMinion = null
+        if (attackerHasFrenzy) {
+          // Frenzy follow-up attack directly to Zombie Hero
+          const frenzyRes = applyHeroDamage(updatedState.zombieHero, attacker.currentAttack, attackerHasBullseye)
+          updatedState.zombieHero = frenzyRes.updatedHero
+          events.push({
+            laneIndex,
+            attackerSide: 'plants',
+            attackerName: `${attacker.name} (Frenzy)`,
+            target: 'hero',
+            targetSide: 'zombies',
+            damageDealt: frenzyRes.actualDamage,
+            isBlocked: frenzyRes.blocked,
+            isLethal: updatedState.zombieHero.hp <= 0,
+            traitsTriggered: ['frenzy'],
+            description: `${attacker.name} kích hoạt Frenzy tấn công bồi vào Zombie Hero gây ${frenzyRes.actualDamage} dmg${frenzyRes.blocked ? ' (SUPER-BLOCK!)' : ''}`,
+          })
+          logs.push(`${attacker.name} kích hoạt Frenzy tấn công bồi vào Zombie Hero gây ${frenzyRes.actualDamage} dmg!`)
+          if (frenzyRes.isSuperBlockTriggered && !pendingSuperBlock) {
+            pendingSuperBlock = getPendingSuperBlockForHero(updatedState.zombieHero, 'zombies')
+          }
+        }
+      }
+
+      if (attackerHasStrikethrough) {
+        const res = applyHeroDamage(updatedState.zombieHero, attacker.currentAttack, attackerHasBullseye)
+        updatedState.zombieHero = res.updatedHero
+        events.push({
+          laneIndex,
+          attackerSide: 'plants',
+          attackerName: attacker.name,
+          target: 'hero',
+          targetSide: 'zombies',
+          damageDealt: res.actualDamage,
+          isBlocked: res.blocked,
+          isLethal: updatedState.zombieHero.hp <= 0,
+          traitsTriggered: ['strikethrough'],
+          description: `${attacker.name} bắn xuyên Strikethrough vào Zombie Hero gây ${res.actualDamage} dmg`,
+        })
+        if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+          pendingSuperBlock = getPendingSuperBlockForHero(updatedState.zombieHero, 'zombies')
+        }
+      }
+    } else {
+      // Direct attack to Zombie Hero
+      const res = applyHeroDamage(updatedState.zombieHero, attacker.currentAttack, attackerHasBullseye)
+      updatedState.zombieHero = res.updatedHero
+      events.push({
+        laneIndex,
+        attackerSide: 'plants',
+        attackerName: `${attacker.name} (Bonus Attack)`,
+        target: 'hero',
+        targetSide: 'zombies',
+        damageDealt: res.actualDamage,
+        isBlocked: res.blocked,
+        isLethal: updatedState.zombieHero.hp <= 0,
+        description: `⚡ ${attacker.name} Bonus Attack đánh thẳng vào Zombie Hero gây ${res.actualDamage} sát thương${res.blocked ? ' (SUPER-BLOCK!)' : ''}`,
+      })
+      logs.push(`⚡ ${attacker.name} Bonus Attack đánh thẳng vào Zombie Hero gây ${res.actualDamage} dmg!`)
+      if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+        pendingSuperBlock = getPendingSuperBlockForHero(updatedState.zombieHero, 'zombies')
+      }
+    }
+  } else {
+    // Zombie bonus attack
+    const plant = lane.plantMinion || lane.plantTeamUpMinion
+    if (plant && plant.currentHealth > 0) {
+      const pArmored = plant.armored ?? (plant.traits?.includes('armored') ? 1 : 0)
+      const dmg = Math.max(0, attacker.currentAttack - pArmored)
+      plant.currentHealth = attackerHasDeadly ? 0 : Math.max(0, plant.currentHealth - dmg)
+      const isLethal = plant.currentHealth <= 0
+
+      events.push({
+        laneIndex,
+        attackerSide: 'zombies',
+        attackerName: `${attacker.name} (Bonus Attack)`,
+        target: 'minion',
+        targetSide: 'plants',
+        damageDealt: dmg,
+        isBlocked: false,
+        isLethal,
+        description: `⚡ ${attacker.name} Bonus Attack gây ${dmg} sát thương lên ${plant.name}${isLethal ? ' (Tiêu diệt!)' : ''}`,
+      })
+      logs.push(`⚡ ${attacker.name} Bonus Attack gây ${dmg} sát thương lên ${plant.name}${isLethal ? ' (Tiêu diệt!)' : ''}`)
+
+      if (isLethal) {
+        if (lane.plantMinion && lane.plantMinion.instanceId === plant.instanceId) {
+          lane.plantMinion = null
+        } else if (lane.plantTeamUpMinion && lane.plantTeamUpMinion.instanceId === plant.instanceId) {
+          lane.plantTeamUpMinion = null
+        }
+
+        if (attackerHasFrenzy) {
+          // If plantTeamUpMinion still exists, frenzy hits it; otherwise hits Plant Hero!
+          const remainingPlant = lane.plantMinion || lane.plantTeamUpMinion
+          if (remainingPlant && remainingPlant.currentHealth > 0) {
+            const remArmored = remainingPlant.armored ?? (remainingPlant.traits?.includes('armored') ? 1 : 0)
+            const remDmg = Math.max(0, attacker.currentAttack - remArmored)
+            remainingPlant.currentHealth = attackerHasDeadly ? 0 : Math.max(0, remainingPlant.currentHealth - remDmg)
+            const remLethal = remainingPlant.currentHealth <= 0
+            if (remLethal) {
+              if (lane.plantMinion?.instanceId === remainingPlant.instanceId) lane.plantMinion = null
+              else lane.plantTeamUpMinion = null
+            }
+            events.push({
+              laneIndex,
+              attackerSide: 'zombies',
+              attackerName: `${attacker.name} (Frenzy)`,
+              target: 'minion',
+              targetSide: 'plants',
+              damageDealt: remDmg,
+              isBlocked: false,
+              isLethal: remLethal,
+              traitsTriggered: ['frenzy'],
+              description: `⚡ ${attacker.name} Frenzy tấn công tiếp tục lên ${remainingPlant.name} gây ${remDmg} dmg${remLethal ? ' (Tiêu diệt!)' : ''}`,
+            })
+            logs.push(`${attacker.name} Frenzy tấn công tiếp lên ${remainingPlant.name}!`)
+          } else {
+            const frenzyRes = applyHeroDamage(updatedState.plantHero, attacker.currentAttack, attackerHasBullseye)
+            updatedState.plantHero = frenzyRes.updatedHero
+            events.push({
+              laneIndex,
+              attackerSide: 'zombies',
+              attackerName: `${attacker.name} (Frenzy)`,
+              target: 'hero',
+              targetSide: 'plants',
+              damageDealt: frenzyRes.actualDamage,
+              isBlocked: frenzyRes.blocked,
+              isLethal: updatedState.plantHero.hp <= 0,
+              traitsTriggered: ['frenzy'],
+              description: `${attacker.name} kích hoạt Frenzy tấn công bồi vào Plant Hero gây ${frenzyRes.actualDamage} dmg${frenzyRes.blocked ? ' (SUPER-BLOCK!)' : ''}`,
+            })
+            logs.push(`${attacker.name} kích hoạt Frenzy tấn công bồi vào Plant Hero gây ${frenzyRes.actualDamage} dmg!`)
+            if (frenzyRes.isSuperBlockTriggered && !pendingSuperBlock) {
+              pendingSuperBlock = getPendingSuperBlockForHero(updatedState.plantHero, 'plants')
+            }
+          }
+        }
+      }
+
+      if (attackerHasStrikethrough) {
+        const res = applyHeroDamage(updatedState.plantHero, attacker.currentAttack, attackerHasBullseye)
+        updatedState.plantHero = res.updatedHero
+        events.push({
+          laneIndex,
+          attackerSide: 'zombies',
+          attackerName: attacker.name,
+          target: 'hero',
+          targetSide: 'plants',
+          damageDealt: res.actualDamage,
+          isBlocked: res.blocked,
+          isLethal: updatedState.plantHero.hp <= 0,
+          traitsTriggered: ['strikethrough'],
+          description: `${attacker.name} bắn xuyên Strikethrough vào Plant Hero gây ${res.actualDamage} dmg`,
+        })
+        if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+          pendingSuperBlock = getPendingSuperBlockForHero(updatedState.plantHero, 'plants')
+        }
+      }
+    } else {
+      // Direct attack to Plant Hero
+      const res = applyHeroDamage(updatedState.plantHero, attacker.currentAttack, attackerHasBullseye)
+      updatedState.plantHero = res.updatedHero
+      events.push({
+        laneIndex,
+        attackerSide: 'zombies',
+        attackerName: `${attacker.name} (Bonus Attack)`,
+        target: 'hero',
+        targetSide: 'plants',
+        damageDealt: res.actualDamage,
+        isBlocked: res.blocked,
+        isLethal: updatedState.plantHero.hp <= 0,
+        description: `⚡ ${attacker.name} Bonus Attack đánh thẳng vào Plant Hero gây ${res.actualDamage} sát thương${res.blocked ? ' (SUPER-BLOCK!)' : ''}`,
+      })
+      logs.push(`⚡ ${attacker.name} Bonus Attack đánh thẳng vào Plant Hero gây ${res.actualDamage} dmg!`)
+      if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+        pendingSuperBlock = getPendingSuperBlockForHero(updatedState.plantHero, 'plants')
+      }
+    }
+  }
+
+  updatedState.pendingSuperBlock = pendingSuperBlock
+  updatedState.combatLog = [...logs, ...updatedState.combatLog]
+
+  return { updatedState, events, logs }
 }

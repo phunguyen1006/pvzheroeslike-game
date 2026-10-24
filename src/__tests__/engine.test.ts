@@ -3053,4 +3053,808 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
       expect(spCards.some(c => c.id === 'zombie_carried_away')).toBe(true)
     })
   })
+
+  // ==========================================================
+  // 20. ICONIC LEGENDARY & SUPER-RARE POWERHOUSES SUITE (Round 5)
+  // ==========================================================
+  describe('20. Iconic Legendary & Super-Rare Powerhouses Suite (Round 5)', () => {
+    // --------------------------------------------------------
+    // 1. Bananasaurus Rex (Double Strike & Dino-Roar)
+    // --------------------------------------------------------
+    it('verifies Bananasaurus Rex gains +1/+1 upon drawing cards via Dino-Roar trigger', () => {
+      let state = createInitialGameState()
+      state.phase = 'PLANT_PLAY'
+      state.plantHero.sun = 6
+
+      // Deploy Bananasaurus Rex (3/3 Double Strike)
+      const bRexCard: Card = {
+        id: 'plant_bananasaurus_rex',
+        name: 'Bananasaurus Rex',
+        side: 'plants',
+        type: 'minion',
+        cost: 4,
+        attack: 3,
+        health: 3,
+        doubleStrike: true,
+        traits: ['doubleStrike', 'dino-roar'],
+        image: '/assets/cards/plants/Bananasaurus Rex.png',
+      }
+      state.plantHand = [bRexCard]
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        side: 'plants',
+        cardId: 'plant_bananasaurus_rex',
+        laneIndex: 1,
+      })
+
+      expect(state.lanes[1].plantMinion?.currentAttack).toBe(3)
+      expect(state.lanes[1].plantMinion?.currentHealth).toBe(3)
+
+      // A. Dino-Roar triggered directly
+      const roarRes = triggerDinoRoar(state, 'plants')
+      expect(roarRes.updatedState.lanes[1].plantMinion?.currentAttack).toBe(4)
+      expect(roarRes.updatedState.lanes[1].plantMinion?.currentHealth).toBe(4)
+      expect(roarRes.events.some(e => e.includes('Bananasaurus Rex gầm vang'))).toBe(true)
+
+      // B. Dino-Roar triggered by DRAW_CARD action
+      let drawState = roarRes.updatedState
+      drawState.plantDeck = [
+        createMockCard('p_extra', 'Extra Peashooter', 'plants', 1, 1, 1),
+      ]
+      drawState = gameReducer(drawState, {
+        type: 'DRAW_CARD',
+        side: 'plants',
+      })
+      // 4/4 + 1/1 = 5/5
+      expect(drawState.lanes[1].plantMinion?.currentAttack).toBe(5)
+      expect(drawState.lanes[1].plantMinion?.currentHealth).toBe(5)
+    })
+
+    it('verifies Bananasaurus Rex executes Double Strike: striking twice during combat', () => {
+      const state = createInitialGameState()
+      state.zombieHero.hp = 20
+
+      // Lane 1: Open lane for Bananasaurus Rex (3/3 Double Strike)
+      state.lanes[1].plantMinion = createMockMinion('b_rex', 'Bananasaurus Rex', 'plants', 3, 3, {
+        doubleStrike: true,
+        traits: ['doubleStrike'],
+      })
+
+      const combatRes = resolveSingleLaneCombat(state, 1)
+
+      // Double Strike strikes twice: 3 + 3 = 6 damage to Zombie Hero
+      expect(combatRes.updatedState.zombieHero.hp).toBe(14)
+      const plantStrikes = combatRes.events.filter(e => e.attackerName.includes('Bananasaurus Rex') && e.target === 'hero')
+      expect(plantStrikes.length).toBe(2)
+      expect(plantStrikes[0].damageDealt).toBe(3)
+      expect(plantStrikes[1].damageDealt).toBe(3)
+      expect(combatRes.events.some(e => e.description.includes('Double Strike'))).toBe(true)
+    })
+
+    // --------------------------------------------------------
+    // 2. Trickster (Cost Reduction & Bonus Attack on Play)
+    // --------------------------------------------------------
+    it('verifies Trickster reduces cost by 1 Brain in hand whenever a Zombie trick is played', () => {
+      const state = createInitialGameState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 6
+
+      // Trickster in hand with base cost 10
+      const tricksterCard: Card = {
+        id: 'zombie_trickster',
+        name: 'Trickster',
+        side: 'zombies',
+        type: 'minion',
+        cost: 10,
+        attack: 6,
+        health: 6,
+        image: '/assets/cards/zombies/Trickster.png',
+      }
+      state.zombieHand = [tricksterCard]
+
+      // Play 3 Zombie tricks
+      const plumberCard = createMockCard('zombie_bungee_plumber', 'Bungee Plumber', 'zombies', 1, 0, 0, { type: 'trick' })
+
+      const res1 = triggerWhenTrickPlayed(state, plumberCard, 'zombies')
+      expect(res1.updatedState.zombieHand.find(c => c.id === 'zombie_trickster')?.cost).toBe(9)
+
+      const res2 = triggerWhenTrickPlayed(res1.updatedState, plumberCard, 'zombies')
+      expect(res2.updatedState.zombieHand.find(c => c.id === 'zombie_trickster')?.cost).toBe(8)
+
+      const res3 = triggerWhenTrickPlayed(res2.updatedState, plumberCard, 'zombies')
+      expect(res3.updatedState.zombieHand.find(c => c.id === 'zombie_trickster')?.cost).toBe(7)
+    })
+
+    it('verifies Trickster executes immediate Bonus Attack upon entering the battlefield', () => {
+      let state = createInitialGameState()
+      state.phase = 'ZOMBIE_PLAY'
+      state.zombieHero.brains = 10
+      state.plantHero.hp = 20
+
+      // Plant in lane 1 with 4 HP
+      state.lanes[1].plantMinion = createMockMinion('p_repeater', 'Repeater', 'plants', 2, 4)
+
+      // Play Trickster into Lane 1
+      const tricksterCard: Card = {
+        id: 'zombie_trickster',
+        name: 'Trickster',
+        side: 'zombies',
+        type: 'minion',
+        cost: 10,
+        attack: 6,
+        health: 6,
+        image: '/assets/cards/zombies/Trickster.png',
+      }
+      state.zombieHand = [tricksterCard]
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        side: 'zombies',
+        cardId: 'zombie_trickster',
+        laneIndex: 1,
+      })
+
+      // Bonus Attack deals 6 damage to Repeater (4 HP) -> Repeater destroyed immediately upon play!
+      expect(state.lanes[1].plantMinion).toBeNull()
+      expect(state.combatLog.some(log => log.includes('Trickster xuất kích') || log.includes('Bonus Attack'))).toBe(true)
+
+      // Test Trickster in open lane striking Hero directly
+      let directState = createInitialGameState()
+      directState.phase = 'ZOMBIE_PLAY'
+      directState.zombieHero.brains = 10
+      directState.plantHero.hp = 20
+      directState.zombieHand = [tricksterCard]
+
+      directState = gameReducer(directState, {
+        type: 'PLAY_CARD',
+        side: 'zombies',
+        cardId: 'zombie_trickster',
+        laneIndex: 2, // Open lane
+      })
+
+      // Plant Hero takes 6 bonus attack damage: 20 - 6 = 14 HP
+      expect(directState.plantHero.hp).toBe(14)
+      expect(directState.combatLog.some(log => log.includes('Trickster đánh thẳng mặt Plant Hero'))).toBe(true)
+    })
+
+    // --------------------------------------------------------
+    // 3. Valkyrie (In-Hand Attack Buff on Ally Zombie Death)
+    // --------------------------------------------------------
+    it('verifies Valkyrie in hand gains +2 Attack whenever an allied Zombie is destroyed', () => {
+      const state = createInitialGameState()
+
+      // Valkyrie in zombieHand starting with 0 Attack
+      const valkCard: Card = {
+        id: 'zombie_valkyrie',
+        name: 'Valkyrie',
+        side: 'zombies',
+        type: 'minion',
+        cost: 3,
+        attack: 0,
+        health: 6,
+        image: '/assets/cards/zombies/Valkyrie.png',
+      }
+      state.zombieHand = [valkCard]
+
+      // 1st Zombie casualty
+      const deadZombie1 = createMockMinion('z1', 'Basic Zombie', 'zombies', 1, 1)
+      const res1 = triggerOnDeath(state, deadZombie1, 0)
+      const valkInHand1 = res1.updatedState.zombieHand.find(c => c.id === 'zombie_valkyrie')
+      expect(valkInHand1?.attack).toBe(2)
+      expect(res1.logs.some(l => l.includes('Valkyrie'))).toBe(true)
+
+      // 2nd Zombie casualty
+      const deadZombie2 = createMockMinion('z2', 'Conehead Zombie', 'zombies', 2, 2)
+      const res2 = triggerOnDeath(res1.updatedState, deadZombie2, 0)
+      const valkInHand2 = res2.updatedState.zombieHand.find(c => c.id === 'zombie_valkyrie')
+      expect(valkInHand2?.attack).toBe(4)
+
+      // 3rd Zombie casualty
+      const deadZombie3 = createMockMinion('z3', 'Buckethead Zombie', 'zombies', 3, 4)
+      const res3 = triggerOnDeath(res2.updatedState, deadZombie3, 0)
+      const valkInHand3 = res3.updatedState.zombieHand.find(c => c.id === 'zombie_valkyrie')
+      expect(valkInHand3?.attack).toBe(6)
+
+      // Playing Valkyrie transfers the buffed attack onto the board minion
+      let playState = res3.updatedState
+      playState.phase = 'ZOMBIE_PLAY'
+      playState.zombieHero.brains = 3
+      playState = gameReducer(playState, {
+        type: 'PLAY_CARD',
+        side: 'zombies',
+        cardId: 'zombie_valkyrie',
+        laneIndex: 1,
+      })
+
+      const playedValk = playState.lanes[1].zombieMinion
+      expect(playedValk).toBeDefined()
+      expect(playedValk?.currentAttack).toBe(6)
+      expect(playedValk?.currentHealth).toBe(6)
+    })
+
+    // --------------------------------------------------------
+    // 4. Dark Matter Dragonfruit (Zombie Tricks Surtax & Splash Damage 6)
+    // --------------------------------------------------------
+    it('verifies Dark Matter Dragonfruit increases Zombie Tricks cost by +6 Brains', () => {
+      let state = createInitialGameState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 5
+
+      // Deploy Dark Matter Dragonfruit in Lane 1
+      state.lanes[1].plantMinion = createMockMinion(
+        'dmd',
+        'Dark Matter Dragonfruit',
+        'plants',
+        6,
+        6,
+        { cardId: 'plant_dark_matter_dragonfruit' }
+      )
+
+      // Bungee Plumber normally costs 1 Brain, but now costs 1 + 6 = 7 Brains!
+      const bungeeCard = createMockCard('zombie_bungee_plumber', 'Bungee Plumber', 'zombies', 1, 0, 0, { type: 'trick' })
+      state.zombieHand = [bungeeCard]
+
+      // Zombie only has 5 brains -> cannot afford the 7-cost trick!
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        side: 'zombies',
+        cardId: 'zombie_bungee_plumber',
+        laneIndex: 1,
+      })
+
+      // Trick rejected due to insufficient brains
+      expect(state.zombieHand).toHaveLength(1)
+      expect(state.zombieHero.brains).toBe(5)
+      expect(state.combatLog.some(log => log.includes('Không đủ năng lượng') || log.includes('Dark Matter Dragonfruit'))).toBe(true)
+
+      // Give Zombie 7 Brains -> Can now afford and deducts all 7 Brains
+      state.zombieHero.brains = 7
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        side: 'zombies',
+        cardId: 'zombie_bungee_plumber',
+        laneIndex: 0,
+        targetHero: true,
+      })
+      expect(state.zombieHero.brains).toBe(0) // 7 - (1 + 6) = 0 Brains!
+      expect(state.plantHero.hp).toBe(18) // Took 2 damage
+    })
+
+    it('verifies Dark Matter Dragonfruit deals Splash Damage 6 to adjacent lanes', () => {
+      const state = createInitialGameState()
+      // Lane 1: Dark Matter Dragonfruit (6/6) facing 10-HP Zombie
+      state.lanes[1].plantMinion = createMockMinion(
+        'dmd',
+        'Dark Matter Dragonfruit',
+        'plants',
+        6,
+        6,
+        {
+          cardId: 'plant_dark_matter_dragonfruit',
+          traits: ['Amphibious', 'Splash Damage 6'],
+        }
+      )
+      state.lanes[1].zombieMinion = createMockMinion('z1', 'Knight', 'zombies', 5, 10)
+
+      // Lane 0 (Adjacent): 5-HP Zombie
+      state.lanes[0].zombieMinion = createMockMinion('z0', 'Conehead', 'zombies', 2, 5)
+      // Lane 2 (Adjacent): 8-HP Gargantuar
+      state.lanes[2].zombieMinion = createMockMinion('z2', 'Gargantuar', 'zombies', 6, 8)
+
+      const combatRes = resolveSingleLaneCombat(state, 1)
+
+      // Lane 0 Zombie (5 HP) took 6 splash damage -> destroyed!
+      expect(combatRes.updatedState.lanes[0].zombieMinion).toBeNull()
+
+      // Lane 2 Zombie (8 HP) took 6 splash damage -> 8 - 6 = 2 HP remaining!
+      expect(combatRes.updatedState.lanes[2].zombieMinion?.currentHealth).toBe(2)
+
+      // Splash events logged
+      expect(combatRes.events.some(e => e.description.includes('Splash Damage'))).toBe(true)
+    })
+
+    // --------------------------------------------------------
+    // 5. Brainana (Amphibious & Complete Brain Drain)
+    // --------------------------------------------------------
+    it('verifies Brainana drains all Brains of Zombie Hero down to 0 upon entering play', () => {
+      let state = createInitialGameState()
+      state.phase = 'PLANT_PLAY'
+      state.plantHero.sun = 6
+      state.zombieHero.brains = 8 // Zombie hoarded 8 Brains for Tricks phase
+
+      const brainanaCard: Card = {
+        id: 'plant_brainana',
+        name: 'Brainana',
+        side: 'plants',
+        type: 'minion',
+        cost: 6,
+        attack: 4,
+        health: 3,
+        amphibious: true,
+        traits: ['Amphibious'],
+        image: '/assets/cards/plants/Brainana.png',
+      }
+      state.plantHand = [brainanaCard]
+
+      // Play Brainana in Water Lane (Lane 4)
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        side: 'plants',
+        cardId: 'plant_brainana',
+        laneIndex: 4,
+      })
+
+      // Brainana successfully played into water lane
+      expect(state.lanes[4].plantMinion?.name).toBe('Brainana')
+      expect(state.lanes[4].plantMinion?.amphibious).toBe(true)
+
+      // Zombie Hero lost ALL 8 Brains!
+      expect(state.zombieHero.brains).toBe(0)
+      expect(state.combatLog.some(log => log.includes('Brainana xuất trận: Hút sạch toàn bộ 8 Não'))).toBe(true)
+    })
+
+    // --------------------------------------------------------
+    // 6. Zombot 1000 (Board Wipe across All Lanes & Team-Up)
+    // --------------------------------------------------------
+    it('verifies Zombot 1000 destroys all Plants on every lane including Team-Up minions upon play', () => {
+      let state = createInitialGameState()
+      state.phase = 'ZOMBIE_PLAY'
+      state.zombieHero.brains = 9
+
+      // Set up plants across multiple lanes including Team-Up
+      state.lanes[0].plantMinion = createMockMinion('p0', 'Peashooter', 'plants', 1, 1)
+      state.lanes[1].plantMinion = createMockMinion('p1', 'Repeater', 'plants', 2, 2)
+      state.lanes[1].plantTeamUpMinion = createMockMinion('p1_tu', 'Torchwood', 'plants', 0, 3, { teamUp: true })
+      state.lanes[2].plantMinion = createMockMinion('p2', 'Wall-Nut', 'plants', 0, 6)
+      state.lanes[4].plantMinion = createMockMinion('p4', 'Bananasaurus', 'plants', 4, 4, { amphibious: true })
+
+      // Play Zombot 1000 in Lane 3
+      const zombotCard: Card = {
+        id: 'zombie_zombot_1000',
+        name: 'Zombot 1000',
+        side: 'zombies',
+        type: 'minion',
+        cost: 9,
+        attack: 9,
+        health: 9,
+        image: '/assets/cards/zombies/Zombot 1000.png',
+      }
+      state.zombieHand = [zombotCard]
+
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        side: 'zombies',
+        cardId: 'zombie_zombot_1000',
+        laneIndex: 3,
+      })
+
+      // Every single plant minion wiped clean!
+      expect(state.lanes[0].plantMinion).toBeNull()
+      expect(state.lanes[1].plantMinion).toBeNull()
+      expect(state.lanes[1].plantTeamUpMinion).toBeNull()
+      expect(state.lanes[2].plantMinion).toBeNull()
+      expect(state.lanes[4].plantMinion).toBeNull()
+
+      // Zombot sits menacingly in Lane 3
+      expect(state.lanes[3].zombieMinion?.name).toBe('Zombot 1000')
+      expect(state.lanes[3].zombieMinion?.currentAttack).toBe(9)
+      expect(state.lanes[3].zombieMinion?.currentHealth).toBe(9)
+      expect(state.combatLog.some(log => log.includes('ZOMBOT 1000 KHỔNG LỒ XUẤT HIỆN'))).toBe(true)
+    })
+  })
+
+  // ==========================================================
+  // 21. ADVANCED KEYWORD EDGE-CASES & COMBOS SUITE (Round 5)
+  // ==========================================================
+  describe('21. Advanced Keyword Edge-Cases & Combos Suite (Round 5)', () => {
+    // --------------------------------------------------------
+    // 1. Bullseye: Hero Damage without Block Meter Accumulation
+    // --------------------------------------------------------
+    it('verifies Plant Bullseye minion deals face damage to Zombie Hero without charging any Block Meter segments', () => {
+      const state = createInitialGameState()
+      state.zombieHero.hp = 20
+      state.zombieHero.blockMeter = 0
+
+      // Lane 1: Open lane Plant with Bullseye (3 ATK)
+      state.lanes[1].plantMinion = createMockMinion('p_bullseye', 'Astro-Shroom', 'plants', 3, 3, {
+        bullseye: true,
+        traits: ['bullseye'],
+      })
+
+      const combatRes = resolveSingleLaneCombat(state, 1)
+
+      // Zombie Hero takes 3 damage: 20 - 3 = 17 HP
+      expect(combatRes.updatedState.zombieHero.hp).toBe(17)
+      // Block Meter remains strictly 0 (Zero segments charged!)
+      expect(combatRes.updatedState.zombieHero.blockMeter).toBe(0)
+      expect(combatRes.hasSuperBlock).toBe(false)
+      expect(combatRes.updatedState.pendingSuperBlock).toBeNull()
+    })
+
+    it('verifies Zombie Bullseye minion deals face damage to Plant Hero without charging any Block Meter segments', () => {
+      const state = createInitialGameState()
+      state.plantHero.hp = 20
+      state.plantHero.blockMeter = 5 // Pre-existing 5 segments
+
+      // Lane 2: Open lane Zombie with Bullseye (4 ATK)
+      state.lanes[2].zombieMinion = createMockMinion('z_bullseye', 'Bullseye Mech', 'zombies', 4, 5, {
+        bullseye: true,
+        traits: ['bullseye'],
+      })
+
+      const combatRes = resolveSingleLaneCombat(state, 2)
+
+      // Plant Hero takes 4 damage: 20 - 4 = 16 HP
+      expect(combatRes.updatedState.plantHero.hp).toBe(16)
+      // Block Meter remains unchanged at exactly 5 (Zero increments!)
+      expect(combatRes.updatedState.plantHero.blockMeter).toBe(5)
+      expect(combatRes.hasSuperBlock).toBe(false)
+    })
+
+    // --------------------------------------------------------
+    // 2. Strikethrough: Simultaneous Minion & Face Damage
+    // --------------------------------------------------------
+    it('verifies Plant with Strikethrough damages opposing Zombie and hits Zombie Hero simultaneously', () => {
+      const state = createInitialGameState()
+      state.zombieHero.hp = 20
+
+      // Lane 1: Plant with Strikethrough (3 ATK, 4 HP)
+      state.lanes[1].plantMinion = createMockMinion('p_strike', 'Power Flower', 'plants', 3, 4, {
+        strikethrough: true,
+        traits: ['strikethrough'],
+      })
+      // Opposing Zombie (2 ATK, 5 HP)
+      state.lanes[1].zombieMinion = createMockMinion('z_cone', 'Conehead', 'zombies', 2, 5)
+
+      const combatRes = resolveSingleLaneCombat(state, 1)
+
+      // 1. Zombie minion took 3 damage: 5 - 3 = 2 HP
+      expect(combatRes.updatedState.lanes[1].zombieMinion?.currentHealth).toBe(2)
+
+      // 2. Zombie Hero simultaneously took 3 Strikethrough damage: 20 - 3 = 17 HP
+      expect(combatRes.updatedState.zombieHero.hp).toBe(17)
+
+      // Both combat events recorded
+      expect(combatRes.events.some(e => e.target === 'minion' && e.damageDealt === 3)).toBe(true)
+      expect(combatRes.events.some(e => e.target === 'hero' && e.traitsTriggered?.includes('strikethrough'))).toBe(true)
+    })
+
+    it('verifies Zombie with Strikethrough damages opposing Plant and hits Plant Hero simultaneously', () => {
+      const state = createInitialGameState()
+      state.plantHero.hp = 20
+
+      // Lane 2: Zombie with Strikethrough (4 ATK, 6 HP)
+      state.lanes[2].zombieMinion = createMockMinion('z_strike', 'Linebacker Zombie', 'zombies', 4, 6, {
+        strikethrough: true,
+        traits: ['strikethrough'],
+      })
+      // Opposing Plant (2 ATK, 4 HP)
+      state.lanes[2].plantMinion = createMockMinion('p_rep', 'Repeater', 'plants', 2, 4)
+
+      const combatRes = resolveSingleLaneCombat(state, 2)
+
+      // 1. Plant minion destroyed: 4 HP - 4 damage = 0 HP
+      expect(combatRes.updatedState.lanes[2].plantMinion).toBeNull()
+
+      // 2. Plant Hero simultaneously took 4 Strikethrough damage: 20 - 4 = 16 HP
+      expect(combatRes.updatedState.plantHero.hp).toBe(16)
+      expect(combatRes.events.some(e => e.target === 'hero' && e.traitsTriggered?.includes('strikethrough'))).toBe(true)
+    })
+
+    // --------------------------------------------------------
+    // 3. Frenzy vs Team-Up: Primary Target Destruction & Follow-up
+    // --------------------------------------------------------
+    it('verifies Zombie Frenzy strikes the secondary Team-Up Plant in the same lane after destroying the front Plant', () => {
+      const state = createInitialGameState()
+      state.plantHero.hp = 20
+
+      // Lane 1: Zombie with Frenzy (5 ATK, 6 HP)
+      state.lanes[1].zombieMinion = createMockMinion('z_frenzy', 'All-Star Zombie', 'zombies', 5, 6, {
+        frenzy: true,
+        traits: ['frenzy'],
+      })
+
+      // Lane 1 Plants: Front Plant (2 HP) + Team-Up Plant (3 HP)
+      state.lanes[1].plantMinion = createMockMinion('p_front', 'Peashooter', 'plants', 1, 2)
+      state.lanes[1].plantTeamUpMinion = createMockMinion('p_teamup', 'Torchwood', 'plants', 0, 3, {
+        teamUp: true,
+      })
+
+      const combatRes = resolveSingleLaneCombat(state, 1)
+
+      // 1. Front Plant (2 HP) destroyed by primary attack
+      expect(combatRes.updatedState.lanes[1].plantMinion).toBeNull()
+
+      // 2. Team-Up Plant (3 HP) targeted and destroyed by Frenzy bonus attack (5 damage >= 3 HP)
+      expect(combatRes.updatedState.lanes[1].plantTeamUpMinion).toBeNull()
+
+      // 3. Plant Hero was protected and did NOT take face damage this turn!
+      expect(combatRes.updatedState.plantHero.hp).toBe(20)
+
+      // Verify Frenzy event logged
+      const frenzyEvent = combatRes.events.find(e => e.traitsTriggered?.includes('frenzy'))
+      expect(frenzyEvent).toBeDefined()
+      expect(frenzyEvent?.attackerName).toContain('Frenzy')
+      expect(frenzyEvent?.damageDealt).toBe(5)
+    })
+
+    it('verifies Zombie Frenzy strikes Plant Hero directly after destroying the sole Plant in lane', () => {
+      const state = createInitialGameState()
+      state.plantHero.hp = 20
+
+      // Lane 1: Zombie with Frenzy (4 ATK, 5 HP)
+      state.lanes[1].zombieMinion = createMockMinion('z_frenzy2', 'Vimpyre', 'zombies', 4, 5, {
+        frenzy: true,
+        traits: ['frenzy'],
+      })
+      // Sole Plant in lane with 2 HP (no Team-Up)
+      state.lanes[1].plantMinion = createMockMinion('p_solo', 'Snow Pea', 'plants', 2, 2)
+      state.lanes[1].plantTeamUpMinion = null
+
+      const combatRes = resolveSingleLaneCombat(state, 1)
+
+      // Plant destroyed
+      expect(combatRes.updatedState.lanes[1].plantMinion).toBeNull()
+
+      // Frenzy bonus attack hits Plant Hero directly: 20 - 4 = 16 HP
+      expect(combatRes.updatedState.plantHero.hp).toBe(16)
+      expect(combatRes.events.some(e => e.target === 'hero' && e.traitsTriggered?.includes('frenzy'))).toBe(true)
+    })
+
+    // --------------------------------------------------------
+    // 4. Anti-Hero: Buff on Open Lane & Loss of Buff when Contested
+    // --------------------------------------------------------
+    it('verifies Plant Anti-Hero gains attack buff in open lane and strikes enemy Hero with boosted attack', () => {
+      const state = createInitialGameState()
+      state.zombieHero.hp = 20
+
+      // Lane 1: Open lane Plant with Anti-Hero 2 (base attack 2)
+      state.lanes[1].plantMinion = createMockMinion('p_anti', 'Poison Ivy', 'plants', 2, 3, {
+        antiHero: 2,
+        traits: ['Anti-Hero 2'],
+      })
+      state.lanes[1].zombieMinion = null
+
+      const combatRes = resolveSingleLaneCombat(state, 1)
+
+      // Deals base 2 + 2 Anti-Hero = 4 damage to Zombie Hero!
+      expect(combatRes.updatedState.zombieHero.hp).toBe(16) // 20 - 4 = 16 HP
+      expect(combatRes.events.some(e => e.target === 'hero' && e.damageDealt === 4)).toBe(true)
+    })
+
+    it('verifies Plant Anti-Hero loses buff when facing an opposing Zombie in the lane', () => {
+      const state = createInitialGameState()
+      state.zombieHero.hp = 20
+
+      // Lane 1: Plant with Anti-Hero 2 (base attack 2)
+      state.lanes[1].plantMinion = createMockMinion('p_anti', 'Poison Ivy', 'plants', 2, 3, {
+        antiHero: 2,
+        traits: ['Anti-Hero 2'],
+      })
+      // Opposing Zombie (1 ATK, 5 HP) placed in Lane 1
+      state.lanes[1].zombieMinion = createMockMinion('z_blocker', 'Conehead', 'zombies', 1, 5)
+
+      const combatRes = resolveSingleLaneCombat(state, 1)
+
+      // Anti-Hero buff is NOT applied against minions! Plant deals exactly base 2 damage
+      expect(combatRes.updatedState.lanes[1].zombieMinion?.currentHealth).toBe(3) // 5 - 2 = 3 HP
+      // Zombie Hero took 0 damage
+      expect(combatRes.updatedState.zombieHero.hp).toBe(20)
+    })
+
+    it('verifies Zombie Anti-Hero gains attack buff in open lane against Plant Hero', () => {
+      const state = createInitialGameState()
+      state.plantHero.hp = 20
+
+      // Lane 2: Open lane Zombie with Anti-Hero 4 (base attack 2)
+      state.lanes[2].zombieMinion = createMockMinion('z_stealthy', 'Stealthy Imp', 'zombies', 2, 2, {
+        antiHero: 4,
+        traits: ['Anti-Hero 4'],
+      })
+      state.lanes[2].plantMinion = null
+
+      const combatRes = resolveSingleLaneCombat(state, 2)
+
+      // Deals base 2 + 4 Anti-Hero = 6 damage to Plant Hero!
+      expect(combatRes.updatedState.plantHero.hp).toBe(14) // 20 - 6 = 14 HP
+      expect(combatRes.events.some(e => e.target === 'hero' && e.damageDealt === 6)).toBe(true)
+    })
+  })
+
+  // ==========================================================
+  // 22. PVE CAMPAIGN & BOSS MECHANICS SIMULATION SUITE (Round 5)
+  // ==========================================================
+  describe('22. PvE Campaign & Boss Mechanics Simulation Suite (Round 5)', () => {
+    // --------------------------------------------------------
+    // 1. Preset Initial Board State & Modifiers
+    // --------------------------------------------------------
+    it('verifies custom PvE Campaign initialization with preset minions, environments, and asymmetrical hero HP', () => {
+      let state = createInitialGameState()
+
+      // Campaign Modifier: "Dr. Zomboss Revenge"
+      // Boss has 35 HP and starts with 3 Brains reserve
+      state.zombieHero.hp = 35
+      state.zombieHero.maxHp = 35
+      state.zombieHero.brains = 3
+      state.zombieHero.maxBrains = 3
+
+      // Player has standard 20 HP but gets 2 starting Sun
+      state.plantHero.hp = 20
+      state.plantHero.maxHp = 20
+      state.plantHero.sun = 2
+      state.plantHero.maxSun = 2
+
+      // Pre-placed Boss minions:
+      // Lane 0 (Heights): Backup Dancer (1/1)
+      state.lanes[0].zombieMinion = createMockMinion('boss_m0', 'Backup Dancer', 'zombies', 1, 1)
+      // Lane 2: Pre-placed Laser Base Alpha + All-Star Zombie (4/6)
+      state.lanes[2].environment = {
+        id: 'zombie_laser_base_alpha',
+        name: 'Laser Base Alpha',
+        side: 'zombies',
+        image: '/assets/cards/zombies/Moon Base Z.png',
+        description: 'Deadly and Strikethrough',
+      }
+      state.lanes[2].zombieMinion = createMockMinion('boss_m2', 'All-Star Zombie', 'zombies', 4, 6, {
+        deadly: true,
+        strikethrough: true,
+      })
+      // Lane 4 (Water): Pre-placed Swabbie (1/1 Amphibious)
+      state.lanes[4].zombieMinion = createMockMinion('boss_m4', 'Swabbie', 'zombies', 1, 1, {
+        amphibious: true,
+      })
+
+      // Pre-placed Player minion: Lane 1 Wall-Nut (0/6 Team-Up)
+      state.lanes[1].plantMinion = createMockMinion('player_m1', 'Wall-Nut', 'plants', 0, 6, {
+        teamUp: true,
+      })
+
+      // Verify Boss Board State Integrity
+      expect(state.zombieHero.hp).toBe(35)
+      expect(state.zombieHero.brains).toBe(3)
+      expect(state.plantHero.hp).toBe(20)
+      expect(state.plantHero.sun).toBe(2)
+
+      expect(state.lanes[0].zombieMinion?.name).toBe('Backup Dancer')
+      expect(state.lanes[1].plantMinion?.name).toBe('Wall-Nut')
+      expect(state.lanes[2].environment?.id).toBe('zombie_laser_base_alpha')
+      expect(state.lanes[2].zombieMinion?.name).toBe('All-Star Zombie')
+      expect(state.lanes[2].zombieMinion?.deadly).toBe(true)
+      expect(state.lanes[2].zombieMinion?.strikethrough).toBe(true)
+      expect(state.lanes[4].zombieMinion?.name).toBe('Swabbie')
+      expect(state.lanes[4].zombieMinion?.amphibious).toBe(true)
+    })
+
+    // --------------------------------------------------------
+    // 2. Boss AI Tactical Behavior on Asymmetrical Board
+    // --------------------------------------------------------
+    it('verifies Boss AI on Expert difficulty analyzes pre-placed board and executes optimal tricks against player defenses', () => {
+      let state = createInitialGameState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.hp = 35
+      state.zombieHero.brains = 4
+      state.plantHero.hp = 12
+
+      // Player has dangerous 5 ATK Repeater in Lane 1 threatening Boss
+      state.lanes[1].plantMinion = createMockMinion('p_threat', 'Repeater', 'plants', 5, 2)
+      // Boss has an All-Star in Lane 2
+      state.lanes[2].zombieMinion = createMockMinion('boss_z', 'All-Star Zombie', 'zombies', 4, 6)
+
+      // Boss holds Bungee Plumber (killable target: 2-HP Repeater in Lane 1)
+      const bungeeCard = createMockCard('zombie_bungee_plumber', 'Bungee Plumber', 'zombies', 1, 0, 0, { type: 'trick' })
+      // Boss holds Lurch for Lunch (bonus attack on Lane 2)
+      const lurchCard = createMockCard('zombie_lurch_for_lunch', 'Lurch for Lunch', 'zombies', 2, 0, 0, { type: 'trick' })
+      state.zombieHand = [bungeeCard, lurchCard]
+
+      const decision = getAIDecision(state, 'zombies', 'expert')
+
+      // Boss AI targets the threatening 5-ATK / 2-HP Plant with Bungee Plumber to neutralize high threat
+      expect(decision.action).toBe('PLAY_TRICK')
+      expect(decision.card?.id).toBe('zombie_bungee_plumber')
+      expect(decision.laneIndex).toBe(1)
+      expect(decision.reason).toContain('Bungee Plumber')
+
+      // Execute Boss trick
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        side: 'zombies',
+        cardId: 'zombie_bungee_plumber',
+        laneIndex: 1,
+      })
+
+      // Threat neutralized
+      expect(state.lanes[1].plantMinion).toBeNull()
+      expect(state.zombieHero.brains).toBe(3)
+    })
+
+    // --------------------------------------------------------
+    // 3. Campaign Win Condition: Turn Limit Objective
+    // --------------------------------------------------------
+    it('verifies Campaign condition: Defeating Boss within turn limit triggers Player Victory', () => {
+      let state = createInitialGameState()
+      state.phase = 'FIGHT'
+      state.turn = 3 // Current Turn 3
+
+      // Boss has 4 HP left
+      state.zombieHero.hp = 4
+
+      // Player has a 6 ATK Gatling Pea in Lane 0 facing open lane
+      state.lanes[0].plantMinion = createMockMinion('p_finisher', 'Gatling Pea', 'plants', 6, 4)
+      state.lanes[0].zombieMinion = null
+
+      // Execute combat
+      state = gameReducer(state, { type: 'START_COMBAT' })
+
+      // Boss HP reduced below 0
+      expect(state.zombieHero.hp).toBeLessThanOrEqual(0)
+
+      // Objective Met: Win within Turn <= 3
+      const isVictorious = state.zombieHero.hp <= 0 && state.turn <= 3
+      expect(isVictorious).toBe(true)
+      expect(state.plantHero.hp).toBeGreaterThan(0)
+    })
+
+    // --------------------------------------------------------
+    // 4. Campaign Survival Condition: Player Withstands Boss Onslaught
+    // --------------------------------------------------------
+    it('verifies Campaign condition: Player survives 3 continuous turns of Boss attacks with valid HP', () => {
+      let state = createInitialGameState()
+      state.plantHero.hp = 20
+      state.zombieHero.hp = 30
+
+      // Simulate 3 full rounds of combat
+      for (let t = 1; t <= 3; t++) {
+        // Step to FIGHT phase
+        state.phase = 'FIGHT'
+        // Place a moderate Zombie attacker in Lane 1
+        state.lanes[1].zombieMinion = createMockMinion(`z_wave_${t}`, 'Conehead', 'zombies', 2, 3)
+        // Place a defensive Plant Wall-Nut in Lane 1 to absorb damage
+        if (!state.lanes[1].plantMinion) {
+          state.lanes[1].plantMinion = createMockMinion(`p_nut_${t}`, 'Wall-Nut', 'plants', 0, 6)
+        }
+
+        state = gameReducer(state, { type: 'START_COMBAT' })
+
+        // Step to next turn
+        state = gameReducer(state, { type: 'NEXT_PHASE' })
+      }
+
+      // Assert player survived through Turn 4
+      expect(state.turn).toBe(4)
+      expect(state.plantHero.hp).toBeGreaterThan(0)
+      expect(state.plantHero.hp).toBe(20) // Completely absorbed by Wall-Nut!
+      expect(state.plantGraveyard.length).toBeGreaterThanOrEqual(1)
+    })
+
+    // --------------------------------------------------------
+    // 5. Boss Phase Transition / Enrage Mechanic
+    // --------------------------------------------------------
+    it('verifies Boss Enrage Phase Transition: Boss triggers defensive emergency shield when reduced to <= 15 HP', () => {
+      let state = createInitialGameState()
+      state.zombieHero.hp = 18
+      state.zombieHero.maxHp = 35
+
+      // Player deals 5 damage dropping Boss to 13 HP (below 15 HP threshold)
+      const res = applyHeroDamage(state.zombieHero, 5, false)
+      state.zombieHero = res.updatedHero
+      expect(state.zombieHero.hp).toBe(13)
+
+      // Campaign Enrage Logic: Check HP threshold <= 15
+      const isBossEnraged = state.zombieHero.hp <= 15 && state.zombieHero.hp > 0
+      expect(isBossEnraged).toBe(true)
+
+      // Trigger Enrage event: Boss gains immediate Super-Block shield & bonus brains
+      if (isBossEnraged) {
+        state.zombieHero.isShieldActive = true
+        state.zombieHero.brains += 2
+        state.combatLog.push('⚡ CẢNH BÁO: DR. ZOMBOSS PHẪN NỘ (ENRAGE)! Bật khiên phòng thủ và nạp thêm 2 Não!')
+      }
+
+      expect(state.zombieHero.isShieldActive).toBe(true)
+      expect(state.zombieHero.brains).toBeGreaterThanOrEqual(2)
+      expect(state.combatLog[0]).toContain('DR. ZOMBOSS PHẪN NỘ')
+    })
+  })
 })
+
+
+

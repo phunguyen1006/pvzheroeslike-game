@@ -24,6 +24,11 @@ export type Trait =
   | 'doubleStrike'
   | 'antiHero'
   | 'gravestone'
+  | 'untrickable'
+  | 'dinoRoar'
+  | 'dino-roar'
+  | 'splashDamage'
+  | string
 
 export interface Card {
   id: string
@@ -34,7 +39,7 @@ export interface Card {
   health: number
   type: CardType
   image: string
-  traits?: Trait[]
+  traits?: (Trait | string)[]
   amphibious?: boolean
   bullseye?: boolean
   teamUp?: boolean
@@ -46,6 +51,7 @@ export interface Card {
   antiHero?: number
   doubleStrike?: boolean
   gravestone?: boolean
+  untrickable?: boolean
   description?: string
   heroClass?: string
   laneRequirement?: 'ground' | 'heights' | 'water' | 'any'
@@ -74,6 +80,7 @@ export interface Minion {
   antiHero?: number
   doubleStrike?: boolean
   gravestone?: boolean
+  untrickable?: boolean
   isGravestone?: boolean
   isFrozen?: boolean
   isAttacking?: boolean
@@ -114,6 +121,7 @@ export interface HeroState {
   blockMeter: number // 0 to 8 segments
   isShieldActive: boolean
   invulnerable?: boolean
+  untrickable?: boolean
   blockCount: number // max 3 blocks per game
   avatar: string
   classes: string[]

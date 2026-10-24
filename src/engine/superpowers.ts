@@ -6,6 +6,7 @@
 import type { GameState, Side, Card } from './types'
 import { applyHeroDamage } from './combat'
 import { drawCard } from './reducer'
+import { isUntrickable } from './abilities'
 import { ALL_CARDS } from '../data/cards'
 
 export interface SuperpowerResult {
@@ -60,11 +61,15 @@ export function executeSuperpower(
       // 2. Solar Flare: 2 damage to target (Zombie or Zombie Hero) + 1 permanent Sun max
       if (targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.zombieMinion) {
         const target = updatedLanes[targetLaneIndex].zombieMinion!
-        target.currentHealth = Math.max(0, target.currentHealth - 2)
-        message = `Sunburn thiêu đốt ${target.name} 2 dmg!`
-        if (target.currentHealth <= 0) {
-          message += ` (Tiêu diệt ${target.name})`
-          updatedLanes[targetLaneIndex].zombieMinion = null
+        if (isUntrickable(target)) {
+          message = `Sunburn không thể tác động lên ${target.name} vì có Untrickable!`
+        } else {
+          target.currentHealth = Math.max(0, target.currentHealth - 2)
+          message = `Sunburn thiêu đốt ${target.name} 2 dmg!`
+          if (target.currentHealth <= 0) {
+            message += ` (Tiêu diệt ${target.name})`
+            updatedLanes[targetLaneIndex].zombieMinion = null
+          }
         }
       } else {
         const res = applyHeroDamage(updatedState.zombieHero, 2, false)
@@ -127,12 +132,12 @@ export function executeSuperpower(
 
     case 'plant_whirlwind':
     case 'sp_whirlwind': {
-      // Whirlwind: Bounce a random Zombie
+      // Whirlwind: Bounce a random Zombie (skips untrickable)
       const zombieLanes = updatedLanes
         .map((l, idx) => ({ lane: l, idx }))
-        .filter(item => Boolean(item.lane.zombieMinion))
+        .filter(item => Boolean(item.lane.zombieMinion) && !isUntrickable(item.lane.zombieMinion))
       if (zombieLanes.length > 0) {
-        const chosen = targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.zombieMinion
+        const chosen = targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.zombieMinion && !isUntrickable(updatedLanes[targetLaneIndex].zombieMinion)
           ? { lane: updatedLanes[targetLaneIndex], idx: targetLaneIndex }
           : zombieLanes[Math.floor(Math.random() * zombieLanes.length)]
         const z = chosen.lane.zombieMinion!
@@ -151,7 +156,7 @@ export function executeSuperpower(
         }
         message = `Whirlwind lốc xoáy thổi bay ${z.name} quay trở về tay của Zombie!`
       } else {
-        message = `Whirlwind: Không có Zombie nào trên sân để đẩy lùi!`
+        message = `Whirlwind: Không có Zombie nào trên sân (hoặc đều có Untrickable) để đẩy lùi!`
       }
       break
     }
