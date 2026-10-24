@@ -5,12 +5,14 @@ export interface MainMenuProps {
   onStartGame: () => void
   onOpenHeroSelect: () => void
   onOpenDeckBuilder: () => void
+  onOpenCampaign?: () => void
 }
 
 export const MainMenu: React.FC<MainMenuProps> = ({
   onStartGame,
   onOpenHeroSelect,
   onOpenDeckBuilder,
+  onOpenCampaign,
 }) => {
   const [isMuted, setIsMuted] = useState(soundManager.getMuted())
 
@@ -36,6 +38,13 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   const handleDeckBuilder = () => {
     soundManager.playCardDrop()
     onOpenDeckBuilder()
+  }
+
+  const handleCampaign = () => {
+    soundManager.playCardDrop()
+    if (onOpenCampaign) {
+      onOpenCampaign()
+    }
   }
 
   return (
@@ -72,6 +81,11 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         />
 
         <div className="menu-action-buttons">
+          {onOpenCampaign && (
+            <button className="menu-btn campaign-menu-btn" onClick={handleCampaign}>
+              🗺️ CHIẾN DỊCH (CAMPAIGN MODE)
+            </button>
+          )}
           <button className="menu-btn primary-menu-btn" onClick={handleStart}>
             ▶️ CHƠI NGAY (QUICK MATCH)
           </button>

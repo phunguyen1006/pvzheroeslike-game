@@ -385,6 +385,55 @@ export function executeTrick(
       break
     }
 
+    case 'zombie_going_viral': {
+      // Going Viral: All Zombies get +1/+1 and Frenzy. Draw 1 card. Add 3 Going Virals into deck.
+      let buffedCount = 0
+      updatedLanes.forEach(lane => {
+        if (lane.zombieMinion) {
+          const currentTraits = lane.zombieMinion.traits || []
+          lane.zombieMinion = {
+            ...lane.zombieMinion,
+            currentAttack: lane.zombieMinion.currentAttack + 1,
+            baseAttack: lane.zombieMinion.baseAttack + 1,
+            currentHealth: lane.zombieMinion.currentHealth + 1,
+            maxHealth: lane.zombieMinion.maxHealth + 1,
+            frenzy: true,
+            traits: currentTraits.includes('Frenzy') ? currentTraits : [...currentTraits, 'Frenzy'],
+          }
+          buffedCount++
+        }
+      })
+
+      // Draw 1 card
+      const { newDeck, newHand, drawnCard } = drawCard(updatedState.zombieDeck, updatedState.zombieHand)
+      updatedState.zombieDeck = newDeck
+      updatedState.zombieHand = newHand
+
+      // Add 3 Going Viral cards into deck
+      const viralTemplate: Card = {
+        id: 'zombie_going_viral',
+        name: 'Going Viral',
+        side: 'zombies',
+        cost: 3,
+        attack: 0,
+        health: 0,
+        type: 'trick',
+        traits: ['Frenzy'],
+        frenzy: true,
+        image: '/assets/cards/zombies/Lurch for Lunch.png',
+        description: 'Tất cả Zombie nhận +1/+1 và Cuồng nộ (Frenzy). Rút 1 lá bài. Thêm 3 lá Going Viral vào bộ bài của bạn!',
+      }
+      const virals: Card[] = [
+        { ...viralTemplate, id: `zombie_going_viral_${Date.now()}_1` },
+        { ...viralTemplate, id: `zombie_going_viral_${Date.now()}_2` },
+        { ...viralTemplate, id: `zombie_going_viral_${Date.now()}_3` },
+      ]
+      updatedState.zombieDeck = [...updatedState.zombieDeck, ...virals]
+
+      message = `Going Viral! Toàn bộ ${buffedCount} Zombie nhận +1/+1 và Cuồng nộ (Frenzy)! Rút 1 lá [${drawnCard?.name || 'bài'}] và hòa trộn thêm 3 lá Going Viral vào bộ bài!`
+      break
+    }
+
     default:
       message = `${side === 'plants' ? 'Plant' : 'Zombie'} sử dụng ${card.name}.`
   }

@@ -487,6 +487,24 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       minion = applyLaneRulesOnPlay(minion, lane)
 
+      let lilyBuffed = false
+      if (side === 'plants' && (lane.type === 'heights' || laneIndex === 0)) {
+        const hasLily = state.lanes.some(l =>
+          (l.plantMinion && l.plantMinion.cardId === 'plant_lily_of_the_valley') ||
+          (l.plantTeamUpMinion && l.plantTeamUpMinion.cardId === 'plant_lily_of_the_valley')
+        )
+        if (hasLily) {
+          minion = {
+            ...minion,
+            currentAttack: minion.currentAttack + 2,
+            baseAttack: minion.baseAttack + 2,
+            currentHealth: minion.currentHealth + 2,
+            maxHealth: minion.maxHealth + 2,
+          }
+          lilyBuffed = true
+        }
+      }
+
       const updatedLanes = state.lanes.map((l, idx) => {
         if (idx !== laneIndex) return l
         if (side === 'plants') {
@@ -518,7 +536,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           ? `⚡ Teleport! Zombie dịch chuyển ${minion.name} (${minion.currentAttack}/${minion.currentHealth}) vào ${lane.name} ngay trong phase Tricks!`
           : isEvolved
             ? `${side === 'plants' ? '🌱 Tiến hóa Pea Evolution! ' : '🛸 Tiến hóa Zombie Evolution! '}${minion.name} (${minion.currentAttack}/${minion.currentHealth}) tiến hóa đè lên làn ${lane.name}!`
-            : `${side === 'plants' ? 'Plant' : 'Zombie'} đặt ${minion.name} (${minion.currentAttack}/${minion.currentHealth}) vào ${lane.name}.`
+            : lilyBuffed
+              ? `🌸 Lily of the Valley ban phước! Plant đặt ${minion.name} lên Đồi Cao (${lane.name}) nhận thêm +2/+2 (${minion.currentAttack}/${minion.currentHealth})!`
+              : `${side === 'plants' ? 'Plant' : 'Zombie'} đặt ${minion.name} (${minion.currentAttack}/${minion.currentHealth}) vào ${lane.name}.`
 
       let nextState: GameState = {
         ...state,

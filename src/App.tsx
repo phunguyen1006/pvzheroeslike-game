@@ -20,12 +20,22 @@ import { PhaseBanner } from './components/ui/PhaseBanner'
 import { MainMenu } from './components/screens/MainMenu'
 import { HeroSelect } from './components/screens/HeroSelect'
 import { DeckBuilder } from './components/screens/DeckBuilder'
+import { CampaignMap } from './components/campaign/CampaignMap'
+import {
+  buildMissionLanes,
+  calculateMissionStars,
+  loadCampaignProgress,
+  saveCampaignProgress,
+} from './data/campaign'
+import type { CampaignMission } from './engine/types'
 import type { Projectile, FloatingTextItem, ShockwaveItem } from './components/board/CombatVFXLayer'
 import { soundManager } from './audio/SoundManager'
 import './App.css'
 
 export function App() {
-  const [currentScreen, setCurrentScreen] = useState<'menu' | 'hero_select' | 'deck_builder' | 'battle'>('menu')
+  const [currentScreen, setCurrentScreen] = useState<'menu' | 'hero_select' | 'deck_builder' | 'campaign' | 'battle'>('menu')
+  const [activeCampaignMission, setActiveCampaignMission] = useState<CampaignMission | null>(null)
+  const [campaignStarsWon, setCampaignStarsWon] = useState<number | undefined>(undefined)
   const [selectedHeroes, setSelectedHeroes] = useState<{ plant: string; zombie: string }>({
     plant: 'hero_green_shadow',
     zombie: 'hero_super_brainz',
@@ -71,6 +81,8 @@ export function App() {
 
   // Start match when heroes & difficulty are picked
   const handleStartWithHeroes = (plantId: string, zombieId: string, diff: AIDifficulty = 'normal') => {
+    setActiveCampaignMission(null)
+    setCampaignStarsWon(undefined)
     setSelectedHeroes({ plant: plantId, zombie: zombieId })
     setAiDifficulty(diff)
     dispatch({
@@ -83,6 +95,70 @@ export function App() {
     setShowComicIntro(true)
     setCurrentScreen('battle')
   }
+
+  // Start PvE Campaign Mission with custom rules, initial lanes & energy bonuses
+  const handleStartCampaignMission = (mission: CampaignMission) => {
+    setActiveCampaignMission(mission)
+    setCampaignStarsWon(undefined)
+    const pId = mission.playerHeroId || 'hero_green_shadow'
+    const zId = mission.bossHeroId
+    setSelectedHeroes({ plant: pId, zombie: zId })
+
+    const diff: AIDifficulty =
+      mission.difficulty === 'boss'
+        ? 'expert'
+        : mission.difficulty === 'hard'
+          ? 'hard'
+          : mission.difficulty === 'normal'
+            ? 'normal'
+            : 'easy'
+    setAiDifficulty(diff)
+
+    const missionLanes = buildMissionLanes(mission)
+    dispatch({
+      type: 'START_MATCH',
+      plantHeroId: pId,
+      zombieHeroId: zId,
+      plantDeck: customPlantDeck,
+      zombieDeck: customZombieDeck,
+      initialLanes: missionLanes,
+      startingSunBonus: mission.rule.startingSunBonus || 0,
+      startingBrainsBonus: mission.rule.startingBrainsBonus || 0,
+    })
+    setShowComicIntro(true)
+    setCurrentScreen('battle')
+  }
+
+  // Calculate campaign stars and persist progress upon match conclusion
+  useEffect(() => {
+    if (gameState.winner && activeCampaignMission) {
+      const stars = calculateMissionStars(
+        activeCampaignMission,
+        gameState.winner,
+        gameState.plantHero.health,
+        gameState.turn
+      )
+      setCampaignStarsWon(stars)
+
+      if (stars > 0) {
+        const progress = loadCampaignProgress()
+        const prevRecord = progress.completedMissions[activeCampaignMission.id]
+        const prevStars = prevRecord?.stars || 0
+        progress.completedMissions[activeCampaignMission.id] = {
+          stars: Math.max(stars, prevStars),
+          completedAt: new Date().toISOString(),
+        }
+
+        if (activeCampaignMission.rewards.unlocksNext) {
+          progress.unlockedMissionNumber = Math.max(
+            progress.unlockedMissionNumber,
+            activeCampaignMission.missionNumber + 1
+          )
+        }
+        saveCampaignProgress(progress)
+      }
+    }
+  }, [gameState.winner, activeCampaignMission, gameState.plantHero.health, gameState.turn])
 
   // Handle saving custom deck from DeckBuilder
   const handleSaveDeck = (side: 'plants' | 'zombies', deck: CardType[]) => {
@@ -433,13 +509,28 @@ export function App() {
     setActiveCombatLaneIndex(undefined)
     nextLaneToExecuteRef.current = null
     setShowComicIntro(false)
-    dispatch({
-      type: 'START_MATCH',
-      plantHeroId: selectedHeroes.plant,
-      zombieHeroId: selectedHeroes.zombie,
-      plantDeck: customPlantDeck,
-      zombieDeck: customZombieDeck,
-    })
+    setCampaignStarsWon(undefined)
+
+    if (activeCampaignMission) {
+      dispatch({
+        type: 'START_MATCH',
+        plantHeroId: selectedHeroes.plant,
+        zombieHeroId: selectedHeroes.zombie,
+        plantDeck: customPlantDeck,
+        zombieDeck: customZombieDeck,
+        initialLanes: buildMissionLanes(activeCampaignMission),
+        startingSunBonus: activeCampaignMission.rule.startingSunBonus || 0,
+        startingBrainsBonus: activeCampaignMission.rule.startingBrainsBonus || 0,
+      })
+    } else {
+      dispatch({
+        type: 'START_MATCH',
+        plantHeroId: selectedHeroes.plant,
+        zombieHeroId: selectedHeroes.zombie,
+        plantDeck: customPlantDeck,
+        zombieDeck: customZombieDeck,
+      })
+    }
     setSelectedCard(null)
     setSelectedLaneIndex(undefined)
   }
@@ -498,11 +589,23 @@ export function App() {
     return (
       <MainMenu
         onStartGame={() => {
+          setActiveCampaignMission(null)
+          setCampaignStarsWon(undefined)
           setShowComicIntro(true)
           setCurrentScreen('battle')
         }}
         onOpenHeroSelect={() => setCurrentScreen('hero_select')}
         onOpenDeckBuilder={() => setCurrentScreen('deck_builder')}
+        onOpenCampaign={() => setCurrentScreen('campaign')}
+      />
+    )
+  }
+
+  if (currentScreen === 'campaign') {
+    return (
+      <CampaignMap
+        onStartMission={handleStartCampaignMission}
+        onBack={() => setCurrentScreen('menu')}
       />
     )
   }

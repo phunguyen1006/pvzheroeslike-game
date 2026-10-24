@@ -11,17 +11,19 @@ export interface GameOverModalProps {
   turnCount?: number
   totalDamageDealt?: number
   minionsDefeated?: number
+  starsWon?: number
   onRematch: () => void
   onMainMenu?: () => void
   onHeroSelect?: () => void
+  onCampaignMap?: () => void
 }
 
 /**
  * GameOverModal (Màn hình Kết thúc Trận đấu Chuẩn PvZ Heroes)
  * - Victory: Pháo hoa rực rỡ, hạt giấy ăn mừng (confetti), vương miện vàng, hào quang thắng lợi
  * - Defeat: Mây đen u ám, bia mộ đổ vỡ, mưa u buồn, ánh tím lạnh lẽo
- * - Bảng thống kê trận đấu: Số Lượt đấu, Sát thương đã gây ra, Minions đã tiêu diệt
- * - Các nút điều hướng: Rematch, Đổi Hero, Về Menu Chính
+ * - Bảng thống kê trận đấu: Số Lượt đấu, Sát thương đã gây ra, Minions đã tiêu diệt, Sao chiến dịch
+ * - Các nút điều hướng: Rematch, Đổi Hero, Về Menu Chính, Bản Đồ Chiến Dịch
  * - Tích hợp âm thanh Web Audio API soundManager
  */
 export const GameOverModal: React.FC<GameOverModalProps> = ({
@@ -33,9 +35,11 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   turnCount = 1,
   totalDamageDealt,
   minionsDefeated,
+  starsWon,
   onRematch,
   onMainMenu,
   onHeroSelect,
+  onCampaignMap,
 }) => {
   const isPlants = winner === 'plants'
   const winningHeroName = isPlants ? plantHeroName : zombieHeroName
@@ -146,11 +150,25 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               <span className="stat-box-num">{displayMinions}</span>
               <span className="stat-box-label">QUÂN ĐÃ TIÊU DIỆT</span>
             </div>
+            {starsWon !== undefined && (
+              <div className="stat-card-box stat-stars-box">
+                <span className="stat-box-icon">⭐</span>
+                <span className="stat-box-num">{starsWon} / 3</span>
+                <span className="stat-box-label">SAO CHIẾN DỊCH</span>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Action Decision Buttons */}
         <div className="gameover-decision-actions">
+          {onCampaignMap && (
+            <button className="pvz-btn gameover-campaign-btn" onClick={onCampaignMap}>
+              <span className="btn-icon">🗺️</span>
+              <span className="btn-label">BẢN ĐỒ CHIẾN DỊCH</span>
+            </button>
+          )}
+
           <button
             className={`pvz-btn gameover-primary-btn ${isPlants ? 'btn-victory-gold' : 'btn-defeat-purple'}`}
             onClick={onRematch}

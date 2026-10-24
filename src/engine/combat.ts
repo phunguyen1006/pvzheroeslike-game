@@ -169,6 +169,7 @@ export function resolveSingleLaneCombat(
   let currentZombieHero: HeroState = { ...gameState.zombieHero }
   let updatedPlantDeck = [...gameState.plantDeck]
   let updatedPlantHand = [...gameState.plantHand]
+  let updatedZombieHand = [...gameState.zombieHand]
   let pendingSuperBlock = gameState.pendingSuperBlock || null
   const updatedLanes = gameState.lanes.map((l, idx) => (idx === laneIndex ? { ...l } : l))
   const lane = updatedLanes[laneIndex]
@@ -867,6 +868,43 @@ export function resolveSingleLaneCombat(
       if (res.isSuperBlockTriggered && !pendingSuperBlock) {
         pendingSuperBlock = getPendingSuperBlockForHero(currentPlantHero, 'plants')
       }
+
+      // Dr. Spacetime: Conjure Galactic Gardens card discounted by 1 Brain on damage to Plant Hero
+      if (zombie.cardId === 'zombie_dr_spacetime' && res.actualDamage > 0 && updatedZombieHand.length < 10) {
+        const GALACTIC_POOL = [
+          { id: 'zombie_raiding_raptor', name: 'Raiding Raptor', cost: 2, attack: 2, health: 4, traits: ['Amphibious', 'Dino-Roar'], image: '/assets/heroes/zombies/Brain Freeze.png' },
+          { id: 'zombie_intergalactic_warlord', name: 'Intergalactic Warlord', cost: 5, attack: 3, health: 5, traits: [], image: '/assets/cards/zombies/Dr. Spacetime.png' },
+          { id: 'zombie_quickdraw_con_man', name: 'Quickdraw Con Man', cost: 1, attack: 1, health: 3, traits: ['Bullseye'], bullseye: true, image: '/assets/cards/zombies/Swabbie.png' },
+          { id: 'zombie_laser_base_alpha', name: 'Laser Base Alpha', cost: 3, attack: 0, health: 0, type: 'environment' as const, traits: ['Deadly', 'Strikethrough'], image: '/assets/cards/zombies/Moon Base Z.png' },
+          { id: 'zombie_area_22', name: 'Area 22', cost: 3, attack: 0, health: 0, type: 'environment' as const, traits: ['Frenzy'], image: '/assets/cards/zombies/Area 22.png' },
+        ]
+        const chosen = GALACTIC_POOL[Math.floor(Math.random() * GALACTIC_POOL.length)]
+        const conjured: Card = {
+          id: `${chosen.id}_conjured_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          name: chosen.name,
+          side: 'zombies',
+          cost: Math.max(0, chosen.cost - 1),
+          attack: chosen.attack,
+          health: chosen.health,
+          type: (chosen as any).type ?? 'minion',
+          traits: chosen.traits,
+          bullseye: (chosen as any).bullseye,
+          image: chosen.image,
+          description: `Triệu hồi bởi Dr. Spacetime (Giảm 1 Não).`,
+        }
+        updatedZombieHand = [...updatedZombieHand, conjured]
+        events.push({
+          laneIndex,
+          attackerSide: 'zombies',
+          attackerName: 'Dr. Spacetime',
+          target: 'hero',
+          targetSide: 'zombies',
+          damageDealt: 0,
+          isBlocked: false,
+          isLethal: false,
+          description: `🌌 Dr. Spacetime Triệu hồi (Conjure) lá Galactic Gardens [${conjured.name}] và giảm 1 Não (Giá: ${conjured.cost})!`,
+        })
+      }
     }
   }
 
@@ -901,6 +939,7 @@ export function resolveSingleLaneCombat(
     zombieHero: currentZombieHero,
     plantDeck: updatedPlantDeck,
     plantHand: updatedPlantHand,
+    zombieHand: updatedZombieHand,
     lanes: updatedLanes,
     winner,
     pendingSuperBlock,

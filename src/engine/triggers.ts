@@ -244,6 +244,61 @@ export function triggerOnDeath(
     logs.push(`☣️ Khí độc Gas Giant gây 1 sát thương lên Plant Hero!`)
   }
 
+  // --- Galacta-Cactus (plant_galacta_cactus) ---
+  if (deadMinion.cardId === 'plant_galacta_cactus' || deadMinion.name.toLowerCase() === 'galacta-cactus') {
+    logs.push(`🌌 Galacta-Cactus phát nổ vũ trụ khi bị tiêu diệt: Gây 1 sát thương lên TẤT CẢ mọi thứ!`)
+    updatedState.lanes.forEach(lane => {
+      if (lane.plantMinion && lane.plantMinion.instanceId !== deadMinion.instanceId && lane.plantMinion.currentHealth > 0) {
+        lane.plantMinion = {
+          ...lane.plantMinion,
+          currentHealth: Math.max(0, lane.plantMinion.currentHealth - 1),
+        }
+        if (lane.plantMinion.currentHealth <= 0) {
+          logs.push(`💥 ${lane.plantMinion.name} bị Galacta-Cactus tiêu diệt!`)
+          lane.plantMinion = null
+        }
+      }
+      if (lane.plantTeamUpMinion && lane.plantTeamUpMinion.instanceId !== deadMinion.instanceId && lane.plantTeamUpMinion.currentHealth > 0) {
+        lane.plantTeamUpMinion = {
+          ...lane.plantTeamUpMinion,
+          currentHealth: Math.max(0, lane.plantTeamUpMinion.currentHealth - 1),
+        }
+        if (lane.plantTeamUpMinion.currentHealth <= 0) {
+          logs.push(`💥 ${lane.plantTeamUpMinion.name} bị Galacta-Cactus tiêu diệt!`)
+          lane.plantTeamUpMinion = null
+        }
+      }
+      if (lane.zombieMinion && lane.zombieMinion.currentHealth > 0) {
+        const arm = lane.zombieMinion.armored ?? (lane.zombieMinion.traits?.includes('armored') ? 1 : 0)
+        const dmg = Math.max(0, 1 - arm)
+        lane.zombieMinion = {
+          ...lane.zombieMinion,
+          currentHealth: Math.max(0, lane.zombieMinion.currentHealth - dmg),
+        }
+        if (lane.zombieMinion.currentHealth <= 0) {
+          logs.push(`💥 ${lane.zombieMinion.name} bị Galacta-Cactus tiêu diệt!`)
+          lane.zombieMinion = null
+        }
+      }
+    })
+
+    const plantHeroDmg = applyHeroDamage(updatedState.plantHero, 1, true)
+    updatedState.plantHero = plantHeroDmg.updatedHero
+    const zombieHeroDmg = applyHeroDamage(updatedState.zombieHero, 1, true)
+    updatedState.zombieHero = zombieHeroDmg.updatedHero
+    events.push({
+      laneIndex: deadLaneIndex,
+      attackerSide: 'plants',
+      attackerName: 'Galacta-Cactus',
+      target: 'hero',
+      targetSide: 'plants',
+      damageDealt: 1,
+      isBlocked: false,
+      isLethal: updatedState.plantHero.hp <= 0,
+      description: `🌌 Galacta-Cactus phát nổ gây 1 Bullseye dmg lên cả 2 Heroes!`,
+    })
+  }
+
   // =========================================================================
   // 2. IN-HAND CARDS REACTION (Valkyrie)
   // =========================================================================

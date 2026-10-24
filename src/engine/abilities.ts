@@ -176,6 +176,50 @@ export function triggerWhenPlayed(
       break
     }
 
+    case 'plant_pineclone': {
+      // Pineclone: Transform all other friendly plants into 3/3 Pineclones
+      events.push(`🌲 Pineclone nhân bản: Biến hóa tất cả cây trồng khác của bạn thành bản sao Pineclone 3/3!`)
+      let transformedCount = 0
+      updatedState.lanes.forEach(l => {
+        if (l.plantMinion && l.plantMinion.instanceId !== minion.instanceId) {
+          l.plantMinion = {
+            instanceId: `pineclone_${Date.now()}_${l.index}_main`,
+            cardId: 'plant_pineclone',
+            name: 'Pineclone',
+            side: 'plants',
+            currentAttack: 3,
+            baseAttack: 3,
+            currentHealth: 3,
+            maxHealth: 3,
+            tribe: 'Pinecone Plant',
+            image: '/assets/cards/plants/Cherry Bomb.png',
+            traits: [],
+          }
+          transformedCount++
+        }
+        if (l.plantTeamUpMinion && l.plantTeamUpMinion.instanceId !== minion.instanceId) {
+          l.plantTeamUpMinion = {
+            instanceId: `pineclone_${Date.now()}_${l.index}_teamup`,
+            cardId: 'plant_pineclone',
+            name: 'Pineclone',
+            side: 'plants',
+            currentAttack: 3,
+            baseAttack: 3,
+            currentHealth: 3,
+            maxHealth: 3,
+            tribe: 'Pinecone Plant',
+            image: '/assets/cards/plants/Cherry Bomb.png',
+            traits: [],
+          }
+          transformedCount++
+        }
+      })
+      if (transformedCount > 0) {
+        events.push(`Đã biến hóa thành công ${transformedCount} cây trồng thành Pineclone 3/3!`)
+      }
+      break
+    }
+
     case 'zombie_intergalactic_warlord': {
       // Intergalactic Warlord: Zombie Evolution: All Zombies get +1/+1
       events.push(`🛸 Intergalactic Warlord xuất trận (Zombie Evolution): Toàn bộ Zombie trên sân và rút về sau nhận vĩnh viễn +1/+1!`)
@@ -542,6 +586,15 @@ export function triggerDinoRoar(state: GameState, side: Side): AbilityTriggerRes
         events.push(`🦕 Aloesaurus gầm vang (Dino-Roar): Hồi 2 Máu cho toàn bộ Plants và Plant Hero!`)
       }
     })
+
+    // Quickdraw Con Man: When Plant Hero draws a card, shoot 1 Bullseye damage to Plant Hero!
+    updatedState.lanes.forEach(lane => {
+      if (lane.zombieMinion && lane.zombieMinion.cardId === 'zombie_quickdraw_con_man') {
+        const dmg = applyHeroDamage(updatedState.plantHero, 1, true)
+        updatedState.plantHero = dmg.updatedHero
+        events.push(`🎯 Quickdraw Con Man nổ súng: Bắn 1 sát thương Bullseye vào Plant Hero (Máu Hero còn ${updatedState.plantHero.hp})!`)
+      }
+    })
   } else if (side === 'zombies') {
     // Raiding Raptor: Dino-Roar: Gets +2 Attack!
     updatedState.lanes.forEach(l => {
@@ -585,12 +638,17 @@ export function triggerWhenTrickPlayed(state: GameState, _trickCard: Card, caste
     })
 
     // Trickster in Zombie Hand: Costs 1 Brain less
+    let tricksterDiscounted = false
     updatedState.zombieHand = updatedState.zombieHand.map(c => {
       if (c.id === 'zombie_trickster' && c.cost > 0) {
+        tricksterDiscounted = true
         return { ...c, cost: Math.max(0, c.cost - 1) }
       }
       return c
     })
+    if (tricksterDiscounted) {
+      events.push('🃏 Trickster trên tay Zombie được giảm 1 Brain chi phí!')
+    }
   }
 
   return { updatedState, events }
@@ -630,6 +688,49 @@ export function triggerWhenDestroyed(
         lane.zombieMinion = null
       }
     }
+  }
+
+  if (destroyedMinion.cardId === 'plant_galacta_cactus') {
+    events.push(`🌌 Galacta-Cactus phát nổ vũ trụ khi bị tiêu diệt: Gây 1 sát thương lên TẤT CẢ mọi thứ!`)
+    updatedState.lanes.forEach(lane => {
+      if (lane.plantMinion && lane.plantMinion.instanceId !== destroyedMinion.instanceId) {
+        lane.plantMinion = {
+          ...lane.plantMinion,
+          currentHealth: Math.max(0, lane.plantMinion.currentHealth - 1),
+        }
+        if (lane.plantMinion.currentHealth <= 0) {
+          events.push(`💥 ${lane.plantMinion.name} bị Galacta-Cactus tiêu diệt!`)
+          lane.plantMinion = null
+        }
+      }
+      if (lane.plantTeamUpMinion && lane.plantTeamUpMinion.instanceId !== destroyedMinion.instanceId) {
+        lane.plantTeamUpMinion = {
+          ...lane.plantTeamUpMinion,
+          currentHealth: Math.max(0, lane.plantTeamUpMinion.currentHealth - 1),
+        }
+        if (lane.plantTeamUpMinion.currentHealth <= 0) {
+          events.push(`💥 ${lane.plantTeamUpMinion.name} bị Galacta-Cactus tiêu diệt!`)
+          lane.plantTeamUpMinion = null
+        }
+      }
+      if (lane.zombieMinion) {
+        const armor = lane.zombieMinion.armored || 0
+        const dmg = Math.max(0, 1 - armor)
+        lane.zombieMinion = {
+          ...lane.zombieMinion,
+          currentHealth: Math.max(0, lane.zombieMinion.currentHealth - dmg),
+        }
+        if (lane.zombieMinion.currentHealth <= 0) {
+          events.push(`💥 ${lane.zombieMinion.name} bị Galacta-Cactus tiêu diệt!`)
+          lane.zombieMinion = null
+        }
+      }
+    })
+
+    const plantHeroDmg = applyHeroDamage(updatedState.plantHero, 1, true)
+    updatedState.plantHero = plantHeroDmg.updatedHero
+    const zombieHeroDmg = applyHeroDamage(updatedState.zombieHero, 1, true)
+    updatedState.zombieHero = zombieHeroDmg.updatedHero
   }
 
   // 2. Cascade Triggers for other cards

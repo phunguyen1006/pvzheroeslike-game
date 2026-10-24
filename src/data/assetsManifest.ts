@@ -105,7 +105,10 @@ export const ASSET_MANIFEST = {
       "Geyser": "/assets/heroes/plants/Chompzilla.png",
       "Gatling Pea": "/assets/cards/plants/Peashooter.png",
       "Aloesaurus": "/assets/cards/plants/Bananasaurus Rex.png",
-      "Dusk Lobber": "/assets/cards/plants/Dark Matter Dragonfruit.png"
+      "Dusk Lobber": "/assets/cards/plants/Dark Matter Dragonfruit.png",
+      "Pineclone": "/assets/cards/plants/Cherry Bomb.png",
+      "Galacta-Cactus": "/assets/cards/plants/Shamrocket.png",
+      "Lily of the Valley": "/assets/cards/plants/Sunflower.png"
     },
     "zombies": {
       "Area 22": "/assets/cards/zombies/Area 22.png",
@@ -143,7 +146,9 @@ export const ASSET_MANIFEST = {
       "Dance Off": "/assets/heroes/zombies/Electric Boogaloo.png",
       "Cut Down to Size": "/assets/heroes/zombies/Professor Brainstorm.png",
       "Intergalactic Warlord": "/assets/cards/zombies/Dr. Spacetime.png",
-      "Raiding Raptor": "/assets/heroes/zombies/Brain Freeze.png"
+      "Raiding Raptor": "/assets/heroes/zombies/Brain Freeze.png",
+      "Quickdraw Con Man": "/assets/cards/zombies/Swabbie.png",
+      "Going Viral": "/assets/cards/zombies/Lurch for Lunch.png"
     }
   },
   "traits": {
