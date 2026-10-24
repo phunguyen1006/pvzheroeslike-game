@@ -353,6 +353,44 @@ export function resolveSingleLaneCombat(
       description: `${zombie.name} dealt ${dmgToPlant} damage to ${plant.name}${plant.currentHealth <= 0 ? ' (Destroyed)' : ''}`,
     })
 
+    // Splash Damage (Dark Matter Dragonfruit / Splash Damage trait)
+    const splashTrait = plant.traits?.find(t => t.toLowerCase().includes('splash damage'))
+    let splashDmg = 0
+    if (plant.cardId === 'plant_dark_matter_dragonfruit' || splashTrait) {
+      splashDmg = 6
+      if (splashTrait) {
+        const match = splashTrait.match(/\d+/)
+        if (match) splashDmg = parseInt(match[0], 10)
+      }
+    }
+    if (splashDmg > 0 && plantCanAttack) {
+      const adjIndices = [laneIndex - 1, laneIndex + 1].filter(idx => idx >= 0 && idx < updatedLanes.length)
+      adjIndices.forEach(adjIdx => {
+        const adjLane = updatedLanes[adjIdx]
+        if (adjLane.zombieMinion && adjLane.zombieMinion.currentHealth > 0) {
+          adjLane.zombieMinion = {
+            ...adjLane.zombieMinion,
+            currentHealth: Math.max(0, adjLane.zombieMinion.currentHealth - splashDmg),
+          }
+          events.push({
+            laneIndex: adjIdx,
+            attackerSide: 'plants',
+            attackerName: `${plant.name} (Splash Damage ${splashDmg})`,
+            target: 'minion',
+            targetSide: 'zombies',
+            damageDealt: splashDmg,
+            isBlocked: false,
+            isLethal: adjLane.zombieMinion.currentHealth <= 0,
+            description: `💥 ${plant.name} gây ${splashDmg} Splash Damage lan sang ${adjLane.zombieMinion.name} tại làn ${adjIdx}!`,
+          })
+          if (adjLane.zombieMinion.currentHealth <= 0) {
+            deadUnits.push({ minion: adjLane.zombieMinion, laneIndex: adjIdx })
+            adjLane.zombieMinion = null
+          }
+        }
+      })
+    }
+
     // Strikethrough handling
     if (plantHasStrikethrough && plantCanAttack) {
       const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
@@ -415,22 +453,41 @@ export function resolveSingleLaneCombat(
 
     // Frenzy handling (if Zombie destroyed Plant and survived)
     if (zombieHasFrenzy && plant.currentHealth <= 0 && zombie.currentHealth > 0) {
-      const frenzyRes = applyHeroDamage(currentPlantHero, zombie.currentAttack, zombieHasBullseye)
-      currentPlantHero = frenzyRes.updatedHero
-      events.push({
-        laneIndex,
-        attackerSide: 'zombies',
-        attackerName: zombie.name,
-        target: 'hero',
-        targetSide: 'plants',
-        damageDealt: frenzyRes.actualDamage,
-        isBlocked: frenzyRes.blocked,
-        isLethal: currentPlantHero.hp <= 0,
-        traitsTriggered: ['frenzy'],
-        description: `${zombie.name} triggered Frenzy bonus attack on Plant Hero for ${frenzyRes.actualDamage} dmg${frenzyRes.blocked ? ' (SUPER-BLOCK!)' : ''}`,
-      })
-      if (frenzyRes.isSuperBlockTriggered && !pendingSuperBlock) {
-        pendingSuperBlock = getPendingSuperBlockForHero(currentPlantHero, 'plants')
+      if (plantTeamUp && plantTeamUp.currentHealth > 0) {
+        // Frenzy bonus attack targets the Team-Up plant in the same lane!
+        const teamUpArmored = plantTeamUp.armored ?? (plantTeamUp.traits?.includes('armored') ? 1 : 0)
+        const frenzyDmg = Math.max(0, zombie.currentAttack - teamUpArmored)
+        plantTeamUp.currentHealth = zombieHasDeadly ? 0 : Math.max(0, plantTeamUp.currentHealth - frenzyDmg)
+        events.push({
+          laneIndex,
+          attackerSide: 'zombies',
+          attackerName: `${zombie.name} (Frenzy)`,
+          target: 'minion',
+          targetSide: 'plants',
+          damageDealt: frenzyDmg,
+          isBlocked: false,
+          isLethal: plantTeamUp.currentHealth <= 0,
+          traitsTriggered: ['frenzy'],
+          description: `⚡ ${zombie.name} kích hoạt Frenzy tấn công bồi tiếp tục lên ${plantTeamUp.name} Team-Up gây ${frenzyDmg} damage${plantTeamUp.currentHealth <= 0 ? ' (Tiêu diệt!)' : ''}`,
+        })
+      } else {
+        const frenzyRes = applyHeroDamage(currentPlantHero, zombie.currentAttack, zombieHasBullseye)
+        currentPlantHero = frenzyRes.updatedHero
+        events.push({
+          laneIndex,
+          attackerSide: 'zombies',
+          attackerName: zombie.name,
+          target: 'hero',
+          targetSide: 'plants',
+          damageDealt: frenzyRes.actualDamage,
+          isBlocked: frenzyRes.blocked,
+          isLethal: currentPlantHero.hp <= 0,
+          traitsTriggered: ['frenzy'],
+          description: `${zombie.name} triggered Frenzy bonus attack on Plant Hero for ${frenzyRes.actualDamage} dmg${frenzyRes.blocked ? ' (SUPER-BLOCK!)' : ''}`,
+        })
+        if (frenzyRes.isSuperBlockTriggered && !pendingSuperBlock) {
+          pendingSuperBlock = getPendingSuperBlockForHero(currentPlantHero, 'plants')
+        }
       }
     }
 

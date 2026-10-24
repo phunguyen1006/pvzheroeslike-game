@@ -44,10 +44,12 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] Chuẩn hóa metadata các thẻ bài mới vào `src/data/cards.ts` (`armored`, `antiHero`, `doubleStrike`)
 - [x] Bổ sung catalog validation tests cho Cabbage-Pult, Repeater, Snowdrop, Conehead, Buckethead, Stealthy Imp
 - [x] [ĐỢT 3] Mở rộng kho thẻ bài Plants và Zombies với các lá Super-Rare và Legendary (Wall-Nut, Briar Rose, Cornucopia, Teleport, Bad Moon Rising, Disco-Tron 3000)
-- [ ] [ĐỢT 4] Triển khai hệ thống Thẻ bài Siêu Năng Lực (Hero Superpowers & Signature Superpowers) và Thẻ Môi Trường (Environments)
+- [x] [ĐỢT 4] Triển khai hệ thống Thẻ bài Siêu Năng Lực (Hero Superpowers & Signature Superpowers) và Thẻ Môi Trường (Environments) - 71 cards catalog
+- [x] [ĐỢT 5] Thêm Brainana (Legendary Banana) và Dark Matter Dragonfruit (Legendary Dragon)
 
 ### 🧪 QA Bot (`feature/qa`)
 - [x] Thêm helper kiểm tra trait (`hasCardTrait`) và fixtures fallback cho thẻ bài AI
 - [x] Nâng tổng số test lên 112/112 test suite pass 100% (thêm test Double Strike, Armored 2, Bullseye Super-Block bypass, cascade on-death triggers, Gravestone reveal)
 - [x] [ĐỢT 3] Viết bộ test chuyên sâu `15. Legendary & Super-Rare Strategic Cards Suite` nâng tổng test lên 125/125 test cases pass 100%
-- [ ] [ĐỢT 4] Mở rộng kiểm thử trí tuệ nhân tạo (AI Engine Tests) & Tích hợp Superpower / Environment Suite (>135+ tests)
+- [x] [ĐỢT 4] Mở rộng kiểm thử trí tuệ nhân tạo (AI Engine Tests) & Tích hợp Superpower / Environment Suite (155/155 tests pass)
+- [ ] [ĐỢT 5] Bộ test chuyên sâu cho Brainana, Dark Matter Dragonfruit và Mulligan Re-draw logic

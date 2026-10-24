@@ -221,6 +221,25 @@ export const PLANT_CARDS: CardData[] = [
  laneRequirement: 'any'
  },
  {
+ id: 'plant_brainana',
+ name: 'Brainana',
+ team: 'plants',
+ type: 'plant',
+ cost: 6,
+ attack: 4,
+ hp: 3,
+ health: 3,
+ traits: ['Amphibious'],
+ amphibious: true,
+ rarity: 'Legendary',
+    tribe: 'Banana Plant',
+    assetPath: '/assets/cards/plants/Bananasaurus Rex.png',
+    image: '/assets/cards/plants/Bananasaurus Rex.png',
+    description: 'Amphibious. Khi xuất trận: Hút sạch toàn bộ Não (Brains) của Zombie Hero!',
+ heroClass: 'Smarty',
+ laneRequirement: 'any'
+ },
+ {
  id: 'plant_doubled_mint',
  name: 'Doubled Mint',
  team: 'plants',

@@ -20,11 +20,20 @@ export function executeTrick(
   let updatedState = { ...state }
   const hero = side === 'plants' ? state.plantHero : state.zombieHero
 
-  // Deduct cost
+  // Deduct cost (accounting for Dark Matter Dragonfruit effect on Zombie Tricks)
+  let extraTrickCost = 0
+  if (side === 'zombies' && card.type === 'trick') {
+    const hasDMD = state.lanes.some(
+      l => l.plantMinion?.cardId === 'plant_dark_matter_dragonfruit' || l.plantTeamUpMinion?.cardId === 'plant_dark_matter_dragonfruit'
+    )
+    if (hasDMD) extraTrickCost = 6
+  }
+  const totalCost = card.cost + extraTrickCost
+
   const updatedHero: HeroState = {
     ...hero,
     sun: side === 'plants' ? hero.sun - card.cost : hero.sun,
-    brains: side === 'zombies' ? hero.brains - card.cost : hero.brains,
+    brains: side === 'zombies' ? Math.max(0, hero.brains - totalCost) : hero.brains,
   }
 
   if (side === 'plants') updatedState.plantHero = updatedHero

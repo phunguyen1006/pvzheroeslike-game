@@ -80,6 +80,17 @@ export function triggerWhenPlayed(
       break
     }
 
+    case 'plant_brainana': {
+      // Brainana: When played: Zombie Hero loses all their Brains
+      const lostBrains = updatedState.zombieHero.brains
+      updatedState.zombieHero = {
+        ...updatedState.zombieHero,
+        brains: 0,
+      }
+      events.push(`🍌 Brainana xuất trận: Hút sạch toàn bộ ${lostBrains} Não (Brains) của Zombie Hero!`)
+      break
+    }
+
     case 'plant_cornucopia': {
       // Cornucopia: Make a random Plant in each other open lane
       const CORNUCOPIA_PLANT_POOL: {

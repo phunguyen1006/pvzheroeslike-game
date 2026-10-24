@@ -338,10 +338,21 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       const hero = side === 'plants' ? state.plantHero : state.zombieHero
       const resource = side === 'plants' ? hero.sun : hero.brains
-      if (resource < card.cost) {
+
+      // Dark Matter Dragonfruit effect: Zombie Tricks cost 6 Brains more
+      let extraTrickCost = 0
+      if (side === 'zombies' && card.type === 'trick') {
+        const hasDMD = state.lanes.some(
+          l => l.plantMinion?.cardId === 'plant_dark_matter_dragonfruit' || l.plantTeamUpMinion?.cardId === 'plant_dark_matter_dragonfruit'
+        )
+        if (hasDMD) extraTrickCost = 6
+      }
+      const effectiveCost = card.cost + extraTrickCost
+
+      if (resource < effectiveCost) {
         return {
           ...state,
-          combatLog: [`Không đủ năng lượng (${card.cost} cần thiết)!`, ...state.combatLog],
+          combatLog: [`Không đủ năng lượng (${effectiveCost} cần thiết${extraTrickCost > 0 ? ' do Dark Matter Dragonfruit tăng +6 Brains' : ''})!`, ...state.combatLog],
         }
       }
 
