@@ -1,4 +1,4 @@
-﻿import type { HeroState, GameState, CombatResult, CombatEvent, Side, Card, Minion } from './types'
+﻿import type { HeroState, GameState, CombatResult, CombatEvent, Side, Card, Minion, LaneState } from './types'
 import { SUPERPOWERS } from '../data/superpowers'
 import { triggerOnMultipleDeaths } from './triggers'
 import { isFlowerPlant } from './abilities'
@@ -155,6 +155,78 @@ export function getPendingSuperBlockForHero(hero: HeroState, side: Side): { side
   }
 }
 
+/**
+ * Checks if Binary Stars is active (unhidden/not in gravestone) on the zombie side.
+ * Doubles all zombie damage dealt (combat attacks, traits, frenzy, overshoot, tricks).
+ */
+export function hasBinaryStars(lanes: LaneState[]): boolean {
+  return lanes.some(
+    l => l.zombieMinion &&
+         !l.zombieMinion.isGravestone &&
+         l.zombieMinion.currentHealth > 0 &&
+         (l.zombieMinion.cardId === 'zombie_binary_stars' || l.zombieMinion.name.toLowerCase().includes('binary stars'))
+  )
+}
+
+/**
+ * Soul Patch passive:
+ * "When Plant Hero would take damage, Soul Patch absorbs and takes that damage instead."
+ * Armored 1 applies to Soul Patch: Math.max(0, damage - armored).
+ * Soul Patch takes the damage, Plant Hero takes 0 damage and block meter does NOT charge.
+ */
+export function redirectHeroDamageToSoulPatch(
+  lanes: LaneState[],
+  damage: number,
+  events?: CombatEvent[] | string[],
+  laneIndex: number = 0,
+  attackerName: string = 'Zombie'
+): { absorbed: boolean; actualDamageToHero: number } {
+  if (damage <= 0) return { absorbed: false, actualDamageToHero: 0 }
+
+  for (const l of lanes) {
+    const candidate = (l.plantMinion && (l.plantMinion.cardId === 'plant_soul_patch' || l.plantMinion.name.toLowerCase().includes('soul patch')))
+      ? { minion: l.plantMinion, isTeamUp: false, lane: l }
+      : ((l.plantTeamUpMinion && (l.plantTeamUpMinion.cardId === 'plant_soul_patch' || l.plantTeamUpMinion.name.toLowerCase().includes('soul patch')))
+        ? { minion: l.plantTeamUpMinion, isTeamUp: true, lane: l }
+        : null)
+
+    if (candidate && candidate.minion.currentHealth > 0) {
+      const armor = candidate.minion.armored ?? (candidate.minion.traits?.some(t => t.toLowerCase().includes('armored')) ? 1 : 1)
+      const dmgTaken = Math.max(0, damage - armor)
+      candidate.minion.currentHealth = Math.max(0, candidate.minion.currentHealth - dmgTaken)
+      const isDead = candidate.minion.currentHealth <= 0
+      if (isDead) {
+        if (candidate.isTeamUp) {
+          candidate.lane.plantTeamUpMinion = null
+        } else {
+          candidate.lane.plantMinion = null
+        }
+      }
+      const desc = `🛡️ Soul Patch hấp thụ toàn bộ sát thương thay cho Plant Hero (chịu ${dmgTaken} dmg, còn ${Math.max(0, candidate.minion.currentHealth)} HP)${isDead ? ' và hy sinh' : ''}!`
+      if (events) {
+        if (Array.isArray(events) && events.length > 0 && typeof events[0] === 'string') {
+          (events as string[]).push(desc)
+        } else {
+          (events as CombatEvent[]).push({
+            laneIndex,
+            attackerSide: 'zombies',
+            attackerName,
+            target: 'minion',
+            targetSide: 'plants',
+            damageDealt: dmgTaken,
+            isBlocked: false,
+            isLethal: isDead,
+            description: desc,
+          })
+        }
+      }
+      return { absorbed: true, actualDamageToHero: 0 }
+    }
+  }
+
+  return { absorbed: false, actualDamageToHero: damage }
+}
+
 export interface SingleLaneCombatResult {
   updatedState: GameState
   events: CombatEvent[]
@@ -240,21 +312,25 @@ export function resolveSingleLaneCombat(
       }
     } else if (lane.environment.id === 'zombie_moon_base_z' && zombie) {
       // Moon Base Z: Overshoot 3 (3 damage to Plant Hero before combat)
-      const overshootRes = applyHeroDamage(currentPlantHero, 3, false, updatedPlantHand.length)
-      currentPlantHero = overshootRes.updatedHero
-      events.push({
-        laneIndex,
-        attackerSide: 'zombies',
-        attackerName: `${zombie.name} (Moon Base Z)`,
-        target: 'hero',
-        targetSide: 'plants',
-        damageDealt: overshootRes.actualDamage,
-        isBlocked: overshootRes.blocked,
-        isLethal: currentPlantHero.hp <= 0,
-        description: `Moon Base Z kích hoạt Overshoot 3: Bắn 3 dmg vào Plant Hero${overshootRes.blocked ? ' (SUPER-BLOCK!)' : ''}`,
-      })
-      if (overshootRes.isSuperBlockTriggered && !pendingSuperBlock) {
-        pendingSuperBlock = getPendingSuperBlockForHero(currentPlantHero, 'plants')
+      const overshootDmg = hasBinaryStars(updatedLanes) ? 6 : 3
+      const spRes = redirectHeroDamageToSoulPatch(updatedLanes, overshootDmg, events, laneIndex, `${zombie.name} (Moon Base Z)`)
+      if (!spRes.absorbed) {
+        const overshootRes = applyHeroDamage(currentPlantHero, overshootDmg, false, updatedPlantHand.length)
+        currentPlantHero = overshootRes.updatedHero
+        events.push({
+          laneIndex,
+          attackerSide: 'zombies',
+          attackerName: `${zombie.name} (Moon Base Z)`,
+          target: 'hero',
+          targetSide: 'plants',
+          damageDealt: overshootRes.actualDamage,
+          isBlocked: overshootRes.blocked,
+          isLethal: currentPlantHero.hp <= 0,
+          description: `Moon Base Z kích hoạt Overshoot 3${hasBinaryStars(updatedLanes) ? ' (x2 Binary Stars)' : ''}: Bắn ${overshootDmg} dmg vào Plant Hero${overshootRes.blocked ? ' (SUPER-BLOCK!)' : ''}`,
+        })
+        if (overshootRes.isSuperBlockTriggered && !pendingSuperBlock) {
+          pendingSuperBlock = getPendingSuperBlockForHero(currentPlantHero, 'plants')
+        }
       }
     }
   }
@@ -324,8 +400,10 @@ export function resolveSingleLaneCombat(
     const isZombieInvulnerable = Boolean(zombie.isInvulnerable || zombie.invulnerableThisTurn)
     const isPlantInvulnerable = Boolean(plant.isInvulnerable || plant.invulnerableThisTurn)
 
+    const zombieMult = hasBinaryStars(updatedLanes) ? 2 : 1
+    const zombieAtk = zombieCanAttack ? zombie.currentAttack * zombieMult : 0
     const dmgToZombie = isZombieInvulnerable ? 0 : Math.max(0, totalPlantAtk - zombieArmored)
-    const dmgToPlant = isPlantInvulnerable ? 0 : (zombieCanAttack ? Math.max(0, zombie.currentAttack - plantArmored) : 0)
+    const dmgToPlant = isPlantInvulnerable ? 0 : (zombieCanAttack ? Math.max(0, zombieAtk - plantArmored) : 0)
 
     const plantHasDeadly = Boolean(plant.deadly || plant.traits?.includes('deadly'))
     const zombieHasDeadly = Boolean(zombie.deadly || zombie.traits?.includes('deadly') || lane.environment?.id === 'zombie_laser_base_alpha')
@@ -397,6 +475,29 @@ export function resolveSingleLaneCombat(
           isLethal: false,
           description: `🗞️ Newspaper Zombie bị rách báo! Tăng +4 Attack (${zombie.currentAttack} ATK) và Cuồng nộ (Frenzy)!`,
         })
+      }
+      // Jester: reflect damage back to attacker when attacked
+      if ((zombie.cardId === 'zombie_jester' || zombie.name.toLowerCase().includes('jester')) && plant && plant.currentHealth > 0) {
+        const plantArmor = plant.armored ?? (plant.traits?.some(t => t.toLowerCase().includes('armored')) ? 1 : 0)
+        const reflectDmg = Math.max(0, dmgToZombie - plantArmor)
+        if (reflectDmg > 0) {
+          plant.currentHealth = Math.max(0, plant.currentHealth - reflectDmg)
+          events.push({
+            laneIndex,
+            attackerSide: 'zombies',
+            attackerName: zombie.name,
+            target: 'minion',
+            targetSide: 'plants',
+            damageDealt: reflectDmg,
+            isBlocked: false,
+            isLethal: plant.currentHealth <= 0,
+            description: `🃏 Jester phản xạ ${reflectDmg} sát thương về phía ${plant.name}${plant.currentHealth <= 0 ? ' (Tiêu diệt!)' : ''}!`,
+          })
+          if (plant.currentHealth <= 0) {
+            deadUnits.push({ minion: plant, laneIndex })
+            plant = null
+          }
+        }
       }
     }
 
@@ -1532,6 +1633,26 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
             }
           }
         })
+      }
+
+      // Cob Cannon: deals 4 damage to enemy Zombie Hero when attacking
+      if ((plant.cardId === 'plant_cob_cannon' || plant.name.toLowerCase().includes('cob cannon')) && plantCanAttack) {
+        const cobFaceRes = applyHeroDamage(currentZombieHero, 4, false, updatedZombieHand.length)
+        currentZombieHero = cobFaceRes.updatedHero
+        events.push({
+          laneIndex,
+          attackerSide: 'plants',
+          attackerName: `${plant.name} (Đại pháo)`,
+          target: 'hero',
+          targetSide: 'zombies',
+          damageDealt: cobFaceRes.actualDamage,
+          isBlocked: cobFaceRes.blocked,
+          isLethal: currentZombieHero.hp <= 0,
+          description: `🌽 Cob Cannon công thành bắn đại pháo gây 4 sát thương nổ thẳng vào Zombie Hero${cobFaceRes.blocked ? ' (SUPER-BLOCK!)' : ''}!`,
+        })
+        if (cobFaceRes.isSuperBlockTriggered && !pendingSuperBlock) {
+          pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+        }
       }
 
       // Strikethrough handling

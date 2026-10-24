@@ -173,7 +173,29 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
         <div className="hero-dirt-crater opponent-dirt-crater" />
 
         {/* Hero Character Sprite */}
-        <div className={`hero-standing-character ${isCurrentTurnActive ? 'hero-turn-focus' : ''}`}>
+        <div
+          className={`hero-standing-character ${isCurrentTurnActive ? 'hero-turn-focus' : ''} ${
+            isHurt ? 'hero-portrait-hurt-shake' : ''
+          } ${isUsingSuperpower ? 'hero-portrait-superpower-glow' : ''} ${
+            isLowHp ? 'hero-portrait-low-hp' : ''
+          }`}
+        >
+          {/* Low HP Red Pulsating Danger Vignette & Alarm */}
+          {isLowHp && (
+            <div className="hero-danger-vignette-overlay" aria-hidden="true">
+              <div className="danger-pulsing-edge" />
+              <div className="danger-warning-badge">⚠️ NGUY HIỂM!</div>
+            </div>
+          )}
+
+          {/* Superpower Glowing Aura Ring */}
+          {isUsingSuperpower && (
+            <div className="hero-superpower-radiant-aura" aria-hidden="true">
+              <div className="superpower-aura-ring" />
+              <div className="superpower-sparkle-burst" />
+            </div>
+          )}
+
           <img
             src={hero.avatar || '/assets/board/Game_Logo.png'}
             alt={hero.name}

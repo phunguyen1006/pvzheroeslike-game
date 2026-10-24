@@ -9,6 +9,7 @@ export interface HeroBottomArenaProps {
   side: Side
   phase: Phase
   isHurt?: boolean
+  isUsingSuperpower?: boolean
   floatingDamage?: string
   activeEmote?: { text: string; emoji?: string } | null
   onDismissEmote?: () => void
@@ -20,12 +21,14 @@ export const HeroBottomArena: React.FC<HeroBottomArenaProps> = ({
   side,
   phase,
   isHurt = false,
+  isUsingSuperpower = false,
   floatingDamage,
   activeEmote,
   onDismissEmote,
   onSuperBlockClick,
 }) => {
   const isPlant = side === 'plants'
+  const isLowHp = hero.hp <= 5 && hero.hp > 0
   const maxBlocks = 3
   const remainingBlocks = Math.max(0, maxBlocks - (hero.blockCount || 0))
   const isTurnActive = isPlant
@@ -124,7 +127,29 @@ export const HeroBottomArena: React.FC<HeroBottomArenaProps> = ({
         </div>
 
         {/* Center: Hero Standing Sprite */}
-        <div className={`hero-standing-character player-hero-character ${isTurnActive ? 'hero-turn-focus' : ''}`}>
+        <div
+          className={`hero-standing-character player-hero-character ${
+            isTurnActive ? 'hero-turn-focus' : ''
+          } ${isHurt ? 'hero-portrait-hurt-shake' : ''} ${
+            isUsingSuperpower ? 'hero-portrait-superpower-glow' : ''
+          } ${isLowHp ? 'hero-portrait-low-hp' : ''}`}
+        >
+          {/* Low HP Red Pulsating Danger Vignette & Alarm */}
+          {isLowHp && (
+            <div className="hero-danger-vignette-overlay" aria-hidden="true">
+              <div className="danger-pulsing-edge" />
+              <div className="danger-warning-badge">⚠️ NGUY HIỂM!</div>
+            </div>
+          )}
+
+          {/* Superpower Glowing Aura Ring */}
+          {isUsingSuperpower && (
+            <div className="hero-superpower-radiant-aura" aria-hidden="true">
+              <div className="superpower-aura-ring" />
+              <div className="superpower-sparkle-burst" />
+            </div>
+          )}
+
           <img
             src={hero.avatar || '/assets/board/Game_Logo.png'}
             alt={hero.name}

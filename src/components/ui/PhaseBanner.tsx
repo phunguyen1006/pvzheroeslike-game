@@ -126,9 +126,10 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({
       {/* 2. Top Phase Flow Control Bar (Always accessible) */}
       <div className="phase-banner-wrapper">
         {turn !== undefined && (
-          <div className="turn-counter-badge">
-            <span className="turn-label">ROUND</span>
-            <span className="turn-number">{turn}</span>
+          <div className="turn-counter-badge" title={`Lượt đấu thứ ${turn}`}>
+            <span className="turn-icon">⏱️</span>
+            <span className="turn-label">LƯỢT</span>
+            <span className="turn-number">{turn} <span className="turn-infinity-total">/ ∞</span></span>
           </div>
         )}
 
@@ -141,10 +142,11 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({
                 className={`phase-step ${isCurrent ? 'active-phase-step' : ''}`}
                 style={{
                   borderColor: isCurrent ? p.activeColor : 'rgba(255,255,255,0.15)',
-                  boxShadow: isCurrent ? `0 0 14px ${p.activeColor}` : 'none',
+                  boxShadow: isCurrent ? `0 0 16px ${p.activeColor}` : 'none',
                 }}
               >
-                <span>{p.label}</span>
+                <span className="phase-step-pill-indicator" />
+                <span className="phase-step-text">{p.label}</span>
               </div>
             )
           })}

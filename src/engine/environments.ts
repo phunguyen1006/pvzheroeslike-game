@@ -121,6 +121,24 @@ export function playEnvironment(
       }
       events.push(`Cone Zone trang bị nón bảo hộ: ${targetLane.zombieMinion.name} nhận thêm +3 Máu (+3 HP)!`)
     }
+  } else if (card.id === 'zombie_haunted_castle') {
+    if (targetLane.zombieMinion) {
+      targetLane.zombieMinion = {
+        ...targetLane.zombieMinion,
+        currentAttack: targetLane.zombieMinion.currentAttack + 1,
+        baseAttack: targetLane.zombieMinion.baseAttack + 1,
+      }
+      events.push(`Haunted Castle: Lâu đài ma quái tăng +1 Tấn công cho ${targetLane.zombieMinion.name}!`)
+    }
+  } else if (card.id === 'plant_mushroom_grotto') {
+    if (targetLane.plantMinion) {
+      targetLane.plantMinion = {
+        ...targetLane.plantMinion,
+        currentHealth: targetLane.plantMinion.currentHealth + 2,
+        maxHealth: targetLane.plantMinion.maxHealth + 2,
+      }
+      events.push(`Mushroom Grotto: Hang nấm tăng +2 Máu cho ${targetLane.plantMinion.name}!`)
+    }
   }
 
   return { updatedState, events }
@@ -227,6 +245,20 @@ export function applyEnvironmentOnPlay(
       maxHealth: lane.zombieMinion.maxHealth + 3,
     }
     events.push(`Cone Zone: ${lane.zombieMinion.name} nhận thêm +3 Máu (+3 HP)!`)
+  } else if (lane.environment.id === 'zombie_haunted_castle' && side === 'zombies' && lane.zombieMinion) {
+    lane.zombieMinion = {
+      ...lane.zombieMinion,
+      currentAttack: lane.zombieMinion.currentAttack + 1,
+      baseAttack: lane.zombieMinion.baseAttack + 1,
+    }
+    events.push(`Haunted Castle: ${lane.zombieMinion.name} nhận +1 Tấn công (+1/+0)!`)
+  } else if (lane.environment.id === 'plant_mushroom_grotto' && side === 'plants' && lane.plantMinion) {
+    lane.plantMinion = {
+      ...lane.plantMinion,
+      currentHealth: lane.plantMinion.currentHealth + 2,
+      maxHealth: lane.plantMinion.maxHealth + 2,
+    }
+    events.push(`Mushroom Grotto: ${lane.plantMinion.name} nhận +2 Máu (+0/+2)!`)
   }
 
   return { updatedState, events }

@@ -1968,6 +1968,9 @@ export function getAIDecision(
 
   const hand = isZombie ? state.zombieHand : state.plantHand
   const resource = isZombie ? myHero.brains : myHero.sun
+  const enemyHero = isZombie ? state.plantHero : state.zombieHero
+  const isAggroAllOut = enemyHero.hp <= 10 || archetype === 'aggro'
+  const isDefensiveSurvival = myHero.hp <= 8
 
   // Handle pending Super-Block trigger if active
   if (state.pendingSuperBlock && state.pendingSuperBlock.side === side) {
@@ -2052,6 +2055,36 @@ export function getAIDecision(
       }
     }
 
+    // S1. DEFENSIVE SURVIVAL MODE: When Zombie Hero HP <= 8, immediately deploy taunt/shield blockers
+    if (isDefensiveSurvival) {
+      const unblockedPlants = state.lanes
+        .map((lane, idx) => ({ lane, idx, plant: lane.plantMinion }))
+        .filter((x): x is { lane: LaneState; idx: number; plant: Minion } => Boolean(x.plant && !x.lane.zombieMinion))
+        .sort((a, b) => b.plant.currentAttack - a.plant.currentAttack)
+
+      if (unblockedPlants.length > 0 && playableMinions.length > 0) {
+        const topThreat = unblockedPlants[0]
+        const defensiveBlockers = [...playableMinions].sort((a, b) => {
+          const aArmored = hasCardTrait(a, 'armored') ? 10 : 0
+          const bArmored = hasCardTrait(b, 'armored') ? 10 : 0
+          const aDeadly = hasCardTrait(a, 'deadly') ? 5 : 0
+          const bDeadly = hasCardTrait(b, 'deadly') ? 5 : 0
+          return (b.health + bArmored + bDeadly) - (a.health + aArmored + aDeadly)
+        })
+
+        for (const candidate of defensiveBlockers) {
+          if (canPlayCardToLane(candidate, topThreat.lane, 'zombies').allowed) {
+            return {
+              action: 'PLAY_MINION',
+              card: candidate,
+              laneIndex: topThreat.idx,
+              reason: `Defensive Survival Mode: Deploys ${candidate.name} to block dangerous ${topThreat.plant.name} (${topThreat.plant.currentAttack} ATK) (Hero HP <= 8)`,
+            }
+          }
+        }
+      }
+    }
+
     // A. Priority: Amphibious on Water Lane (Lane index 4)
     const amphMinion = playableMinions.find(hasAmphibiousTrait)
     const waterLane = state.lanes[4]
@@ -2099,18 +2132,24 @@ export function getAIDecision(
     }
 
     // C. ARCHETYPE SPECIFIC LOGIC:
-    // AGGRO ARCHETYPE: Prioritize open lanes first and foremost for direct face damage (unless facing severe threat >= 4 attack)!
+    // AGGRO ARCHETYPE / ALL-OUT AGGRESSION: Prioritize open lanes first and foremost for direct face damage (when enemy HP <= 10 or Aggro)
     const severeThreatLanes = state.lanes.filter(
       (l) => l.plantMinion && !l.zombieMinion && (l.plantMinion.currentAttack >= 4 || evaluateMinionThreat(l, 'plants') >= 12)
     )
-    if (archetype === 'aggro' && openLanes.length > 0 && severeThreatLanes.length === 0) {
+    if (isAggroAllOut && openLanes.length > 0 && severeThreatLanes.length === 0) {
       const topAggressor = [...playableMinions].sort((a, b) => {
         const aScore = a.attack * 2 + (hasCardTrait(a, 'bullseye') ? 2 : 0) + (hasCardTrait(a, 'frenzy') ? 2 : 0)
         const bScore = b.attack * 2 + (hasCardTrait(b, 'bullseye') ? 2 : 0) + (hasCardTrait(b, 'frenzy') ? 2 : 0)
         return bScore - aScore
       })[0]
 
-      for (const { lane, idx } of openLanes) {
+      // Filter out hazardous lanes (e.g. Spikeweed Sector for <= 2 HP or Hot Lava for <= 1 HP)
+      const safeOpenLanes = openLanes.filter(
+        ({ lane }) => !isEnvironmentHazardousForMinion(lane, topAggressor, 'zombies').hazardous
+      )
+      const candidateLanes = safeOpenLanes.length > 0 ? safeOpenLanes : openLanes
+
+      for (const { lane, idx } of candidateLanes) {
         if (canPlayCardToLane(topAggressor, lane, 'zombies').allowed) {
           return {
             action: 'PLAY_MINION',
@@ -2245,9 +2284,88 @@ export function getAIDecision(
     )
     if (playableTricks.length === 0) return { action: 'PASS' }
 
+    const enemyHero = state.plantHero
+    const isAggroAllOut = enemyHero.hp <= 10 || archetype === 'aggro'
+    const isDefensiveSurvival = myHero.hp <= 8
+
     // A. Check Lethal
     const lethal = checkLethalPossibility(state, 'zombies', playableTricks, resource)
     if (lethal) return lethal
+
+    // S2. DEFENSIVE SURVIVAL MODE: Prioritize removal on attacking plants & heal tricks when HP <= 8
+    if (isDefensiveSurvival) {
+      // Hard removal: Locust Swarm on strongest attacking plant
+      const locust = playableTricks.find((c) => c.id === 'zombie_locust_swarm')
+      if (locust) {
+        const attackingPlantIdx = state.lanes.reduce((best, lane, idx) => {
+          if (!lane.plantMinion || isUntrickable(lane.plantMinion)) return best
+          if (best === -1) return idx
+          return lane.plantMinion.currentAttack > (state.lanes[best].plantMinion?.currentAttack ?? 0)
+            ? idx
+            : best
+        }, -1)
+        if (attackingPlantIdx !== -1 && (state.lanes[attackingPlantIdx].plantMinion?.currentAttack ?? 0) >= 2) {
+          return {
+            action: 'PLAY_TRICK',
+            card: locust,
+            laneIndex: attackingPlantIdx,
+            reason: `Defensive Survival Mode: Locust Swarm destroys attacking plant ${state.lanes[attackingPlantIdx].plantMinion!.name} to protect Hero (HP <= 8)`,
+          }
+        }
+      }
+
+      // Hard removal: Rocket Science on >= 4 attack plant
+      const rocket = playableTricks.find((c) => c.id === 'zombie_rocket_science')
+      if (rocket) {
+        const bigPlantIdx = state.lanes.findIndex(
+          (l) => l.plantMinion && l.plantMinion.currentAttack >= 4 && !isUntrickable(l.plantMinion)
+        )
+        if (bigPlantIdx !== -1) {
+          return {
+            action: 'PLAY_TRICK',
+            card: rocket,
+            laneIndex: bigPlantIdx,
+            reason: `Defensive Survival Mode: Rocket Science neutralizes dangerous ${state.lanes[bigPlantIdx].plantMinion!.name} (${state.lanes[bigPlantIdx].plantMinion!.currentAttack} ATK) (Hero HP <= 8)`,
+          }
+        }
+      }
+
+      // Heal trick: Stayin' Alive
+      const stayinAlive = playableTricks.find((c) => c.id.includes('stayin_alive'))
+      if (stayinAlive) {
+        const targetPlantIdx = state.lanes.findIndex((l) => l.plantMinion && !isUntrickable(l.plantMinion))
+        if (targetPlantIdx !== -1) {
+          return {
+            action: 'PLAY_TRICK',
+            card: stayinAlive,
+            laneIndex: targetPlantIdx,
+            reason: `Defensive Survival Mode: Stayin' Alive siphons health to heal Hero (HP <= 8)`,
+          }
+        }
+      }
+    }
+
+    // S3. AGGRO ALL-OUT MODE: Burn face with Bungee Plumber / Final Mission directly when Plant Hero HP <= 10
+    if (isAggroAllOut) {
+      const bungee = playableTricks.find((c) => c.id === 'zombie_bungee_plumber')
+      if (bungee) {
+        return {
+          action: 'PLAY_TRICK',
+          card: bungee,
+          targetHero: true,
+          reason: 'Aggro All-Out Mode: Bungee Plumber deals direct face damage to Plant Hero (HP <= 10)',
+        }
+      }
+      const finalMission = playableTricks.find((c) => c.id === 'zombie_final_mission')
+      if (finalMission) {
+        return {
+          action: 'PLAY_TRICK',
+          card: finalMission,
+          targetHero: true,
+          reason: 'Aggro All-Out Mode: Final Mission blasts Plant Hero face directly (HP <= 10)',
+        }
+      }
+    }
 
     // B. Environment Overwrite & Strategic Placement Tactics:
     const envCard = playableTricks.find((c) => c.type === 'environment')
@@ -2468,11 +2586,14 @@ export function getAIDecision(
         .sort((a, b) => b.l.zombieMinion!.currentAttack - a.l.zombieMinion!.currentAttack)[0]
 
       if (unblockedZombie) {
+        const isLethal = unblockedZombie.l.zombieMinion!.currentAttack >= state.plantHero.hp
         return {
           action: 'PLAY_TRICK',
           card: lurch,
           laneIndex: unblockedZombie.idx,
-          reason: `Lurch for Lunch grants bonus attack to unblocked zombie ${unblockedZombie.l.zombieMinion!.name} for face damage`,
+          reason: isLethal
+            ? `Lethal Lurch for Lunch bonus attack to unblocked zombie ${unblockedZombie.l.zombieMinion!.name} for victory`
+            : `Lurch for Lunch grants bonus attack to unblocked zombie ${unblockedZombie.l.zombieMinion!.name} for face damage`,
         }
       }
 
@@ -2513,6 +2634,68 @@ export function getAIDecision(
     // A. Check Lethal
     const lethal = checkLethalPossibility(state, 'plants', playableCards, resource)
     if (lethal) return lethal
+
+    // S1. DEFENSIVE SURVIVAL MODE: Prioritize heal tricks and emergency removal when HP <= 8
+    if (isDefensiveSurvival) {
+      // Heal tricks
+      const taco = playableCards.find((c) => c.id === 'plant_2nd_best_taco_of_all_time')
+      if (taco) {
+        return {
+          action: 'PLAY_TRICK',
+          card: taco,
+          targetHero: true,
+          reason: 'Defensive Survival Mode: 2nd Best Taco heals Plant Hero for 4 HP (HP <= 8)',
+        }
+      }
+
+      const lawnmower = playableCards.find((c) => c.id === 'plant_lawnmower')
+      if (lawnmower) {
+        const groundZombieIdx = [1, 2, 3].find(
+          (idx) => state.lanes[idx].zombieMinion && !isUntrickable(state.lanes[idx].zombieMinion)
+        )
+        if (groundZombieIdx !== undefined) {
+          return {
+            action: 'PLAY_TRICK',
+            card: lawnmower,
+            laneIndex: groundZombieIdx,
+            reason: `Defensive Survival Mode: Lawnmower destroys attacking zombie in ground lane ${groundZombieIdx + 1} (HP <= 8)`,
+          }
+        }
+      }
+
+      // Hard removal: Squash any attacking zombie
+      const squash = playableCards.find((c) => c.id === 'plant_squash')
+      if (squash) {
+        const dangerousZombieIdx = state.lanes.reduce((best, lane, idx) => {
+          if (!lane.zombieMinion || isUntrickable(lane.zombieMinion)) return best
+          if (best === -1) return idx
+          return lane.zombieMinion.currentAttack > (state.lanes[best].zombieMinion?.currentAttack ?? 0)
+            ? idx
+            : best
+        }, -1)
+        if (dangerousZombieIdx !== -1) {
+          return {
+            action: 'PLAY_TRICK',
+            card: squash,
+            laneIndex: dangerousZombieIdx,
+            reason: `Defensive Survival Mode: Squash destroys high threat zombie ${state.lanes[dangerousZombieIdx].zombieMinion!.name} (HP <= 8)`,
+          }
+        }
+      }
+    }
+
+    // S2. AGGRO ALL-OUT MODE: Burn Zombie Hero face directly with Berry Blast
+    if (isAggroAllOut) {
+      const berryBlast = playableCards.find((c) => c.id === 'plant_berry_blast')
+      if (berryBlast) {
+        return {
+          action: 'PLAY_TRICK',
+          card: berryBlast,
+          targetHero: true,
+          reason: 'Aggro All-Out Mode: Berry Blast targets Zombie Hero face directly (HP <= 10)',
+        }
+      }
+    }
 
     // B. Environment Overwrite Tactics: Neutralize dangerous Zombie environments!
     const plantEnv = playableCards.find((c) => c.type === 'environment')
@@ -2622,6 +2805,44 @@ export function getAIDecision(
     // E. Minions Placement
     const playableMinions = playableCards.filter(isMinionCard)
     if (playableMinions.length > 0) {
+      // 1. Environment Synergy: Pair Pearadise (Duplicates Plant with Team-Up!)
+      const pairPearadiseLaneIdx = state.lanes.findIndex(
+        (l) => l.environment?.id.includes('pair_pearadise') && !l.plantMinion
+      )
+      if (pairPearadiseLaneIdx !== -1) {
+        const topMinion = [...playableMinions].sort(
+          (a, b) => b.attack + b.health + b.cost * 2 - (a.attack + a.health + a.cost * 2)
+        )[0]
+        if (canPlayCardToLane(topMinion, state.lanes[pairPearadiseLaneIdx], 'plants').allowed) {
+          return {
+            action: 'PLAY_MINION',
+            card: topMinion,
+            laneIndex: pairPearadiseLaneIdx,
+            reason: `Environment Synergy: Deploys ${topMinion.name} into Pair Pearadise to trigger cloning`,
+          }
+        }
+      }
+
+      // 2. Environment Synergy: Venus Flytrap Planet (Heals hero for damage dealt!)
+      const venusFlytrapLaneIdx = state.lanes.findIndex(
+        (l) => l.environment?.id.includes('venus_flytrap') && !l.plantMinion
+      )
+      if (venusFlytrapLaneIdx !== -1) {
+        const healAttacker = [...playableMinions].sort((a, b) => {
+          const aStrike = (hasCardTrait(a, 'strikethrough') ? 5 : 0) + a.attack
+          const bStrike = (hasCardTrait(b, 'strikethrough') ? 5 : 0) + b.attack
+          return bStrike - aStrike
+        })[0]
+        if (canPlayCardToLane(healAttacker, state.lanes[venusFlytrapLaneIdx], 'plants').allowed) {
+          return {
+            action: 'PLAY_MINION',
+            card: healAttacker,
+            laneIndex: venusFlytrapLaneIdx,
+            reason: `Environment Synergy: Deploys ${healAttacker.name} into Venus Flytrap Planet for healing`,
+          }
+        }
+      }
+
       // Prioritize Amphibious on Water Lane
       const amph = playableMinions.find(hasAmphibiousTrait)
       if (amph && !state.lanes[4].plantMinion) {
@@ -2644,8 +2865,8 @@ export function getAIDecision(
         }
       }
 
-      // Aggro Plant AI: Prioritize open lanes to blast Zombie Hero
-      if (archetype === 'aggro') {
+      // Aggro Plant AI / All-Out Mode: Prioritize open lanes to blast Zombie Hero
+      if (isAggroAllOut) {
         for (let i = 0; i < state.lanes.length; i++) {
           const lane = state.lanes[i]
           if (!lane.plantMinion && !lane.zombieMinion) {

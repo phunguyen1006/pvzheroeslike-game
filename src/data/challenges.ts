@@ -432,6 +432,18 @@ export function createDefaultDailyChallenges(dateStr: string): DailyChallengesDa
         isClaimed: false,
         metricType: 'play_trick',
       },
+      {
+        id: `daily_minion_${dateStr}`,
+        title: 'Binh Đoàn Xuất Kích',
+        description: 'Triệu hồi 3 Minion lên bàn đấu',
+        targetCount: 3,
+        currentCount: 0,
+        rewardGems: 50,
+        rewardCoins: 200,
+        isCompleted: false,
+        isClaimed: false,
+        metricType: 'play_minion',
+      },
     ],
     lastUpdated: new Date().toISOString(),
   }
@@ -583,6 +595,7 @@ export function saveCompletedPuzzle(puzzleId: string): void {
     console.error('Failed to save completed puzzle', err)
   }
 }
+export const markPuzzleCompleted = saveCompletedPuzzle
 
 export function isPuzzleCompleted(puzzleId: string): boolean {
   return loadCompletedPuzzles().includes(puzzleId)
@@ -610,6 +623,7 @@ export function saveCompletedShowcase(showcaseId: string): void {
     console.error('Failed to save completed showcase', err)
   }
 }
+export const markShowcaseCompleted = saveCompletedShowcase
 
 export function isShowcaseCompleted(showcaseId: string): boolean {
   return loadCompletedShowcases().includes(showcaseId)

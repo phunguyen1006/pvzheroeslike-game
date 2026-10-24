@@ -4,6 +4,7 @@ import type { HeroData } from '../../data/cards'
 import type { AIDifficulty } from '../../engine/ai'
 import { soundManager } from '../../audio/SoundManager'
 import { ASSET_MANIFEST } from '../../data/assetsManifest'
+import { HeroQuestsModal } from '../quests/HeroQuestsModal'
 
 export interface HeroSelectProps {
   onSelectHeroes: (plantHeroId: string, zombieHeroId: string, difficulty?: AIDifficulty) => void
@@ -27,6 +28,7 @@ export const HeroSelect: React.FC<HeroSelectProps> = ({ onSelectHeroes, onBack }
   const [selectedPlantHero, setSelectedPlantHero] = useState<HeroData>(PLANT_HEROES[5]) // Green Shadow default
   const [selectedZombieHero, setSelectedZombieHero] = useState<HeroData>(ZOMBIE_HEROES[8]) // Super Brainz default
   const [difficulty, setDifficulty] = useState<AIDifficulty>('normal')
+  const [questModalHero, setQuestModalHero] = useState<HeroData | null>(null)
 
   const handlePickPlant = (hero: HeroData) => {
     setSelectedPlantHero(hero)
@@ -141,11 +143,46 @@ export const HeroSelect: React.FC<HeroSelectProps> = ({ onSelectHeroes, onBack }
         </div>
       </div>
 
-      <div className="hero-select-footer">
+      <div className="hero-select-footer" style={{ display: 'flex', gap: '14px', justifyContent: 'center', alignItems: 'center' }}>
+        <button
+          className="briefing-cancel-btn"
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '12px 20px', borderRadius: '14px' }}
+          onClick={() => {
+            soundManager.playCardDrop()
+            setQuestModalHero(selectedPlantHero)
+          }}
+          title={`Xem chuỗi nhiệm vụ của ${selectedPlantHero.name}`}
+        >
+          📜 NHIỆM VỤ: {selectedPlantHero.name.toUpperCase()}
+        </button>
+
         <button className="start-match-btn" onClick={handleStart}>
           ⚔️ BẮT ĐẦU ĐỐI ĐẦU ({selectedPlantHero.name} VS {selectedZombieHero.name})
         </button>
+
+        <button
+          className="briefing-cancel-btn"
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '12px 20px', borderRadius: '14px' }}
+          onClick={() => {
+            soundManager.playCardDrop()
+            setQuestModalHero(selectedZombieHero)
+          }}
+          title={`Xem chuỗi nhiệm vụ của ${selectedZombieHero.name}`}
+        >
+          📜 NHIỆM VỤ: {selectedZombieHero.name.toUpperCase()}
+        </button>
       </div>
+
+      {/* Hero Quests Modal */}
+      {questModalHero && (
+        <HeroQuestsModal
+          isOpen={!!questModalHero}
+          onClose={() => setQuestModalHero(null)}
+          heroId={questModalHero.id}
+          heroName={questModalHero.name}
+          heroAvatar={questModalHero.avatar}
+        />
+      )}
     </div>
   )
 }

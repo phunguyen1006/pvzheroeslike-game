@@ -7,6 +7,8 @@ export interface MainMenuProps {
   onOpenHeroSelect: () => void
   onOpenDeckBuilder: () => void
   onOpenCampaign?: () => void
+  onOpenDailyChallenges?: () => void
+  dailyBadgeCount?: number
 }
 
 export const MainMenu: React.FC<MainMenuProps> = ({
@@ -14,6 +16,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenHeroSelect,
   onOpenDeckBuilder,
   onOpenCampaign,
+  onOpenDailyChallenges,
+  dailyBadgeCount = 0,
 }) => {
   const [isMuted, setIsMuted] = useState(soundManager.getMuted())
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -90,6 +94,20 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         />
 
         <div className="menu-action-buttons">
+          {onOpenDailyChallenges && (
+            <button
+              className="menu-btn daily-challenges-launcher-btn"
+              onClick={() => {
+                soundManager.playCardDrop()
+                onOpenDailyChallenges()
+              }}
+            >
+              🎯 THỬ THÁCH HẰNG NGÀY (DAILY CHALLENGES)
+              {dailyBadgeCount > 0 && (
+                <span className="notification-badge-dot">{dailyBadgeCount}</span>
+              )}
+            </button>
+          )}
           {onOpenCampaign && (
             <button className="menu-btn campaign-menu-btn" onClick={handleCampaign}>
               🗺️ CHIẾN DỊCH (CAMPAIGN MODE)

@@ -18,6 +18,8 @@ import { MulliganModal } from './components/ui/MulliganModal'
 import { ComicIntro } from './components/modals/ComicIntro'
 import { CardDetailModal } from './components/modals/CardDetailModal'
 import { SoundSettingsModal } from './components/modals/SoundSettingsModal'
+import { DailyChallengesModal } from './components/challenges/DailyChallengesModal'
+import { CampaignVictoryCinematicModal } from './components/campaign/CampaignVictoryCinematicModal'
 import { HeroEmotesBar, type EmoteType } from './components/hero/HeroEmotesBar'
 import { PhaseBanner } from './components/ui/PhaseBanner'
 import { MainMenu } from './components/screens/MainMenu'
@@ -38,6 +40,13 @@ import {
   addEventTickets,
   type MatchTicketResult,
 } from './data/eventTickets'
+import {
+  getDailyChallengesBadgeCount,
+  updateDailyChallengesOnMatchOver,
+  type PuzzlePartyConfig,
+  type EventShowcaseConfig,
+} from './data/challenges'
+import { advanceHeroQuestProgress } from './data/heroQuests'
 import type { CampaignMission, Minion as MinionType } from './engine/types'
 import type { Projectile, FloatingTextItem, ShockwaveItem } from './components/board/CombatVFXLayer'
 import { type CombatPopupItem, getComicActionWord } from './components/board/CombatActionPopups'
@@ -49,6 +58,15 @@ export function App() {
   const [activeCampaignMission, setActiveCampaignMission] = useState<CampaignMission | null>(null)
   const [campaignStarsWon, setCampaignStarsWon] = useState<number | undefined>(undefined)
   const [matchTicketsEarned, setMatchTicketsEarned] = useState<MatchTicketResult | undefined>(undefined)
+  const [isDailyChallengesOpen, setIsDailyChallengesOpen] = useState(false)
+  const [dailyBadgeCount, setDailyBadgeCount] = useState<number>(() => {
+    try {
+      return getDailyChallengesBadgeCount().totalUncompleted
+    } catch {
+      return 0
+    }
+  })
+  const [showCinematicVictory, setShowCinematicVictory] = useState(false)
   const [inspectModalData, setInspectModalData] = useState<{
     card?: CardType
     minion?: MinionType
@@ -87,6 +105,13 @@ export function App() {
   const [isScreenShaking, setIsScreenShaking] = useState(false)
   const [plantHeroHurt, setPlantHeroHurt] = useState(false)
   const [zombieHeroHurt, setZombieHeroHurt] = useState(false)
+  const [plantUsingSuperpower, setPlantUsingSuperpower] = useState(false)
+  const [zombieUsingSuperpower, setZombieUsingSuperpower] = useState(false)
+  const [combatAnimation, setCombatAnimation] = useState<{
+    attacking?: { laneIndex: number; side: 'plants' | 'zombies' } | null
+    hit?: { laneIndex: number; side: 'plants' | 'zombies' } | null
+    dying?: { laneIndex: number; side: 'plants' | 'zombies' } | null
+  }>({})
   const [isMuted, setIsMuted] = useState(soundManager.getMuted())
   const [isCombatLogOpen, setIsCombatLogOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -251,6 +276,37 @@ export function App() {
             saveCampaignProgress(progress)
           }
         }
+
+        // 3. Campaign Victory Cinematic Trigger on Final Chapter Bosses
+        const isBossMission10 =
+          activeCampaignMission.difficulty === 'boss' &&
+          activeCampaignMission.missionNumber === 10
+        if (isBossMission10 && gameState.winner === playerSide) {
+          setShowCinematicVictory(true)
+        }
+      }
+
+      // 4. Update Daily Challenges Progress on Match Conclusion
+      const enemyHeroHp = playerSide === 'plants' ? gameState.zombieHero.hp : gameState.plantHero.hp
+      const damageDealtToEnemy = Math.max(0, 20 - enemyHeroHp)
+      updateDailyChallengesOnMatchOver({
+        winner: gameState.winner,
+        playerSide,
+        damageDealtToEnemyHero: damageDealtToEnemy,
+        tricksPlayed: 1,
+        minionsPlayed: 2,
+      })
+
+      // 5. Update Hero Quest Progress on Match Conclusion
+      if (gameState.winner === playerSide) {
+        advanceHeroQuestProgress(playerHeroId, 'win_matches', 1)
+      }
+
+      // 6. Refresh Daily Challenges Badge Notification Count
+      try {
+        setDailyBadgeCount(getDailyChallengesBadgeCount().totalUncompleted)
+      } catch {
+        // ignore storage errors
       }
     }
   }, [
@@ -343,6 +399,7 @@ export function App() {
   useEffect(() => {
     if (gameState.pendingSuperBlock && gameState.pendingSuperBlock.side === 'zombies') {
       soundManager.playSuperBlock()
+      setZombieUsingSuperpower(true)
       const sp = gameState.pendingSuperBlock.superpower
       const timer = setTimeout(() => {
         dispatch({
@@ -351,6 +408,7 @@ export function App() {
           superpowerId: sp.id,
         })
         soundManager.playAttackHit()
+        setTimeout(() => setZombieUsingSuperpower(false), 1500)
 
         // Resume combat loop if paused waiting for Zombie Super-Block
         if (nextLaneToExecuteRef.current !== null) {
@@ -389,13 +447,17 @@ export function App() {
     setSelectedLaneIndex(laneIndex)
 
     if (selectedCard && isPlayerPlantTurn) {
+      if (selectedCard.type === 'superpower') {
+        setPlantUsingSuperpower(true)
+        setTimeout(() => setPlantUsingSuperpower(false), 1500)
+      }
       dispatch({
         type: 'PLAY_CARD',
         side: 'plants',
         cardId: selectedCard.id,
         laneIndex,
       })
-      if (selectedCard.type === 'trick') {
+      if (selectedCard.type === 'trick' || selectedCard.type === 'superpower') {
         soundManager.playAttackHit()
       } else {
         soundManager.playCardPlace()
@@ -407,13 +469,17 @@ export function App() {
   const handleDropCardToLane = (laneIndex: number, cardId: string) => {
     const card = gameState.plantHand.find((c) => c.id === cardId)
     if (card && isPlayerPlantTurn && card.cost <= gameState.plantHero.sun) {
+      if (card.type === 'superpower') {
+        setPlantUsingSuperpower(true)
+        setTimeout(() => setPlantUsingSuperpower(false), 1500)
+      }
       dispatch({
         type: 'PLAY_CARD',
         side: 'plants',
         cardId: card.id,
         laneIndex,
       })
-      if (card.type === 'trick') {
+      if (card.type === 'trick' || card.type === 'superpower') {
         soundManager.playAttackHit()
       } else {
         soundManager.playCardPlace()
@@ -462,6 +528,7 @@ export function App() {
       if (idx >= 5) {
         // Combat complete across all 5 lanes
         setActiveCombatLaneIndex(undefined)
+        setCombatAnimation({})
         setIsCombatResolving(false)
         nextLaneToExecuteRef.current = null
         setTimeout(() => {
@@ -475,6 +542,7 @@ export function App() {
       // Check if match already has a winner before resolving lane
       if (gameStateRef.current.winner) {
         setActiveCombatLaneIndex(undefined)
+        setCombatAnimation({})
         setIsCombatResolving(false)
         nextLaneToExecuteRef.current = null
         return
@@ -498,7 +566,15 @@ export function App() {
         setTimeout(() => {
           const isPlant = ev.attackerSide === 'plants'
 
-          // 1. Fire attack projectile
+          // 1. Minion attack lunge animation forward
+          if (ev.attackerSide) {
+            setCombatAnimation((prev) => ({
+              ...prev,
+              attacking: { laneIndex: idx, side: ev.attackerSide },
+            }))
+          }
+
+          // Fire attack projectile
           if (isPlant) {
             soundManager.playPeaShoot()
           } else {
@@ -519,6 +595,29 @@ export function App() {
           // Projectile arrives at target (after 350ms)
           setTimeout(() => {
             setProjectiles((prev) => prev.filter((p) => p.id !== projId))
+
+            // Reset minion attack lunge
+            setCombatAnimation((prev) => ({
+              ...prev,
+              attacking: null,
+            }))
+
+            // Minion damage reaction (shake + red flash) & lethal death scatter
+            if (ev.target === 'minion' && ev.damageDealt > 0) {
+              setCombatAnimation((prev) => ({
+                ...prev,
+                hit: { laneIndex: idx, side: ev.targetSide },
+                dying: ev.isLethal ? { laneIndex: idx, side: ev.targetSide } : prev.dying,
+              }))
+              setTimeout(() => {
+                setCombatAnimation((prev) => ({ ...prev, hit: null }))
+              }, 450)
+              if (ev.isLethal) {
+                setTimeout(() => {
+                  setCombatAnimation((prev) => ({ ...prev, dying: null }))
+                }, 750)
+              }
+            }
 
             // 2. Target impact & Floating Number
             const floatId = `float-${idx}-${Date.now()}-${evIdx}`
@@ -664,6 +763,7 @@ export function App() {
   const handleRematch = () => {
     setIsCombatResolving(false)
     setActiveCombatLaneIndex(undefined)
+    setCombatAnimation({})
     nextLaneToExecuteRef.current = null
     setShowComicIntro(false)
     setCampaignStarsWon(undefined)
@@ -697,12 +797,14 @@ export function App() {
   const handlePlaySuperpower = () => {
     if (gameState.pendingSuperBlock) {
       const sp = gameState.pendingSuperBlock.superpower
+      setPlantUsingSuperpower(true)
       dispatch({
         type: 'PLAY_SUPERPOWER',
         side: gameState.pendingSuperBlock.side,
         superpowerId: sp.id,
       })
       soundManager.playSuperBlock()
+      setTimeout(() => setPlantUsingSuperpower(false), 1500)
 
       // Resume combat loop if paused waiting for Super-Block
       if (nextLaneToExecuteRef.current !== null) {
@@ -743,19 +845,73 @@ export function App() {
     soundManager.playCardDrop()
   }
 
+  const handleStartPuzzle = (puzzle: PuzzlePartyConfig) => {
+    setIsDailyChallengesOpen(false)
+    setActiveCampaignMission(null)
+    setCampaignStarsWon(undefined)
+    setShowCinematicVictory(false)
+
+    const pHeroId = puzzle.playerSide === 'plants' ? puzzle.playerHeroId : puzzle.opponentHeroId
+    const zHeroId = puzzle.playerSide === 'zombies' ? puzzle.playerHeroId : puzzle.opponentHeroId
+    setSelectedHeroes({ plant: pHeroId, zombie: zHeroId })
+
+    dispatch({
+      type: 'START_MATCH',
+      plantHeroId: pHeroId,
+      zombieHeroId: zHeroId,
+      startingSunBonus: puzzle.playerSide === 'plants' ? Math.max(0, puzzle.playerStartingMana - 1) : 0,
+      startingBrainsBonus: puzzle.playerSide === 'zombies' ? Math.max(0, puzzle.playerStartingMana - 1) : 0,
+    })
+    setShowComicIntro(true)
+    setCurrentScreen('battle')
+  }
+
+  const handleStartShowcase = (showcase: EventShowcaseConfig) => {
+    setIsDailyChallengesOpen(false)
+    setActiveCampaignMission(null)
+    setCampaignStarsWon(undefined)
+    setShowCinematicVictory(false)
+
+    setSelectedHeroes({ plant: showcase.playerHeroId, zombie: showcase.opponentHeroId })
+    dispatch({
+      type: 'START_MATCH',
+      plantHeroId: showcase.playerHeroId,
+      zombieHeroId: showcase.opponentHeroId,
+    })
+    setShowComicIntro(true)
+    setCurrentScreen('battle')
+  }
+
   if (currentScreen === 'menu') {
     return (
-      <MainMenu
-        onStartGame={() => {
-          setActiveCampaignMission(null)
-          setCampaignStarsWon(undefined)
-          setShowComicIntro(true)
-          setCurrentScreen('battle')
-        }}
-        onOpenHeroSelect={() => setCurrentScreen('hero_select')}
-        onOpenDeckBuilder={() => setCurrentScreen('deck_builder')}
-        onOpenCampaign={() => setCurrentScreen('campaign')}
-      />
+      <>
+        <MainMenu
+          onStartGame={() => {
+            setActiveCampaignMission(null)
+            setCampaignStarsWon(undefined)
+            setShowComicIntro(true)
+            setCurrentScreen('battle')
+          }}
+          onOpenHeroSelect={() => setCurrentScreen('hero_select')}
+          onOpenDeckBuilder={() => setCurrentScreen('deck_builder')}
+          onOpenCampaign={() => setCurrentScreen('campaign')}
+          onOpenDailyChallenges={() => setIsDailyChallengesOpen(true)}
+          dailyBadgeCount={dailyBadgeCount}
+        />
+        <DailyChallengesModal
+          isOpen={isDailyChallengesOpen}
+          onClose={() => {
+            setIsDailyChallengesOpen(false)
+            try {
+              setDailyBadgeCount(getDailyChallengesBadgeCount().totalUncompleted)
+            } catch {
+              // ignore
+            }
+          }}
+          onStartPuzzle={handleStartPuzzle}
+          onStartShowcase={handleStartShowcase}
+        />
+      </>
     )
   }
 
@@ -809,6 +965,7 @@ export function App() {
             opponentHandCount={gameState.zombieHand.length}
             phase={gameState.phase}
             isHurt={zombieHeroHurt}
+            isUsingSuperpower={zombieUsingSuperpower}
             isTargetable={Boolean(selectedCard && selectedCard.type === 'trick' && isPlayerPlantTurn)}
             onHeroClick={() => {
               if (selectedCard && selectedCard.type === 'trick' && isPlayerPlantTurn) {
@@ -841,6 +998,7 @@ export function App() {
               selectedCard={selectedCard}
               selectedCardSide={selectedCard?.side}
               activeCombatLaneIndex={activeCombatLaneIndex}
+              combatAnimation={combatAnimation}
               projectiles={projectiles}
               floatingTexts={floatingTexts}
               shockwaves={shockwaves}
@@ -864,6 +1022,7 @@ export function App() {
             side="plants"
             phase={gameState.phase}
             isHurt={plantHeroHurt}
+            isUsingSuperpower={plantUsingSuperpower}
             activeEmote={playerEmote}
             onDismissEmote={() => setPlayerEmote(null)}
             onSuperBlockClick={() => {
@@ -1053,8 +1212,8 @@ export function App() {
         />
       )}
 
-      {/* Victory / Defeat Modal */}
-      {gameState.winner && (
+      {/* Victory / Defeat Modal (Suppressed during Final Boss Cinematic) */}
+      {!showCinematicVictory && gameState.winner && (
         <GameOverModal
           winner={gameState.winner}
           plantHeroName={gameState.plantHero.name}
@@ -1089,6 +1248,58 @@ export function App() {
           }}
         />
       )}
+
+      {/* Campaign Victory Cinematic Modal (Chapter 2 Boss Citron / Rustbolt) */}
+      {showCinematicVictory && activeCampaignMission && (
+        <CampaignVictoryCinematicModal
+          isOpen={showCinematicVictory}
+          mission={activeCampaignMission}
+          starsWon={campaignStarsWon || 3}
+          turnCount={gameState.turn}
+          playerHeroAvatar={
+            activeCampaignMission.faction === 'zombies'
+              ? gameState.zombieHero.avatar
+              : gameState.plantHero.avatar
+          }
+          playerHeroName={
+            activeCampaignMission.faction === 'zombies'
+              ? gameState.zombieHero.name
+              : gameState.plantHero.name
+          }
+          bossHeroAvatar={
+            activeCampaignMission.faction === 'zombies'
+              ? gameState.plantHero.avatar
+              : gameState.zombieHero.avatar
+          }
+          bossHeroName={
+            activeCampaignMission.faction === 'zombies'
+              ? gameState.plantHero.name
+              : gameState.zombieHero.name
+          }
+          onContinue={() => {
+            setShowCinematicVictory(false)
+            setActiveCampaignMission(null)
+            setCampaignStarsWon(undefined)
+            setCurrentScreen('campaign')
+            handleRematch()
+          }}
+        />
+      )}
+
+      {/* Daily Challenges Modal */}
+      <DailyChallengesModal
+        isOpen={isDailyChallengesOpen}
+        onClose={() => {
+          setIsDailyChallengesOpen(false)
+          try {
+            setDailyBadgeCount(getDailyChallengesBadgeCount().totalUncompleted)
+          } catch {
+            // ignore
+          }
+        }}
+        onStartPuzzle={handleStartPuzzle}
+        onStartShowcase={handleStartShowcase}
+      />
 
       {/* Card & Minion Lore Detail Inspection Modal */}
       {inspectModalData && (
