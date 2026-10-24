@@ -355,6 +355,194 @@ export const ALL_CAMPAIGN_MISSIONS: CampaignMission[] = [
   ...CHAPTER_2_MISSIONS,
 ]
 
+// ==========================================
+// ZOMBIE CAMPAIGN - CHAPTER 1: ZOMBIE ONSLAUGHT
+// ==========================================
+export const ZOMBIE_CHAPTER_1_MISSIONS: CampaignMission[] = [
+  {
+    id: 'zombie_mission_1',
+    chapter: 1,
+    missionNumber: 1,
+    faction: 'zombies',
+    playerHeroId: 'hero_super_brainz',
+    title: 'Nhiệm Vụ 1: Bắn Tỉa Trong Đêm',
+    subtitle: 'Tiến công Green Shadow tại Làn Giữa',
+    storyIntro:
+      'Tiến sĩ Zomboss lệnh cho bạn dẫn đầu biệt đội Thây Ma đổ bộ vào sân sau của Dave! Green Shadow phục kích tại Làn Giữa với phát bắn tỉa Precision Blast. Zomboss tiếp tế cho bạn +1 Brains khởi đầu để lập tức áp đảo!',
+    bossHeroId: 'hero_green_shadow',
+    bossHeroName: 'Green Shadow',
+    bossHeroAvatar: '/assets/heroes/plants/Green Shadow.png',
+    difficulty: 'easy',
+    rule: {
+      id: 'zrule_mission_1',
+      name: 'Năng Lượng Trí Não Tiếp Tế',
+      description: 'Zomboss tiếp viện: Bạn khởi đầu trận đấu với +1 Bộ Não (Brains) ngay từ lượt 1!',
+      startingBrainsBonus: 1,
+      startingSunBonus: 0,
+    },
+    starObjectives: [
+      '⭐ Chiến thắng trận đấu (Clear Mission)',
+      '⭐⭐ Kết thúc trận với Zombie Hero còn từ 12 HP trở lên',
+      '⭐⭐⭐ Giành thắng lợi trong vòng 8 lượt đấu',
+    ],
+    rewards: {
+      gems: 100,
+      unlocksNext: true,
+      title: 'Tân Binh Zomboss',
+    },
+  },
+  {
+    id: 'zombie_mission_2',
+    chapter: 1,
+    missionNumber: 2,
+    faction: 'zombies',
+    playerHeroId: 'hero_super_brainz',
+    title: 'Nhiệm Vụ 2: Mặt Trời Thiêu Đốt',
+    subtitle: 'Đối đầu Solar Flare - Cơn bão ánh sáng',
+    storyIntro:
+      'Solar Flare dùng tia năng lượng mặt trời thiêu đốt chiến trường! Một Sunflower đã bén rễ ở Làn 1 để cung cấp thêm Sun cho cô ta, nhưng một chú Chim Cánh Cụt Thủy Quân Swabbie cũng đã mai phục sẵn dưới nước ở Làn 5!',
+    bossHeroId: 'hero_solar_flare',
+    bossHeroName: 'Solar Flare',
+    bossHeroAvatar: '/assets/heroes/plants/Solar Flare.png',
+    difficulty: 'normal',
+    rule: {
+      id: 'zrule_mission_2',
+      name: 'Hạt Giống Nắng Vàng & Thủy Quân',
+      description: 'Làn 1 có sẵn 1 Sunflower phe Cây Trồng; Làn 5 (Water) có sẵn 1 Swabbie phe Thây Ma!',
+      startingBrainsBonus: 0,
+      startingSunBonus: 0,
+      initialMinions: [
+        { laneIndex: 0, cardId: 'plant_sunflower', side: 'plants' },
+        { laneIndex: 4, cardId: 'zombie_swabbie', side: 'zombies' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đập tan ngọn lửa của Solar Flare',
+      '⭐⭐ Kết thúc trận với ít nhất 10 HP còn lại',
+      '⭐⭐⭐ Tiêu diệt Sunflower ở Làn 1 trước lượt thứ 3',
+    ],
+    rewards: {
+      gems: 150,
+      unlocksNext: true,
+      title: 'Dập Tắt Mặt Trời',
+    },
+  },
+  {
+    id: 'zombie_mission_3',
+    chapter: 1,
+    missionNumber: 3,
+    faction: 'zombies',
+    playerHeroId: 'hero_super_brainz',
+    title: 'Nhiệm Vụ 3: Pháo Đài Quả Hạch',
+    subtitle: 'Đối đầu Wall-Knight tại Vực Nón Bảo Vệ',
+    storyIntro:
+      'Wall-Knight dựng thành lũy kiên cố bằng áo giáp nón và vỏ quả hạch! Một môi trường Cone Zone (+3 HP cho Zombie) được Zomboss dựng sẵn ở Làn 2, trong khi Wall-Nut đứng chắn ở Làn 1!',
+    bossHeroId: 'hero_wall_knight',
+    bossHeroName: 'Wall-Knight',
+    bossHeroAvatar: '/assets/heroes/plants/Wall-Knight.png',
+    difficulty: 'normal',
+    rule: {
+      id: 'zrule_mission_3',
+      name: 'Vành Đai Cone Zone & Hạch Kiên Cố',
+      description: 'Làn 2 (Ground) có sẵn Cone Zone (+3 Max HP cho Zombie); Làn 1 có 1 Wall-Nut phe Cây Trồng!',
+      startingBrainsBonus: 0,
+      startingSunBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 1, environmentCardId: 'zombie_cone_zone' },
+      ],
+      initialMinions: [
+        { laneIndex: 0, cardId: 'plant_wall_nut', side: 'plants' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đập vỡ phòng tuyến Wall-Knight',
+      '⭐⭐ Kết thúc trận với ít nhất 15 HP còn lại',
+      '⭐⭐⭐ Giành chiến thắng trong vòng 10 lượt đấu',
+    ],
+    rewards: {
+      gems: 200,
+      unlocksNext: true,
+      title: 'Kẻ Phá Thành',
+    },
+  },
+  {
+    id: 'zombie_mission_4',
+    chapter: 1,
+    missionNumber: 4,
+    faction: 'zombies',
+    playerHeroId: 'hero_super_brainz',
+    title: 'Nhiệm Vụ 4: Củ Khoai Nổ Chậm',
+    subtitle: 'Đối đầu Spudow - Bãi mìn chông gai',
+    storyIntro:
+      'Spudow rải bãi mìn Spikeweed Sector ở Làn 1 gây sát thương mỗi lượt! Tuy nhiên, Zomboss trang bị trạm Laser Base Alpha (Deadly & Strikethrough) tại Làn 3 cho phe Zombie! Bạn nhận thêm +1 Brains khởi đầu!',
+    bossHeroId: 'hero_spudow',
+    bossHeroName: 'Spudow',
+    bossHeroAvatar: '/assets/heroes/plants/Spudow.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'zrule_mission_4',
+      name: 'Chiến Hào Gai & Căn Cứ Laser',
+      description: 'Làn 1 có Spikeweed Sector (Plants); Làn 3 có Laser Base Alpha (Zombies); Bạn nhận +1 Brains khởi đầu!',
+      startingBrainsBonus: 1,
+      startingSunBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 0, environmentCardId: 'plant_spikeweed_sector' },
+        { laneIndex: 2, environmentCardId: 'zombie_laser_base_alpha' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Hạ gục Spudow trước khi bãi mìn bùng nổ',
+      '⭐⭐ Không để Spudow kích hoạt Tater Toss trúng Zombie ở Làn 3',
+      '⭐⭐⭐ Giành thắng lợi trong vòng 8 lượt đấu',
+    ],
+    rewards: {
+      gems: 250,
+      unlocksNext: true,
+      title: 'Chuyên Gia Tháo Ngòi',
+    },
+  },
+  {
+    id: 'zombie_mission_5',
+    chapter: 1,
+    missionNumber: 5,
+    faction: 'zombies',
+    playerHeroId: 'hero_super_brainz',
+    title: 'Nhiệm Vụ 5: Đại Chiến Hàm Răng Thao Túng',
+    subtitle: 'ĐẠI CHIẾN BOSS CUỐI CHAPTER 1 ZOMBIE: Chompzilla Cuồng Nộ',
+    storyIntro:
+      'Chompzilla há miệng nuốt chửng mọi đội hình Thây Ma! Cả hai bên đều nhận +2 Năng lượng ngay từ đầu! Một Medulla Nebula được kích hoạt tại Làn 2 và Bog of Sunken Hope tại Làn 4! Đây là trận chiến quyết định quyền kiểm soát Ngoại ô của Zomboss!',
+    bossHeroId: 'hero_chompzilla',
+    bossHeroName: 'Chompzilla',
+    bossHeroAvatar: '/assets/heroes/plants/Chompzilla.png',
+    difficulty: 'boss',
+    rule: {
+      id: 'zrule_mission_5',
+      name: 'Đại Chiến Sinh Tử Ngoại Ô',
+      description: 'Cả 2 phe nhận +2 Brains/Sun! Làn 2 có Medulla Nebula; Làn 4 có Bog of Sunken Hope!',
+      startingBrainsBonus: 2,
+      startingSunBonus: 2,
+      initialEnvironments: [
+        { laneIndex: 1, environmentCardId: 'zombie_medulla_nebula' },
+        { laneIndex: 3, environmentCardId: 'plant_bog_of_sunken_hope' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đánh bại Chompzilla Cuồng Nộ',
+      '⭐⭐ Kết thúc trận với Zombie Hero còn từ 15 HP trở lên',
+      '⭐⭐⭐ Hoàn thành xuất sắc toàn bộ Chapter 1 Zombie: Zombie Onslaught!',
+    ],
+    rewards: {
+      gems: 500,
+      unlocksNext: false,
+      title: 'Chỉ Huy Chiến Dịch Zomboss',
+    },
+  },
+]
+
+export const ALL_ZOMBIE_CAMPAIGN_MISSIONS: CampaignMission[] = [
+  ...ZOMBIE_CHAPTER_1_MISSIONS,
+]
+
 export interface CampaignChapter {
   id: number
   title: string
@@ -385,7 +573,20 @@ export const CAMPAIGN_CHAPTERS: CampaignChapter[] = [
   },
 ]
 
+export const ZOMBIE_CAMPAIGN_CHAPTERS: CampaignChapter[] = [
+  {
+    id: 1,
+    title: 'TIẾN CÔNG NGOẠI Ô (ZOMBIE ONSLAUGHT)',
+    subtitle: 'Chapter 1: Đột kích sân vườn và nhà Dave',
+    description:
+      'Lãnh đạo binh đoàn Zombie dưới quyền chỉ huy tối cao của Tiến sĩ Zomboss! Tiêu diệt các chỉ huy Cây Trồng Green Shadow, Solar Flare, Wall-Knight, Spudow và Chompzilla để cắm cờ Zombie!',
+    badgeText: 'ZOMBIE CH. 1',
+    missions: ZOMBIE_CHAPTER_1_MISSIONS,
+  },
+]
+
 export const CAMPAIGN_STORAGE_KEY = 'pvz_campaign_progress_v1'
+export const ZOMBIE_CAMPAIGN_STORAGE_KEY = 'pvz_zombie_campaign_progress_v1'
 
 export function getInitialCampaignProgress(): CampaignProgress {
   return {
@@ -416,6 +617,38 @@ export function saveCampaignProgress(progress: CampaignProgress): void {
     localStorage.setItem(CAMPAIGN_STORAGE_KEY, JSON.stringify(progress))
   } catch (err) {
     console.error('Failed to save campaign progress:', err)
+  }
+}
+
+export function getInitialZombieCampaignProgress(): CampaignProgress {
+  return {
+    unlockedMissionNumber: 1,
+    completedMissions: {},
+  }
+}
+
+export function loadZombieCampaignProgress(): CampaignProgress {
+  try {
+    if (typeof localStorage === 'undefined') return getInitialZombieCampaignProgress()
+    const raw = localStorage.getItem(ZOMBIE_CAMPAIGN_STORAGE_KEY)
+    if (!raw) return getInitialZombieCampaignProgress()
+    const parsed = JSON.parse(raw)
+    return {
+      unlockedMissionNumber: Math.max(1, parsed.unlockedMissionNumber || 1),
+      completedMissions: parsed.completedMissions || {},
+    }
+  } catch (err) {
+    console.error('Failed to load zombie campaign progress:', err)
+    return getInitialZombieCampaignProgress()
+  }
+}
+
+export function saveZombieCampaignProgress(progress: CampaignProgress): void {
+  try {
+    if (typeof localStorage === 'undefined') return
+    localStorage.setItem(ZOMBIE_CAMPAIGN_STORAGE_KEY, JSON.stringify(progress))
+  } catch (err) {
+    console.error('Failed to save zombie campaign progress:', err)
   }
 }
 

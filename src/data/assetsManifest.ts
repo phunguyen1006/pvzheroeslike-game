@@ -110,7 +110,11 @@ export const ASSET_MANIFEST = {
       "Galacta-Cactus": "/assets/cards/plants/Shamrocket.png",
       "Lily of the Valley": "/assets/cards/plants/Sunflower.png",
       "Blooming Heart": "/assets/cards/plants/Sunflower.png",
-      "Sportacus": "/assets/cards/plants/Astro-Shroom.png"
+      "Sportacus": "/assets/cards/plants/Astro-Shroom.png",
+      "The Podfather": "/assets/cards/plants/Peashooter.png",
+      "Buff-Shroom": "/assets/cards/plants/Astro-Shroom.png",
+      "Banana Launcher": "/assets/cards/plants/Bananasaurus Rex.png",
+      "Banana Bomb": "/assets/cards/plants/Peashooter.png"
     },
     "zombies": {
       "Area 22": "/assets/cards/zombies/Area 22.png",
@@ -153,7 +157,10 @@ export const ASSET_MANIFEST = {
       "Going Viral": "/assets/cards/zombies/Lurch for Lunch.png",
       "Kitchen Sink Zombie": "/assets/cards/zombies/Zombot 1000.png",
       "Trick-or-Treater": "/assets/cards/zombies/Conga Zombie.png",
-      "Synchronized Swimmer": "/assets/cards/zombies/Swabbie.png"
+      "Synchronized Swimmer": "/assets/cards/zombies/Swabbie.png",
+      "Zombie Coach": "/assets/cards/zombies/Arm Wrestler.png",
+      "Gadget Scientist": "/assets/cards/zombies/Dr. Spacetime.png",
+      "Interdimensional Zombie": "/assets/cards/zombies/Dr. Spacetime.png"
     }
   },
   "traits": {

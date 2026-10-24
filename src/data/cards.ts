@@ -180,7 +180,7 @@ export const PLANT_CARDS: CardData[] = [
  tribe: 'Fruit Plant',
  assetPath: '/assets/cards/plants/Captain Cucumber.png',
  image: '/assets/cards/plants/Captain Cucumber.png',
- description: 'Tất cả các lá bài khác trên tay bạn giảm 1 Sun. Khi đánh trúng Zombie Hero, Triệu hồi (Conjure) một lá bài Legendary.',
+ description: 'Khi gây sát thương: Triệu hồi (Conjure) 1 lá bài Legendary ngẫu nhiên vào tay bạn và lá bài đó được giảm 1 Sun vĩnh viễn!',
  heroClass: 'Mega-Grow',
  laneRequirement: 'ground'
  },
@@ -831,6 +831,42 @@ export const PLANT_CARDS: CardData[] = [
  image: '/assets/cards/plants/Astro-Shroom.png',
  description: 'Mỗi khi đối thủ chơi một lá Zombie Trick: Bắn ngay 2 sát thương vào Zombie Hero!',
  heroClass: 'Smarty',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'plant_podfather',
+ name: 'The Podfather',
+ team: 'plants',
+ type: 'plant',
+ cost: 3,
+ attack: 2,
+ hp: 2,
+ health: 2,
+ traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'Pea Plant',
+ assetPath: '/assets/cards/plants/Peashooter.png',
+ image: '/assets/cards/plants/Peashooter.png',
+ description: 'Bố già Đậu Hà Lan: Khi bạn trồng một Pea khác, cây Pea đó nhận ngay +2 Tấn công và +2 Máu (+2/+2)!',
+ heroClass: 'Mega-Grow',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'plant_buff_shroom',
+ name: 'Buff-Shroom',
+ team: 'plants',
+ type: 'plant',
+ cost: 2,
+ attack: 1,
+ hp: 1,
+ health: 1,
+ traits: [],
+ rarity: 'Uncommon',
+ tribe: 'Mushroom Plant',
+ assetPath: '/assets/cards/plants/Astro-Shroom.png',
+ image: '/assets/cards/plants/Astro-Shroom.png',
+ description: 'Nấm tăng lực: Khi xuất trận, tất cả Nấm (Mushrooms) trên sân nhận +1 Tấn công và +1 Máu (+1/+1)!',
+ heroClass: 'Kabloom',
  laneRequirement: 'ground'
  }
 ];
@@ -1643,6 +1679,44 @@ export const ZOMBIE_CARDS: CardData[] = [
  description: 'Thủy quân (Amphibious). Khi xuất trận: Sao chép chỉ số Tấn công và Máu của một Zombie đồng minh khác trên sân!',
  heroClass: 'Beastly',
  laneRequirement: 'any'
+ },
+ {
+ id: 'zombie_coach',
+ name: 'Zombie Coach',
+ team: 'zombies',
+ type: 'zombie',
+ cost: 4,
+ attack: 3,
+ hp: 3,
+ health: 3,
+ traits: [],
+ rarity: 'Rare',
+ tribe: 'Sports Zombie',
+ assetPath: '/assets/cards/zombies/Arm Wrestler.png',
+ image: '/assets/cards/zombies/Arm Wrestler.png',
+ gravestone: false,
+ description: 'Huấn luyện viên: Khi xuất trận, tất cả Zombie thuộc tộc Thể thao (Sports) không thể bị tổn thương trong lượt này!',
+ heroClass: 'Hearty',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'zombie_gadget_scientist',
+ name: 'Gadget Scientist',
+ team: 'zombies',
+ type: 'zombie',
+ cost: 5,
+ attack: 2,
+ hp: 3,
+ health: 3,
+ traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'Science Zombie',
+ assetPath: '/assets/cards/zombies/Dr. Spacetime.png',
+ image: '/assets/cards/zombies/Dr. Spacetime.png',
+ gravestone: false,
+ description: 'Nhà khoa học công nghệ: Khi xuất trận, tất cả Zombie thuộc tộc Khoa học (Science) lập tức tung một đòn tấn công phụ (Bonus Attack)!',
+ heroClass: 'Brainy',
+ laneRequirement: 'ground'
  }
 ];
 

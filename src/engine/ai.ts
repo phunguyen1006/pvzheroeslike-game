@@ -356,6 +356,8 @@ export function getAIMulliganDecision(
       c.id === 'zombie_medulla_nebula'
   )
 
+  const hasOneDrop = hand.some((c) => c.cost === 1 && c.type !== 'superpower')
+
   const cheapTricksCount = hand.filter(
     (c) => (c.type === 'trick' || c.type === 'superpower') && c.cost <= 2
   ).length
@@ -367,46 +369,97 @@ export function getAIMulliganDecision(
       return
     }
 
-    // Special Combo Exception 1: Valkyrie wants to be in hand from turn 1 to accumulate death buffs
+    // Combo Core Piece 1: Valkyrie wants to be in hand from turn 1 to accumulate death buffs
     if (card.id === 'zombie_valkyrie') {
       keepIndices.push(idx)
       return
     }
 
-    // Special Combo Exception 2: Trickster kept if holding multiple cheap tricks to discount it
-    if (card.id === 'zombie_trickster' && cheapTricksCount >= 2) {
+    // Combo Core Piece 2: Trickster kept if holding cheap tricks to discount it
+    if (card.id === 'zombie_trickster' && cheapTricksCount >= 1) {
       keepIndices.push(idx)
       return
     }
 
-    // Special Combo Exception 3: Ramp allows keeping one 4-5 cost bomb
+    // Combo Core Piece 3: Going Viral is a core combo/tempo buff engine
+    if (card.id === 'zombie_going_viral' && (archetype === 'combo' || archetype === 'tempo')) {
+      keepIndices.push(idx)
+      return
+    }
+
+    // Combo Core Piece 4: Bad Moon Rising kept if Ramp or cheap swarm minions are in hand
+    if (card.id === 'zombie_bad_moon_rising' && (hasRamp || hand.filter((c) => c.cost <= 2 && c.type === 'minion').length >= 2)) {
+      keepIndices.push(idx)
+      return
+    }
+
+    // Ramp Exception: allows keeping one 4-5 cost bomb
     if (hasRamp && (card.cost === 4 || card.cost === 5) && !keepIndices.some((i) => hand[i].cost >= 4)) {
       keepIndices.push(idx)
       return
     }
 
-    // Standard Curve Rules
+    // Aggro Curve Rules:
+    // Strictly prioritize 1-drops and 2-drops; swap 3+ cost cards if missing a 1-drop
+    if (archetype === 'aggro') {
+      if (card.cost <= 2) {
+        keepIndices.push(idx)
+      } else if (card.cost === 3) {
+        if (!hasOneDrop) {
+          swapIndices.push(idx) // Dig aggressively for turn 1 minion
+        } else {
+          // Keep at most one 3-cost card
+          const alreadyKept3Cost = keepIndices.some((i) => hand[i].cost === 3)
+          if (!alreadyKept3Cost) {
+            keepIndices.push(idx)
+          } else {
+            swapIndices.push(idx)
+          }
+        }
+      } else {
+        // Cost 4+: always swap in Aggro
+        swapIndices.push(idx)
+      }
+      return
+    }
+
+    // Control Curve Rules:
+    // Can keep key removal (Rocket Science, Shamrocket, Squash) if early defense exists
+    if (archetype === 'control') {
+      const isKeyRemoval =
+        card.id === 'zombie_rocket_science' ||
+        card.id === 'plant_shamrocket' ||
+        card.id === 'plant_squash' ||
+        card.id === 'zombie_locust_swarm'
+      const hasEarlyDefense = keepIndices.some((i) => hand[i].cost <= 2)
+
+      if (card.cost <= 2) {
+        keepIndices.push(idx)
+      } else if (isKeyRemoval && hasEarlyDefense) {
+        keepIndices.push(idx)
+      } else if (card.cost === 3 && card.type === 'minion') {
+        keepIndices.push(idx)
+      } else {
+        swapIndices.push(idx)
+      }
+      return
+    }
+
+    // Standard Curve Rules (Tempo, Combo):
     if (card.cost <= 3) {
       // Curve 1-3: Keep
       keepIndices.push(idx)
     } else if (card.cost >= 5) {
-      // Curve 5+: Swap
+      // Curve 5+: Swap unless combo piece already kept
       swapIndices.push(idx)
     } else {
-      // Cost 4 cards:
-      // Aggro always swaps 4-cost cards to ensure 1-2-3 turn aggression
-      // Control keeps high-value removal like Rocket Science (cost 3) or Shamrocket/Squash
-      // Tempo keeps at most one 4-cost card if a 1 or 2-cost play is already secured
-      if (archetype === 'aggro') {
-        swapIndices.push(idx)
+      // Cost 4 cards: Keep at most one 4-cost if a 1 or 2-cost play is already secured
+      const hasEarlyCurve = keepIndices.some((i) => hand[i].cost <= 2)
+      const alreadyKept4Cost = keepIndices.some((i) => hand[i].cost === 4)
+      if (hasEarlyCurve && !alreadyKept4Cost) {
+        keepIndices.push(idx)
       } else {
-        const hasEarlyCurve = keepIndices.some((i) => hand[i].cost <= 2)
-        const alreadyKept4Cost = keepIndices.some((i) => hand[i].cost === 4)
-        if (hasEarlyCurve && !alreadyKept4Cost) {
-          keepIndices.push(idx)
-        } else {
-          swapIndices.push(idx)
-        }
+        swapIndices.push(idx)
       }
     }
   })
@@ -623,7 +676,180 @@ export function getAISuperpowerDecision(
     }
   }
 
-  // 10. Default heuristic: If immediate board advantage is available, play; otherwise save
+  // 10. Heroic Health (Heal Zombie Hero for 6 HP)
+  if (spId.includes('heroic_health')) {
+    const zombieHp = state.zombieHero.hp
+    if (zombieHp <= 15) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: `Heroic Health restores 6 HP to Zombie Hero (current HP: ${zombieHp})`,
+      }
+    }
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: `Save Heroic Health until Zombie Hero loses at least 5 HP (current HP: ${zombieHp})`,
+    }
+  }
+
+  // 11. Geyser (Heal Plant Hero and all Plants for 4 HP)
+  if (spId.includes('geyser')) {
+    const plantHp = state.plantHero.hp
+    const hasDamagedPlants = lanes.some(
+      (l) => l.plantMinion && l.plantMinion.currentHealth < l.plantMinion.maxHealth
+    )
+    if (plantHp <= 16 || hasDamagedPlants) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: 'Geyser heals damaged Plant Hero and friendly plants',
+      }
+    }
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Geyser until Hero or friendly plants are damaged',
+    }
+  }
+
+  // 12. Uncrackable (Your Hero cannot be hurt this turn. Draw a card.)
+  if (spId.includes('uncrackable')) {
+    const incomingFaceDamage = lanes.reduce((sum, l) => {
+      if (l.zombieMinion && !l.plantMinion && !l.zombieMinion.isFrozen) {
+        return sum + l.zombieMinion.currentAttack
+      }
+      return sum
+    }, 0)
+
+    const isHeroInDanger =
+      incomingFaceDamage >= 5 ||
+      incomingFaceDamage >= state.plantHero.hp ||
+      state.plantHero.hp <= 6
+
+    if (isHeroInDanger) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: `Uncrackable shields Plant Hero from ${incomingFaceDamage} incoming face damage this turn`,
+      }
+    }
+
+    if (state.plantHero.hp >= 15 && incomingFaceDamage <= 2) {
+      return {
+        action: 'SAVE_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: 'Save Uncrackable for high-danger or lethal combat turns',
+      }
+    }
+
+    return {
+      action: 'PLAY_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Uncrackable provides defense and draws a card',
+    }
+  }
+
+  // 13. Telepathy / Holoflora (Draw 2 cards)
+  if (spId.includes('telepathy') || spId.includes('holoflora')) {
+    const hand = isZombie ? state.zombieHand : state.plantHand
+    if (hand.length <= 8) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: `${superpower.name} draws 2 cards for card advantage`,
+      }
+    }
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: `Save ${superpower.name} to avoid hand overflow (hand >= 9)`,
+    }
+  }
+
+  // 14. Electrobolt (Deal 3 damage to a Plant)
+  if (spId.includes('electrobolt')) {
+    const targetPlants = lanes
+      .map((l, idx) => ({ l, idx }))
+      .filter((x) => x.l.plantMinion && !isUntrickable(x.l.plantMinion))
+
+    if (targetPlants.length > 0) {
+      // Prioritize clean kills or highest threat
+      const bestKill = targetPlants.find((x) => x.l.plantMinion!.currentHealth <= 3)
+      const target = bestKill || targetPlants.sort((a, b) => evaluateMinionThreat(b.l, 'plants') - evaluateMinionThreat(a.l, 'plants'))[0]
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: target.idx,
+        reason: `Electrobolt strikes plant ${target.l.plantMinion!.name} in lane ${target.idx + 1} for 3 damage`,
+      }
+    }
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Electrobolt until enemy plants are deployed',
+    }
+  }
+
+  // 15. Acid Rain (All Plants on the Ground get -1/-1)
+  if (spId.includes('acid_rain')) {
+    const groundLanes = [lanes[1], lanes[2], lanes[3]]
+    const groundPlants = groundLanes.filter((l) => l.plantMinion && !isUntrickable(l.plantMinion))
+    if (groundPlants.length >= 2 || groundPlants.some((l) => l.plantMinion!.currentHealth <= 1)) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: `Acid Rain weakens ${groundPlants.length} ground plants with -1/-1`,
+      }
+    }
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Acid Rain until multiple plants occupy ground lanes',
+    }
+  }
+
+  // 16. Whirlwind (Bounce a random Zombie)
+  if (spId.includes('whirlwind')) {
+    const hasZombie = lanes.some((l) => l.zombieMinion && !isUntrickable(l.zombieMinion))
+    if (hasZombie) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: 'Whirlwind bounces an enemy zombie back to hand',
+      }
+    }
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Whirlwind until enemy zombies are deployed',
+    }
+  }
+
+  // 17. Missile Madness (Deal 3 damage to a Plant and 1 damage to all other Plants)
+  if (spId.includes('missile_madness')) {
+    const hasPlants = lanes.some((l) => l.plantMinion && !isUntrickable(l.plantMinion))
+    if (hasPlants) {
+      const bestTargetIdx = lanes.reduce((best, l, idx) => {
+        if (!l.plantMinion || isUntrickable(l.plantMinion)) return best
+        if (best === -1) return idx
+        return evaluateMinionThreat(l, 'plants') > evaluateMinionThreat(lanes[best], 'plants') ? idx : best
+      }, -1)
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: bestTargetIdx !== -1 ? bestTargetIdx : undefined,
+        reason: 'Missile Madness barrages all enemy plants with rockets',
+      }
+    }
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Missile Madness until enemy plants are deployed',
+    }
+  }
+
+  // 18. Default heuristic: If immediate board advantage is available, play; otherwise save
   const hasEnemyMinions = lanes.some((l) => (isZombie ? l.plantMinion : l.zombieMinion))
   if (hasEnemyMinions || archetype === 'aggro') {
     return {
@@ -751,6 +977,153 @@ function checkLethalPossibility(
 }
 
 /**
+ * Calculates the number of Brains the Zombie AI should reserve during ZOMBIE_PLAY
+ * for the upcoming ZOMBIE_TRICKS phase.
+ *
+ * In PvZ Heroes, Zombies must deploy minions before Plants react.
+ * If the Zombie AI spends all brains on minions, it cannot cast critical tricks
+ * (Rocket Science, Locust Swarm, Lurch for Lunch, Going Viral, Cut Down to Size, Bungee Plumber).
+ */
+export function reserveBrainsForTricks(
+  state: GameState,
+  hand: Card[],
+  resource: number,
+  archetype: AIArchetype = 'tempo',
+  difficulty: AIDifficulty = 'normal'
+): { reservedBrains: number; targetTrick?: Card; reason?: string } {
+  if (difficulty === 'easy') {
+    return { reservedBrains: 0 }
+  }
+
+  // Filter playable/affordable tricks within current total brain resource
+  const playableTricks = hand.filter(
+    (c) =>
+      (c.type === 'trick' || c.type === 'superpower' || c.type === 'environment') &&
+      c.cost <= resource
+  )
+
+  if (playableTricks.length === 0) {
+    return { reservedBrains: 0 }
+  }
+
+  const plantHero = state.plantHero
+  const lanes = state.lanes
+
+  // 1. Lethal / Direct Face Damage Buff Reservation:
+  // If we have an unblocked zombie with decent attack and a buff trick that can deal massive face damage
+  const unblockedZombies = lanes.filter((l) => l.zombieMinion && !l.plantMinion && !l.zombieMinion.isFrozen)
+  if (unblockedZombies.length > 0) {
+    // Check Lurch for Lunch (cost 2)
+    const lurch = playableTricks.find((c) => c.id === 'zombie_lurch_for_lunch' && c.cost <= resource)
+    if (lurch && unblockedZombies.some((l) => l.zombieMinion!.currentAttack >= 2)) {
+      return {
+        reservedBrains: lurch.cost,
+        targetTrick: lurch,
+        reason: 'Reserving brains for Lurch for Lunch bonus face attack on unblocked zombie',
+      }
+    }
+
+    // Check Brute Strength (cost 2 or 1 for superpower)
+    const brute = playableTricks.find(
+      (c) => (c.id === 'zombie_brute_strength' || c.id === 'sp_brute_strength') && c.cost <= resource
+    )
+    if (brute) {
+      return {
+        reservedBrains: brute.cost,
+        targetTrick: brute,
+        reason: 'Reserving brains for Brute Strength (+3 ATK) face damage',
+      }
+    }
+
+    // Check Going Viral (cost 3)
+    const viral = playableTricks.find((c) => c.id === 'zombie_going_viral' && c.cost <= resource)
+    if (viral && (archetype === 'tempo' || archetype === 'combo' || archetype === 'aggro')) {
+      return {
+        reservedBrains: viral.cost,
+        targetTrick: viral,
+        reason: 'Reserving brains for Going Viral team-wide frenzy buff',
+      }
+    }
+  }
+
+  // 2. High-Threat Removal Reservation:
+  // If opposing plant minion has >= 5 Attack, reserve for Cut Down to Size (cost 1)
+  const cutDown = playableTricks.find((c) => c.id.includes('cut_down_to_size') && c.cost <= resource)
+  const has5AtkPlant = lanes.some((l) => l.plantMinion && l.plantMinion.currentAttack >= 5 && !isUntrickable(l.plantMinion))
+  if (cutDown && has5AtkPlant) {
+    return {
+      reservedBrains: cutDown.cost,
+      targetTrick: cutDown,
+      reason: 'Reserving brains for Cut Down to Size removal',
+    }
+  }
+
+  // Rocket Science (cost 3) against 4+ Attack plants
+  const rocket = playableTricks.find((c) => c.id === 'zombie_rocket_science' && c.cost <= resource)
+  const has4AtkPlant = lanes.some((l) => l.plantMinion && l.plantMinion.currentAttack >= 4 && !isUntrickable(l.plantMinion))
+  if (rocket && (has4AtkPlant || (archetype === 'control' && plantHero.sun >= 4))) {
+    return {
+      reservedBrains: rocket.cost,
+      targetTrick: rocket,
+      reason: 'Reserving brains for Rocket Science against 4+ attack plants',
+    }
+  }
+
+  // Locust Swarm (cost 5): Unconditional hard removal for high-threat plants
+  const locust = playableTricks.find((c) => c.id === 'zombie_locust_swarm' && c.cost <= resource)
+  const highThreatPlant = lanes.some(
+    (l) =>
+      l.plantMinion &&
+      (evaluateMinionThreat(l, 'plants') >= 5 ||
+        l.plantMinion.currentAttack >= (archetype === 'control' ? 2 : 3) ||
+        l.plantMinion.currentHealth >= 4) &&
+      !isUntrickable(l.plantMinion)
+  )
+  if (locust && (highThreatPlant || (archetype === 'control' && resource <= 8 && plantHero.sun >= 5))) {
+    return {
+      reservedBrains: locust.cost,
+      targetTrick: locust,
+      reason: 'Preserving all brains for high-value Tricks in ZOMBIE_TRICKS phase',
+    }
+  }
+
+  // Weed Spray (cost 3): Wipe small swarms
+  const weedSpray = playableTricks.find((c) => c.id === 'zombie_weed_spray' && c.cost <= resource)
+  const smallPlantsCount = lanes.filter((l) => l.plantMinion && l.plantMinion.currentAttack <= 2 && !isUntrickable(l.plantMinion)).length
+  if (weedSpray && (smallPlantsCount >= 2 || (smallPlantsCount >= 1 && archetype === 'control'))) {
+    return {
+      reservedBrains: weedSpray.cost,
+      targetTrick: weedSpray,
+      reason: 'Reserving brains for Weed Spray against small plants',
+    }
+  }
+
+  // Bungee Plumber (cost 1): Snipe low health plant or burn face
+  const bungee = playableTricks.find((c) => c.id === 'zombie_bungee_plumber' && c.cost <= resource)
+  const killablePlant = lanes.some((l) => l.plantMinion && l.plantMinion.currentHealth <= 2 && !isUntrickable(l.plantMinion))
+  if (bungee && killablePlant && (archetype === 'control' || archetype === 'tempo')) {
+    return {
+      reservedBrains: bungee.cost,
+      targetTrick: bungee,
+      reason: 'Reserving brains for Bungee Plumber snipe',
+    }
+  }
+
+  // Bad Moon Rising (cost 7): In combo archetype with >= 2 zombies on board
+  const bmr = playableTricks.find((c) => c.id === 'zombie_bad_moon_rising' && c.cost <= resource)
+  const zombieCount = lanes.filter((l) => l.zombieMinion).length
+  if (bmr && zombieCount >= 2 && (archetype === 'combo' || archetype === 'control')) {
+    return {
+      reservedBrains: bmr.cost,
+      targetTrick: bmr,
+      reason: `Reserving brains for Bad Moon Rising to transform ${zombieCount} zombies`,
+    }
+  }
+
+  return { reservedBrains: 0 }
+}
+
+/**
  * Main Heuristic AI Decision Engine for PvZ Heroes.
  * Evaluates tactical options and returns the single next best move.
  * Supports Difficulty and 3 Distinct Boss Archetypes (Aggro, Control, Tempo).
@@ -838,32 +1211,11 @@ export function getAIDecision(
       }
     }
 
-    // Check if we should hold back some Brains for a strong Trick in hand
-    const highValueTricks = hand.filter(
-      (c) =>
-        (c.type === 'trick' || c.type === 'superpower' || c.type === 'environment') &&
-        (c.id === 'zombie_locust_swarm' ||
-          c.id === 'zombie_rocket_science' ||
-          c.id === 'zombie_area_22' ||
-          c.id === 'zombie_bad_moon_rising' ||
-          c.id === 'zombie_bungee_plumber')
-    )
-
-    // Control archetype is significantly more disciplined about preserving brains
-    const shouldPreserveBrains =
-      (difficulty === 'expert' || difficulty === 'normal') &&
-      highValueTricks.length > 0 &&
-      (archetype === 'control' ? resource <= 8 : resource <= 6) &&
-      state.lanes.some(
-        (l) =>
-          l.plantMinion &&
-          (l.plantMinion.currentAttack >= (archetype === 'control' ? 2 : 3) ||
-            l.plantMinion.currentHealth >= 4)
-      )
-
-    if (shouldPreserveBrains && (archetype !== 'aggro' || state.lanes.some(l => l.plantMinion && l.plantMinion.currentAttack >= 4))) {
-      const targetTrickCost = Math.min(...highValueTricks.map((t) => t.cost))
-      const affordableMinions = playableMinions.filter((m) => m.cost <= resource - targetTrickCost)
+    // Calculate dynamic brain reservation for upcoming ZOMBIE_TRICKS
+    const reservation = reserveBrainsForTricks(state, hand, resource, archetype, difficulty)
+    if (reservation.reservedBrains > 0) {
+      const availableBrainsForMinions = resource - reservation.reservedBrains
+      const affordableMinions = playableMinions.filter((m) => m.cost <= availableBrainsForMinions)
       if (affordableMinions.length > 0) {
         const cheapMinion = affordableMinions.sort((a, b) => b.health - a.health)[0]
         const openLane = state.lanes.findIndex(
@@ -874,13 +1226,13 @@ export function getAIDecision(
             action: 'PLAY_MINION',
             card: cheapMinion,
             laneIndex: openLane,
-            reason: 'Preserving brains for high-value Tricks',
+            reason: `Preserving ${reservation.reservedBrains} brains for tricks while deploying ${cheapMinion.name}`,
           }
         }
       } else {
         return {
           action: 'PASS',
-          reason: 'Preserving all brains for high-value Tricks in ZOMBIE_TRICKS phase',
+          reason: reservation.reason || 'Preserving all brains for high-value Tricks in ZOMBIE_TRICKS phase',
         }
       }
     }

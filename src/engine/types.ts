@@ -90,6 +90,8 @@ export interface Minion {
   isAttacking?: boolean
   isHit?: boolean
   damageTakenThisTurn?: number
+  isInvulnerable?: boolean
+  invulnerableThisTurn?: boolean
 }
 
 export interface EnvironmentState {
@@ -227,6 +229,7 @@ export interface CampaignMission {
   id: string
   chapter?: number
   missionNumber: number
+  faction?: Side
   title: string
   subtitle: string
   storyIntro: string
@@ -242,6 +245,26 @@ export interface CampaignMission {
     unlocksNext?: boolean
     title?: string
   }
+}
+
+export interface WeeklyEventConfig {
+  id: string
+  cardId: string
+  cardName: string
+  cardAvatar: string
+  cardSide: Side
+  targetTickets: number
+  maxCopies: number
+  boostedPlantHeroId: string
+  boostedZombieHeroId: string
+  startDate: string
+  endDate: string
+}
+
+export interface WeeklyEventProgress {
+  tickets: number
+  unlockedCopies: number
+  lastClaimedAt?: string
 }
 
 export interface CampaignProgress {
