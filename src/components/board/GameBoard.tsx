@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Lane } from './Lane'
-import { CombatVFXLayer, type Projectile, type FloatingTextItem } from './CombatVFXLayer'
+import { CombatVFXLayer, type Projectile, type FloatingTextItem, type ShockwaveItem } from './CombatVFXLayer'
 import type { LaneState, Card as CardType } from '../../engine/types'
 import { ASSET_MANIFEST } from '../../data/assetsManifest'
 
@@ -12,6 +12,7 @@ export interface GameBoardProps {
   activeCombatLaneIndex?: number
   projectiles?: Projectile[]
   floatingTexts?: FloatingTextItem[]
+  shockwaves?: ShockwaveItem[]
   onSelectLane: (laneIndex: number) => void
   onDropCardToLane?: (laneIndex: number, cardId: string) => void
 }
@@ -24,6 +25,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   activeCombatLaneIndex,
   projectiles = [],
   floatingTexts = [],
+  shockwaves = [],
   onSelectLane,
   onDropCardToLane,
 }) => {
@@ -64,10 +66,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         ))}
       </div>
 
-      {/* Combat VFX Layer (Projectiles & Floating Numbers) */}
+      {/* Combat VFX Layer (Projectiles, Shockwaves & Floating Numbers) */}
       <CombatVFXLayer
         projectiles={projectiles}
         floatingTexts={floatingTexts}
+        shockwaves={shockwaves}
       />
     </div>
   )

@@ -12,6 +12,7 @@ import {
   triggerStartOfTurn,
   triggerDinoRoar,
   triggerWhenTrickPlayed,
+  triggerWhenDestroyed,
   playEnvironment,
   applyEnvironmentBeforeCombat,
   applyEnvironmentOnPlay,
@@ -19,6 +20,7 @@ import {
   executeTrick,
   executeSuperpower,
   getAIDecision,
+  triggerOnDeath,
 } from '../engine/index'
 import type { Minion, Card, HeroState } from '../engine/types'
 
@@ -466,6 +468,39 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
       // Trickster cost should decrease from 7 to 6
       expect(res.updatedState.zombieHand[0].cost).toBe(6)
     })
+
+    it('should trigger Valkyrie +2 attack in zombie hand when a zombie minion is destroyed', () => {
+      const state = createInitialGameState()
+      state.zombieHand = [
+        createMockCard('zombie_valkyrie', 'Valkyrie', 'zombies', 3, 0, 6),
+      ]
+      const dyingZombie = createMockMinion('z_dead', 'Basic Zombie', 'zombies', 1, 1, { cardId: 'zombie_basic' })
+
+      const res = triggerWhenDestroyed(state, dyingZombie, 1, 'zombies')
+      expect(res.updatedState.zombieHand[0].attack).toBe(2)
+      expect(res.events.some(e => e.includes('Valkyrie'))).toBe(true)
+    })
+
+    it('should trigger Potato Mine 2 damage to zombie in same lane when destroyed', () => {
+      const state = createInitialGameState()
+      state.lanes[2].zombieMinion = createMockMinion('z_target', 'Conehead', 'zombies', 2, 4)
+      const potatoMine = createMockMinion('pm', 'Potato Mine', 'plants', 0, 1, { cardId: 'plant_potato_mine' })
+
+      const res = triggerWhenDestroyed(state, potatoMine, 2, 'plants')
+      // Conehead had 4 HP - 2 = 2 HP
+      expect(res.updatedState.lanes[2].zombieMinion?.currentHealth).toBe(2)
+      expect(res.events.some(e => e.includes('Potato Mine'))).toBe(true)
+    })
+
+    it('should trigger Punish-Shroom retaliation damage when mushroom is destroyed', () => {
+      const state = createInitialGameState()
+      state.lanes[0].plantMinion = createMockMinion('ps', 'Punish-Shroom', 'plants', 2, 2, { cardId: 'plant_punish_shroom' })
+      state.lanes[1].zombieMinion = createMockMinion('z_victim', 'Imp', 'zombies', 1, 2)
+      const astroShroom = createMockMinion('as', 'Astro-Shroom', 'plants', 1, 1, { cardId: 'plant_astro_shroom' })
+
+      const res = triggerWhenDestroyed(state, astroShroom, 1, 'plants')
+      expect(res.events.some(e => e.includes('Punish-Shroom'))).toBe(true)
+    })
   })
 
   // ==========================================================
@@ -812,6 +847,532 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
       const decision = getAIDecision(state, 'plants')
       expect(decision.action).toBe('PLAY_MINION')
       expect(decision.laneIndex).toBe(1) // Blocks lane 1 with zombie
+    })
+  })
+
+  // ==========================================================
+  // 9. ADVANCED COMBAT INTERACTIONS & EDGE-CASES (QA BOT)
+  // ==========================================================
+  describe('Advanced Combat Interactions & Edge-Cases (QA Suite)', () => {
+    // --------------------------------------------------------
+    // (1) BULLSEYE + STRIKETHROUGH COMBINATIONS
+    // --------------------------------------------------------
+    describe('Bullseye + Strikethrough Trait Combination', () => {
+      it('should hit opposing minion AND enemy hero with Strikethrough while Bullseye completely prevents block meter charge', () => {
+        const state = createInitialGameState()
+        state.zombieHero.hp = 20
+        state.zombieHero.blockMeter = 4
+        // Plant has 3 ATK, 4 HP, Strikethrough & Bullseye
+        state.lanes[1].plantMinion = createMockMinion('p_combo', 'Strikethrough Bullseye Plant', 'plants', 3, 4, {
+          strikethrough: true,
+          bullseye: true,
+        })
+        // Zombie has 1 ATK, 5 HP
+        state.lanes[1].zombieMinion = createMockMinion('z_tank', 'Conehead Zombie', 'zombies', 1, 5)
+
+        const { updatedState, result } = resolveCombat(state)
+        // Zombie minion took 3 combat damage: 5 - 3 = 2 HP
+        expect(updatedState.lanes[1].zombieMinion?.currentHealth).toBe(2)
+        // Plant minion took 1 combat damage: 4 - 1 = 3 HP
+        expect(updatedState.lanes[1].plantMinion?.currentHealth).toBe(3)
+        // Strikethrough dealt 3 piercing damage directly to Zombie Hero
+        expect(result.zombieHeroDamageTaken).toBe(3)
+        expect(updatedState.zombieHero.hp).toBe(17)
+        // Bullseye ensured the Zombie Hero block meter did NOT charge at all (remains exactly 4)
+        expect(updatedState.zombieHero.blockMeter).toBe(4)
+      })
+
+      it('should bypass Super-Block trigger even if hero block meter is at 7/8 when damaged by Bullseye + Strikethrough', () => {
+        const state = createInitialGameState()
+        state.zombieHero.hp = 20
+        state.zombieHero.blockMeter = 7
+        state.lanes[1].plantMinion = createMockMinion('p_combo', 'Strikethrough Bullseye Plant', 'plants', 4, 3, {
+          strikethrough: true,
+          bullseye: true,
+        })
+        state.lanes[1].zombieMinion = createMockMinion('z_blocker', 'Zombie Blocker', 'zombies', 1, 6)
+
+        const res = resolveSingleLaneCombat(state, 1)
+        // Bullseye must completely bypass Super-Block even when meter is at 7/8
+        expect(res.hasSuperBlock).toBe(false)
+        expect(res.updatedState.pendingSuperBlock).toBeNull()
+        expect(res.updatedState.zombieHero.hp).toBe(16)
+        expect(res.updatedState.zombieHero.blockMeter).toBe(7) // Block meter untouched!
+        expect(res.updatedState.lanes[1].zombieMinion?.currentHealth).toBe(2)
+      })
+
+      it('should apply Bullseye and Strikethrough correctly for Zombie minion attacking Plant Hero', () => {
+        const state = createInitialGameState()
+        state.plantHero.hp = 20
+        state.plantHero.blockMeter = 5
+        state.lanes[2].plantMinion = createMockMinion('p_nut', 'Wall-Nut', 'plants', 0, 6)
+        state.lanes[2].zombieMinion = createMockMinion('z_combo', 'Line Dancing Zombie', 'zombies', 3, 3, {
+          strikethrough: true,
+          bullseye: true,
+        })
+
+        const { updatedState, result } = resolveCombat(state)
+        expect(updatedState.lanes[2].plantMinion?.currentHealth).toBe(3)
+        expect(result.plantHeroDamageTaken).toBe(3)
+        expect(updatedState.plantHero.hp).toBe(17)
+        // Plant Hero block meter remains 5 without any increase
+        expect(updatedState.plantHero.blockMeter).toBe(5)
+      })
+
+      it('should deal direct face damage without charging block meter in an open lane with Bullseye + Strikethrough', () => {
+        const state = createInitialGameState()
+        state.zombieHero.hp = 20
+        state.zombieHero.blockMeter = 3
+        state.lanes[0].plantMinion = createMockMinion('p_open', 'Open Lane Striker', 'plants', 3, 3, {
+          strikethrough: true,
+          bullseye: true,
+        })
+
+        const { updatedState, result } = resolveCombat(state)
+        expect(result.zombieHeroDamageTaken).toBe(3)
+        expect(updatedState.zombieHero.hp).toBe(17)
+        expect(updatedState.zombieHero.blockMeter).toBe(3)
+      })
+    })
+
+    // --------------------------------------------------------
+    // (2) ARMORED REDUCING DAMAGE ACROSS MULTIPLE SOURCES
+    // --------------------------------------------------------
+    describe('Armored Trait Across Multiple Damage Sources', () => {
+      it('should absorb damage independently on each strike when facing Double Strike (Armored applied per damage instance)', () => {
+        const state = createInitialGameState()
+        // Plant has 3 ATK, 6 HP, and Double Strike
+        state.lanes[1].plantMinion = createMockMinion('p_ds', 'Repeater DS', 'plants', 3, 6, {
+          doubleStrike: true,
+        })
+        // Zombie has 1 ATK, 6 HP, and Armored 1
+        state.lanes[1].zombieMinion = createMockMinion('z_armored', 'Armored Zombie', 'zombies', 1, 6, {
+          armored: 1,
+        })
+
+        const { updatedState, result } = resolveCombat(state)
+        // Strike 1: 3 ATK - 1 Armored = 2 damage taken (6 - 2 = 4 HP). Zombie hits plant for 1 (6 - 1 = 5 HP).
+        // Strike 2 (Double Strike): 3 ATK - 1 Armored = 2 damage taken again (4 - 2 = 2 HP).
+        // Armored reduced damage by 1 on EACH strike (total 2 damage absorbed)!
+        expect(updatedState.lanes[1].zombieMinion?.currentHealth).toBe(2)
+        expect(updatedState.lanes[1].plantMinion?.currentHealth).toBe(5)
+        const plantAttacks = result.events.filter(e => e.target === 'minion' && e.attackerSide === 'plants')
+        expect(plantAttacks).toHaveLength(2)
+        expect(result.events.some(e => e.traitsTriggered?.includes('doubleStrike'))).toBe(true)
+      })
+
+      it('should completely absorb repeated low-damage strikes when damage <= Armored rating', () => {
+        const state = createInitialGameState()
+        // Plant has 2 ATK, 5 HP, and Double Strike
+        state.lanes[1].plantMinion = createMockMinion('p_pea', 'Low Atk DS Plant', 'plants', 2, 5, {
+          doubleStrike: true,
+        })
+        // Zombie has Armored 2 and 4 HP
+        state.lanes[1].zombieMinion = createMockMinion('z_knight', 'Knight of the Living Dead', 'zombies', 1, 4, {
+          armored: 2,
+        })
+
+        const { updatedState } = resolveCombat(state)
+        // Strike 1: max(0, 2 - 2) = 0 damage
+        // Strike 2: max(0, 2 - 2) = 0 damage
+        // Zombie minion took 0 damage across both strikes!
+        expect(updatedState.lanes[1].zombieMinion?.currentHealth).toBe(4)
+      })
+
+      it('should reduce damage across distinct sources: pre-combat environment followed by combat strike', () => {
+        const state = createInitialGameState()
+        state.lanes[1].environment = {
+          id: 'plant_spikeweed_sector',
+          name: 'Spikeweed Sector',
+          side: 'plants',
+          description: 'Do 2 damage to zombie here before combat',
+          image: '/assets/spikeweed.png',
+        }
+        state.lanes[1].plantMinion = createMockMinion('p_bonk', 'Bonk Choy', 'plants', 3, 4)
+        state.lanes[1].zombieMinion = createMockMinion('z_tank', 'Armored Conehead', 'zombies', 1, 6, {
+          armored: 1,
+        })
+
+        const { updatedState } = resolveCombat(state)
+        // Pre-combat: Spikeweed Sector deals 2 environmental damage -> 6 - 2 = 4 HP
+        // Combat strike: Plant 3 ATK - 1 Armored = 2 damage -> 4 - 2 = 2 HP
+        expect(updatedState.lanes[1].zombieMinion?.currentHealth).toBe(2)
+      })
+
+      it('should reduce damage dealt to Armored Plant minion from enemy Zombie', () => {
+        const state = createInitialGameState()
+        // Plant has Armored 2 and 5 HP
+        state.lanes[1].plantMinion = createMockMinion('p_wall', 'Armored Plant Tank', 'plants', 1, 5, {
+          armored: 2,
+        })
+        // Zombie has 4 ATK
+        state.lanes[1].zombieMinion = createMockMinion('z_smash', 'Smash Zombie', 'zombies', 4, 4)
+
+        const { updatedState } = resolveCombat(state)
+        // Zombie deals 4 - 2 (Armored) = 2 damage to Plant -> 5 - 2 = 3 HP
+        // Plant deals 1 damage to Zombie -> 4 - 1 = 3 HP
+        expect(updatedState.lanes[1].plantMinion?.currentHealth).toBe(3)
+        expect(updatedState.lanes[1].zombieMinion?.currentHealth).toBe(3)
+      })
+    })
+
+    // --------------------------------------------------------
+    // (3) SUPER-BLOCK TRIGGER AT 8/8 & 100% DAMAGE NEGATION
+    // --------------------------------------------------------
+    describe('Super-Block Meter 8/8 Precision & 100% Damage Negation', () => {
+      it('should trigger Super-Block exactly when meter reaches 8/8 and block 100% of lethal incoming damage', () => {
+        const hero: HeroState = {
+          ...createInitialHero('plants', 'hero_green_shadow'),
+          hp: 5,
+          blockMeter: 7,
+          blockCount: 0,
+        }
+
+        // Incoming 20 damage (would be lethal), non-bullseye
+        const res = applyHeroDamage(hero, 20, false)
+        expect(res.blocked).toBe(true)
+        expect(res.isSuperBlockTriggered).toBe(true)
+        expect(res.actualDamage).toBe(0) // 100% of the 20 damage blocked!
+        expect(res.updatedHero.hp).toBe(5) // Hero took ZERO damage!
+        expect(res.updatedHero.blockMeter).toBe(0) // Meter reset to 0
+        expect(res.updatedHero.blockCount).toBe(1) // Block count incremented
+      })
+
+      it('should create pendingSuperBlock with 0-cost superpower during single lane combat when meter reaches 8/8', () => {
+        const state = createInitialGameState()
+        state.plantHero.hp = 12
+        state.plantHero.blockMeter = 7
+        state.lanes[2].zombieMinion = createMockMinion('z_heavy', 'Gargantuar', 'zombies', 8, 8)
+
+        const res = resolveSingleLaneCombat(state, 2)
+        expect(res.hasSuperBlock).toBe(true)
+        expect(res.updatedState.plantHero.hp).toBe(12) // 0 damage taken
+        expect(res.updatedState.pendingSuperBlock).toBeDefined()
+        expect(res.updatedState.pendingSuperBlock?.side).toBe('plants')
+        expect(res.updatedState.pendingSuperBlock?.superpower.cost).toBe(0)
+        expect(res.updatedState.pendingSuperBlock?.superpower.type).toBe('superpower')
+        expect(res.updatedState.plantHero.blockCount).toBe(1)
+        expect(res.updatedState.plantHero.blockMeter).toBe(0)
+      })
+
+      it('should exhaust Super-Block protection after 3 blocks (blockCount = 3), taking full damage even with full meter', () => {
+        const hero: HeroState = {
+          ...createInitialHero('plants', 'hero_green_shadow'),
+          hp: 20,
+          blockMeter: 7,
+          blockCount: 3, // Already used all 3 Super-Blocks
+        }
+
+        const res = applyHeroDamage(hero, 5, false)
+        expect(res.blocked).toBe(false)
+        expect(res.isSuperBlockTriggered).toBe(false)
+        expect(res.actualDamage).toBe(5)
+        expect(res.updatedHero.hp).toBe(15)
+        expect(res.updatedHero.blockCount).toBe(3) // Stays at 3
+      })
+
+      it('should completely prevent Super-Block from triggering when damage source has Bullseye trait even at 7/8 meter', () => {
+        const hero: HeroState = {
+          ...createInitialHero('zombies', 'hero_super_brainz'),
+          hp: 20,
+          blockMeter: 7,
+          blockCount: 0,
+        }
+
+        const res = applyHeroDamage(hero, 6, true) // hasBullseye = true
+        expect(res.blocked).toBe(false)
+        expect(res.isSuperBlockTriggered).toBe(false)
+        expect(res.actualDamage).toBe(6)
+        expect(res.updatedHero.hp).toBe(14)
+        expect(res.updatedHero.blockMeter).toBe(7) // Meter remains 7, no charge
+      })
+    })
+
+    // --------------------------------------------------------
+    // (4) DOUBLE STRIKE TRIGGERS (OPEN LANE & SURVIVING MINION)
+    // --------------------------------------------------------
+    describe('Double Strike Triggers (Open Lane & Surviving Minion)', () => {
+      it('should attack Zombie Hero twice in an open lane when Double Strike is active', () => {
+        const state = createInitialGameState()
+        state.zombieHero.hp = 20
+        // Plant in open lane (no zombie in lane 1) with Double Strike & Bullseye
+        state.lanes[1].plantMinion = createMockMinion('p_ds_open', 'Repeater Open', 'plants', 4, 3, {
+          doubleStrike: true,
+          bullseye: true,
+        })
+
+        const { updatedState, result } = resolveCombat(state)
+        // First strike: 4 damage to Zombie Hero
+        // Second strike (Double Strike): 4 damage to Zombie Hero
+        // Total damage dealt: 4 + 4 = 8!
+        expect(result.zombieHeroDamageTaken).toBe(8)
+        expect(updatedState.zombieHero.hp).toBe(12)
+        const doubleStrikeEvents = result.events.filter(e => e.traitsTriggered?.includes('doubleStrike'))
+        expect(doubleStrikeEvents).toHaveLength(1)
+        expect(doubleStrikeEvents[0].target).toBe('hero')
+        expect(doubleStrikeEvents[0].damageDealt).toBe(4)
+      })
+
+      it('should strike surviving enemy minion a second time with Double Strike', () => {
+        const state = createInitialGameState()
+        // Plant: 3 ATK, 6 HP, Double Strike
+        state.lanes[2].plantMinion = createMockMinion('p_ds', 'Bananasaurus Rex', 'plants', 3, 6, {
+          doubleStrike: true,
+        })
+        // Zombie: 2 ATK, 8 HP (high HP, survives first strike)
+        state.lanes[2].zombieMinion = createMockMinion('z_tank', 'Gargantuar', 'zombies', 2, 8)
+
+        const { updatedState, result } = resolveCombat(state)
+        // First strike: Plant deals 3 to Zombie (8 - 3 = 5 HP), Zombie deals 2 to Plant (6 - 2 = 4 HP)
+        // Both survive!
+        // Double Strike triggers: Plant attacks Zombie minion again for 3 damage -> 5 - 3 = 2 HP
+        expect(updatedState.lanes[2].plantMinion?.currentHealth).toBe(4)
+        expect(updatedState.lanes[2].zombieMinion?.currentHealth).toBe(2)
+
+        const dsMinionEvent = result.events.find(
+          e => e.traitsTriggered?.includes('doubleStrike') && e.target === 'minion'
+        )
+        expect(dsMinionEvent).toBeDefined()
+        expect(dsMinionEvent?.damageDealt).toBe(3)
+        expect(dsMinionEvent?.isLethal).toBe(false)
+      })
+
+      it('should destroy surviving enemy minion if the second Double Strike hit is lethal', () => {
+        const state = createInitialGameState()
+        // Plant: 3 ATK, 5 HP, Double Strike
+        state.lanes[1].plantMinion = createMockMinion('p_ds', 'Repeater', 'plants', 3, 5, {
+          doubleStrike: true,
+        })
+        // Zombie: 1 ATK, 5 HP (survives first hit of 3 HP -> 2 HP left, dies on second hit of 3 HP)
+        state.lanes[1].zombieMinion = createMockMinion('z_cone', 'Conehead', 'zombies', 1, 5)
+
+        const { updatedState, result } = resolveCombat(state)
+        // Plant survives: 5 - 1 = 4 HP
+        expect(updatedState.lanes[1].plantMinion?.currentHealth).toBe(4)
+        // Zombie is destroyed by the second Double Strike hit!
+        expect(updatedState.lanes[1].zombieMinion).toBeNull()
+
+        const dsEvent = result.events.find(
+          e => e.traitsTriggered?.includes('doubleStrike') && e.target === 'minion'
+        )
+        expect(dsEvent).toBeDefined()
+        expect(dsEvent?.isLethal).toBe(true)
+      })
+
+      it('should NOT trigger Double Strike if the plant minion is destroyed in the first simultaneous strike', () => {
+        const state = createInitialGameState()
+        // Plant: 3 ATK, 2 HP, Double Strike
+        state.lanes[1].plantMinion = createMockMinion('p_glass', 'Glass Cannon Plant', 'plants', 3, 2, {
+          doubleStrike: true,
+        })
+        // Zombie: 4 ATK, 6 HP (destroys plant in first strike)
+        state.lanes[1].zombieMinion = createMockMinion('z_strong', 'Strong Zombie', 'zombies', 4, 6)
+
+        const { updatedState, result } = resolveCombat(state)
+        // Plant destroyed in first strike (2 - 4 <= 0)
+        expect(updatedState.lanes[1].plantMinion).toBeNull()
+        // Zombie takes only 1 strike (6 - 3 = 3 HP) and survives
+        expect(updatedState.lanes[1].zombieMinion?.currentHealth).toBe(3)
+        // Double Strike should NOT have triggered
+        const dsEvents = result.events.filter(e => e.traitsTriggered?.includes('doubleStrike'))
+        expect(dsEvents).toHaveLength(0)
+      })
+
+      it('should hit surviving minion AND pierce to Zombie Hero when plant has both Double Strike and Strikethrough', () => {
+        const state = createInitialGameState()
+        state.zombieHero.hp = 20
+        // Plant: 3 ATK, 5 HP, Double Strike, Strikethrough, Bullseye
+        state.lanes[1].plantMinion = createMockMinion('p_combo', 'Super Plant', 'plants', 3, 5, {
+          doubleStrike: true,
+          strikethrough: true,
+          bullseye: true,
+        })
+        // Zombie: 1 ATK, 8 HP
+        state.lanes[1].zombieMinion = createMockMinion('z_wall', 'Tank Zombie', 'zombies', 1, 8)
+
+        const { updatedState, result } = resolveCombat(state)
+        // Strike 1: 3 damage to minion (8 - 3 = 5 HP), 3 damage to Hero via Strikethrough (20 - 3 = 17 HP)
+        // Plant takes 1 damage from Zombie (5 - 1 = 4 HP)
+        // Strike 2 (Double Strike): 3 damage to minion (5 - 3 = 2 HP), 3 damage to Hero via Strikethrough (17 - 3 = 14 HP)
+        // Total damage to Zombie minion: 3 + 3 = 6 (2 HP remaining)
+        expect(updatedState.lanes[1].zombieMinion?.currentHealth).toBe(2)
+        // Total damage to Zombie Hero: 3 + 3 = 6 (14 HP remaining)
+        expect(updatedState.zombieHero.hp).toBe(14)
+        expect(result.zombieHeroDamageTaken).toBe(6)
+      })
+    })
+  })
+
+  // ==========================================================
+  // 10. CASCADE DEATH TRIGGERS & ON-DEATH MECHANICS (Phase 6)
+  // ==========================================================
+  describe('Cascade Death Triggers & On-Death Mechanics (Phase 6)', () => {
+    it('should trigger Hothead on-death explosion dealing 6 damage and destroying opposing zombie', () => {
+      const state = createInitialGameState()
+      const hothead = createMockMinion('p_hot', 'Hothead', 'plants', 0, 1, { cardId: 'plant_hothead' })
+      const zombie = createMockMinion('z_cone', 'Conehead Zombie', 'zombies', 2, 4)
+      state.lanes[1].plantMinion = hothead
+      state.lanes[1].zombieMinion = zombie
+
+      const { updatedState, events, logs } = triggerOnDeath(state, hothead, 1)
+
+      // Hothead exploded and dealt 6 damage to Zombie (4 HP -> 0 HP)
+      expect(updatedState.lanes[1].zombieMinion).toBeNull()
+      expect(updatedState.plantGraveyard.some(c => c.id === 'plant_hothead')).toBe(true)
+      expect(updatedState.zombieGraveyard.some(c => c.name === 'Conehead Zombie')).toBe(true)
+      const explosionEvent = events.find(e => e.attackerName === 'Hothead')
+      expect(explosionEvent).toBeDefined()
+      expect(explosionEvent?.damageDealt).toBe(6)
+      expect(explosionEvent?.isLethal).toBe(true)
+      expect(logs.some(l => l.includes('Hothead phát nổ'))).toBe(true)
+    })
+
+    it('should buff Valkyrie in Zombie hand by +2 Attack whenever any Zombie minion dies', () => {
+      const state = createInitialGameState()
+      const valkyrieCard = createMockCard('zombie_valkyrie', 'Valkyrie', 'zombies', 3, 0, 6)
+      state.zombieHand = [valkyrieCard]
+
+      const deadZombie1 = createMockMinion('z1', 'Basic Zombie', 'zombies', 1, 1)
+      const res1 = triggerOnDeath(state, deadZombie1, 0)
+
+      expect(res1.updatedState.zombieHand[0].attack).toBe(2)
+      expect(res1.events.some(e => e.attackerName === 'Valkyrie')).toBe(true)
+
+      // Second zombie dies
+      const deadZombie2 = createMockMinion('z2', 'Conehead Zombie', 'zombies', 2, 2)
+      const res2 = triggerOnDeath(res1.updatedState, deadZombie2, 1)
+
+      expect(res2.updatedState.zombieHand[0].attack).toBe(4)
+      expect(res2.updatedState.zombieGraveyard).toHaveLength(2)
+    })
+
+    it('should NOT buff Valkyrie when a Plant minion is destroyed', () => {
+      const state = createInitialGameState()
+      const valkyrieCard = createMockCard('zombie_valkyrie', 'Valkyrie', 'zombies', 3, 0, 6)
+      state.zombieHand = [valkyrieCard]
+
+      const deadPlant = createMockMinion('p1', 'Peashooter', 'plants', 2, 2)
+      const res = triggerOnDeath(state, deadPlant, 0)
+
+      expect(res.updatedState.zombieHand[0].attack).toBe(0)
+      expect(res.events.some(e => e.attackerName === 'Valkyrie')).toBe(false)
+    })
+
+    it('should trigger Punish-Shroom retaliation when a Mushroom minion dies', () => {
+      const state = createInitialGameState()
+      state.zombieHero.hp = 20
+      // Punish-Shroom on board in lane 0
+      state.lanes[0].plantMinion = createMockMinion('p_punish', 'Punish-Shroom', 'plants', 2, 2, {
+        cardId: 'plant_punish_shroom',
+      })
+      // Astro-Shroom in lane 1 dies
+      const astroShroom = createMockMinion('p_astro', 'Astro-Shroom', 'plants', 1, 1, {
+        cardId: 'plant_astro_shroom',
+      })
+      state.lanes[1].plantMinion = astroShroom
+
+      const { updatedState, events } = triggerOnDeath(state, astroShroom, 1, { preferredTarget: 'hero' })
+
+      // Punish-Shroom dealt 2 damage to Zombie Hero
+      expect(updatedState.zombieHero.hp).toBe(18)
+      const punishEvent = events.find(e => e.attackerName === 'Punish-Shroom')
+      expect(punishEvent).toBeDefined()
+      expect(punishEvent?.damageDealt).toBe(2)
+      expect(punishEvent?.target).toBe('hero')
+    })
+
+    it('should trigger Punish-Shroom retaliation even when Punish-Shroom itself is destroyed', () => {
+      const state = createInitialGameState()
+      state.zombieHero.hp = 20
+      const punishShroom = createMockMinion('p_punish', 'Punish-Shroom', 'plants', 2, 2, {
+        cardId: 'plant_punish_shroom',
+      })
+      state.lanes[0].plantMinion = punishShroom
+
+      const { updatedState, events } = triggerOnDeath(state, punishShroom, 0, { preferredTarget: 'hero' })
+
+      expect(updatedState.zombieHero.hp).toBe(18)
+      expect(events.some(e => e.attackerName === 'Punish-Shroom')).toBe(true)
+    })
+
+    it('should execute a full cascade chain reaction across multiple triggers', () => {
+      const state = createInitialGameState()
+      // 1. Zombie Hand has Valkyrie (0 ATK)
+      state.zombieHand = [createMockCard('zombie_valkyrie', 'Valkyrie', 'zombies', 3, 0, 6)]
+      // 2. Board has Punish-Shroom in lane 0
+      state.lanes[0].plantMinion = createMockMinion('p_punish', 'Punish-Shroom', 'plants', 2, 2, {
+        cardId: 'plant_punish_shroom',
+      })
+      // 3. Lane 2 has an Imp with 2 HP
+      const imp = createMockMinion('z_imp', 'Imp', 'zombies', 1, 2)
+      state.lanes[2].zombieMinion = imp
+      // 4. Mushroom (Poison Mushroom) dies
+      const deadMushroom = createMockMinion('p_mush', 'Poison Mushroom', 'plants', 1, 1, {
+        cardId: 'plant_poison_mushroom',
+      })
+
+      // When Mushroom dies -> Punish-Shroom targets Imp with 2 damage -> Imp dies -> Valkyrie gets +2 ATK!
+      const { updatedState, events } = triggerOnDeath(state, deadMushroom, 1, {
+        preferredTarget: 'minion',
+        targetLaneIndex: 2,
+      })
+
+      // Imp was destroyed by Punish-Shroom!
+      expect(updatedState.lanes[2].zombieMinion).toBeNull()
+      // Imp was added to zombie graveyard!
+      expect(updatedState.zombieGraveyard.some(c => c.name === 'Imp')).toBe(true)
+      // Cascade triggered Valkyrie in Zombie hand: +2 Attack!
+      expect(updatedState.zombieHand[0].attack).toBe(2)
+      // Check events contain both Punish-Shroom attack and Valkyrie buff
+      expect(events.some(e => e.attackerName === 'Punish-Shroom' && e.isLethal)).toBe(true)
+      expect(events.some(e => e.attackerName === 'Valkyrie')).toBe(true)
+    })
+
+    it('should transform Pear Cub into Grizzly Pear upon death', () => {
+      const state = createInitialGameState()
+      const pearCub = createMockMinion('p_cub', 'Pear Cub', 'plants', 1, 1, { cardId: 'plant_pear_cub' })
+      state.lanes[1].plantMinion = pearCub
+
+      const { updatedState, logs } = triggerOnDeath(state, pearCub, 1)
+
+      expect(updatedState.lanes[1].plantMinion?.name).toBe('Grizzly Pear')
+      expect(updatedState.lanes[1].plantMinion?.currentAttack).toBe(5)
+      expect(updatedState.lanes[1].plantMinion?.currentHealth).toBe(4)
+      expect(logs.some(l => l.includes('Grizzly Pear'))).toBe(true)
+    })
+
+    it('should buff Frankentuar by +1/+1 when another Zombie dies', () => {
+      const state = createInitialGameState()
+      state.lanes[0].zombieMinion = createMockMinion('z_frank', 'Frankentuar', 'zombies', 5, 5, {
+        cardId: 'zombie_frankentuar',
+      })
+      const deadZombie = createMockMinion('z_fodder', 'Basic Zombie', 'zombies', 1, 1)
+      state.lanes[1].zombieMinion = deadZombie
+
+      const { updatedState } = triggerOnDeath(state, deadZombie, 1)
+
+      expect(updatedState.lanes[0].zombieMinion?.currentAttack).toBe(6)
+      expect(updatedState.lanes[0].zombieMinion?.currentHealth).toBe(6)
+    })
+
+    it('should integrate seamlessly into resolveCombat: combat death triggers Valkyrie in hand and Hothead', () => {
+      const state = createInitialGameState()
+      state.zombieHand = [createMockCard('zombie_valkyrie', 'Valkyrie', 'zombies', 3, 0, 6)]
+      // Lane 1: Plant Hothead (0/1) vs Zombie (4/4)
+      state.lanes[1].plantMinion = createMockMinion('p_hot', 'Hothead', 'plants', 0, 1, { cardId: 'plant_hothead' })
+      state.lanes[1].zombieMinion = createMockMinion('z_brute', 'Brute Zombie', 'zombies', 4, 4)
+
+      const { updatedState, result } = resolveCombat(state)
+
+      // 1. Zombie destroyed Hothead in combat
+      // 2. Hothead exploded on death, dealing 6 damage to Zombie -> destroying it!
+      // 3. Zombie death cascaded to Valkyrie in hand -> +2 Attack!
+      expect(updatedState.lanes[1].plantMinion).toBeNull()
+      expect(updatedState.lanes[1].zombieMinion).toBeNull()
+      expect(updatedState.zombieHand[0].attack).toBe(2)
+      expect(result.events.some(e => e.attackerName === 'Hothead')).toBe(true)
+      expect(updatedState.plantGraveyard.some(c => c.id === 'plant_hothead')).toBe(true)
+      expect(updatedState.zombieGraveyard.some(c => c.name === 'Brute Zombie')).toBe(true)
     })
   })
 })

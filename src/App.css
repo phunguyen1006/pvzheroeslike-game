@@ -1596,6 +1596,11 @@
   box-shadow: 0 0 6px #22c55e;
 }
 
+.dial-segment-pip.opponent-segment-lit .segment-nub {
+  background: #c084fc;
+  box-shadow: 0 0 6px #a855f7;
+}
+
 .dial-segment-pip.segment-pulse .segment-nub {
   animation: pulseCharge 0.5s ease;
 }
@@ -1677,6 +1682,149 @@
   min-width: 0;
   overflow: visible;
   display: flex;
+  justify-content: center;
+}
+
+/* ========================================================
+   AUTHENTIC PVZ HEROES 4-PHASE CIRCULAR TURN DIAL
+   ======================================================== */
+.arena-phase-dial-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 6px;
+  margin-bottom: 2px;
+  z-index: 250;
+  position: relative;
+}
+
+.phase-dial-turn-pill {
+  background: linear-gradient(180deg, #334155 0%, #0f172a 100%);
+  border: 1.5px solid #64748b;
+  border-radius: 999px;
+  padding: 1px 8px;
+  margin-bottom: -7px;
+  z-index: 260;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+}
+
+.turn-pill-text {
+  font-family: var(--font-display);
+  font-size: 0.58rem;
+  font-weight: 900;
+  color: #f8fafc;
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.phase-dial-bezel {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #1e293b 0%, #0f172a 75%, #020617 100%);
+  border: 2.5px solid #475569;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.phase-dial-bezel.phase-active-plant_play {
+  border-color: #22c55e;
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.5), 0 4px 16px rgba(0, 0, 0, 0.8);
+}
+
+.phase-dial-bezel.phase-active-fight {
+  border-color: #ea580c;
+  box-shadow: 0 0 20px rgba(234, 88, 12, 0.6), 0 4px 16px rgba(0, 0, 0, 0.8);
+}
+
+.phase-dial-bezel.phase-active-zombie_play,
+.phase-dial-bezel.phase-active-zombie_tricks {
+  border-color: #a855f7;
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.5), 0 4px 16px rgba(0, 0, 0, 0.8);
+}
+
+/* Rotating pointer indicator */
+.phase-dial-pointer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  pointer-events: none;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 5;
+}
+
+.dial-pointer-head {
+  position: absolute;
+  top: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid #facc15;
+  filter: drop-shadow(0 0 4px #facc15);
+}
+
+/* 4 Phase Quadrant Icons */
+.dial-quadrant {
+  position: absolute;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.25s ease;
+  z-index: 6;
+  opacity: 0.45;
+}
+
+.dial-quadrant.quad-zombie-play {
+  top: 2px;
+  left: 2px;
+}
+
+.dial-quadrant.quad-plant-play {
+  top: 2px;
+  right: 2px;
+}
+
+.dial-quadrant.quad-zombie-tricks {
+  bottom: 2px;
+  right: 2px;
+}
+
+.dial-quadrant.quad-fight {
+  bottom: 2px;
+  left: 2px;
+}
+
+.dial-quadrant.quad-active {
+  opacity: 1;
+  transform: scale(1.22);
+  box-shadow: 0 0 8px #facc15;
+  border-color: #facc15;
+  background: rgba(0, 0, 0, 0.95);
+}
+
+.phase-dial-core-slot {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
   justify-content: center;
 }
 
@@ -3738,6 +3886,465 @@
 .deck-remove-btn:hover {
   background: #ef4444;
   color: #fff;
+}
+
+/* ========================================================
+   SUPER-BLOCK CHARGE VISUAL FEEDBACK (1-3 ROLL BADGES & FLASHES)
+   ======================================================== */
+
+/* 1. Floating Roll Badge on Side BlockMeter */
+.meter-roll-bounce-badge {
+  position: absolute;
+  top: -24px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #facc15 0%, #f59e0b 60%, #b45309 100%);
+  border: 2px solid #fef08a;
+  border-radius: 999px;
+  padding: 2px 10px;
+  box-shadow: 0 0 16px rgba(250, 204, 21, 0.9), 0 4px 10px rgba(0, 0, 0, 0.8);
+  z-index: 100;
+  pointer-events: none;
+  animation: rollBadgeBounce 0.9s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+.meter-roll-bounce-badge .roll-sparkle-icon {
+  font-size: 0.95rem;
+  animation: sparkleRotate 0.6s ease-in-out infinite alternate;
+}
+
+.meter-roll-bounce-badge .roll-number-text {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.15rem;
+  color: #fff;
+  text-shadow: 1px 1px 0 #78350f, -1px -1px 0 #78350f, 1px -1px 0 #78350f, -1px 1px 0 #78350f, 0 2px 4px rgba(0, 0, 0, 0.8);
+  line-height: 1;
+}
+
+.meter-roll-bounce-badge .roll-label {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.68rem;
+  color: #fef08a;
+  letter-spacing: 0.5px;
+}
+
+/* 2. Floating Roll Badge on Hero Arena 8-Segment Gauge Dial */
+.superpower-roll-bounce-badge {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: linear-gradient(135deg, #facc15 0%, #ea580c 100%);
+  border: 2px solid #fff;
+  border-radius: 999px;
+  padding: 3px 10px;
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.95), 0 4px 10px rgba(0, 0, 0, 0.7);
+  z-index: 50;
+  pointer-events: none;
+  animation: dialRollBadgePop 0.95s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+.superpower-roll-bounce-badge .roll-symbol {
+  font-size: 0.9rem;
+}
+
+.superpower-roll-bounce-badge .roll-val {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.2rem;
+  color: #fff;
+  text-shadow: 2px 2px 0 #7c2d12, -1px -1px 0 #7c2d12, 1px -1px 0 #7c2d12, -1px 1px 0 #7c2d12, 0 2px 4px rgba(0, 0, 0, 0.8);
+  line-height: 1;
+}
+
+/* Opponent Dial Variant (Violet / Purple glow) */
+.superpower-roll-bounce-badge.opponent-roll-badge {
+  background: linear-gradient(135deg, #c084fc 0%, #9333ea 50%, #581c87 100%);
+  border-color: #f5d0fe;
+  box-shadow: 0 0 18px rgba(192, 132, 252, 0.95), 0 4px 10px rgba(0, 0, 0, 0.7);
+}
+
+.superpower-roll-bounce-badge.opponent-roll-badge .roll-val {
+  text-shadow: 2px 2px 0 #3b0764, -1px -1px 0 #3b0764, 1px -1px 0 #3b0764, -1px 1px 0 #3b0764, 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* 3. Meter & Dial Charging Container Glow */
+.meter-is-charging,
+.device-is-charging {
+  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.8));
+  animation: chargingContainerSurge 0.8s ease-out;
+}
+
+.core-charge-pulse {
+  animation: corePulsePop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 4. Newly Charged Segment / Pip Flashing */
+.pip-charging-flash .pip-fill-inner {
+  background: #fef08a !important;
+  box-shadow: 0 0 14px #facc15, 0 0 24px #f59e0b !important;
+  animation: segmentFlashGreen 0.75s ease-in-out infinite alternate !important;
+}
+
+.segment-charging-flash .segment-nub {
+  background: #fef08a !important;
+  box-shadow: 0 0 14px #facc15, 0 0 22px #eab308 !important;
+  animation: segmentFlashGreen 0.75s ease-in-out infinite alternate !important;
+}
+
+.opponent-segment-lit.segment-charging-flash .segment-nub {
+  background: #f5d0fe !important;
+  box-shadow: 0 0 14px #d8b4fe, 0 0 22px #a855f7 !important;
+  animation: segmentFlashPurple 0.75s ease-in-out infinite alternate !important;
+}
+
+/* Keyframes for Meter Charge */
+@keyframes rollBadgeBounce {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.4);
+  }
+  25% {
+    opacity: 1;
+    transform: translateY(-8px) scale(1.25);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.05);
+  }
+  75% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.9);
+  }
+}
+
+@keyframes dialRollBadgePop {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px) scale(0.4);
+  }
+  25% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-10px) scale(1.3);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-6px) scale(1.08);
+  }
+  75% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-8px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-22px) scale(0.85);
+  }
+}
+
+@keyframes sparkleRotate {
+  0% { transform: scale(0.9) rotate(-10deg); }
+  100% { transform: scale(1.25) rotate(15deg); }
+}
+
+@keyframes chargingContainerSurge {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+@keyframes corePulsePop {
+  0% { transform: scale(0.8); }
+  40% { transform: scale(1.35); filter: drop-shadow(0 0 10px #facc15); }
+  100% { transform: scale(1); }
+}
+
+@keyframes segmentFlashGreen {
+  0% {
+    transform: scale(1);
+    filter: brightness(1.2);
+  }
+  100% {
+    transform: scale(1.4);
+    filter: brightness(2) drop-shadow(0 0 8px #facc15);
+  }
+}
+
+@keyframes segmentFlashPurple {
+  0% {
+    transform: scale(1);
+    filter: brightness(1.2);
+  }
+  100% {
+    transform: scale(1.4);
+    filter: brightness(2) drop-shadow(0 0 8px #d8b4fe);
+  }
+}
+
+/* ========================================================
+   KINETIC SHOCKWAVE VFX (MINION ATTACKS & HERO DAMAGE)
+   ======================================================== */
+
+.combat-shockwave-emitter {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 0;
+  height: 0;
+}
+
+/* Energy Rings */
+.shockwave-ring {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  left: 0;
+  top: 0;
+}
+
+.shockwave-ring.ring-outer {
+  width: 90px;
+  height: 90px;
+  border: 3px solid rgba(250, 204, 21, 0.85);
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.8), inset 0 0 12px rgba(250, 204, 21, 0.5);
+  animation: shockwaveExpandOuter 0.55s cubic-bezier(0.1, 0.7, 0.1, 1) forwards;
+}
+
+.shockwave-ring.ring-inner {
+  width: 60px;
+  height: 60px;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.9);
+  animation: shockwaveExpandInner 0.4s cubic-bezier(0.15, 0.85, 0.35, 1.2) forwards;
+}
+
+/* Core Impact Flash Starburst */
+.shockwave-core-flash {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 15%, #fef08a 60%, transparent 100%);
+  box-shadow: 0 0 24px rgba(255, 255, 255, 1), 0 0 40px rgba(250, 204, 21, 0.8);
+  animation: shockwaveCoreBurst 0.32s ease-out forwards;
+}
+
+/* 1. Hero Damage Shockwave Variation (More intense, red/orange ground crater blast) */
+.shockwave-hero-emitter .shockwave-ring.ring-outer {
+  width: 140px;
+  height: 140px;
+  border: 4px solid #ef4444;
+  box-shadow: 0 0 28px rgba(239, 68, 68, 0.95), inset 0 0 18px rgba(249, 115, 22, 0.8);
+  animation: shockwaveHeroOuter 0.65s cubic-bezier(0.08, 0.8, 0.15, 1) forwards;
+}
+
+.shockwave-hero-emitter .shockwave-ring.ring-inner {
+  width: 90px;
+  height: 90px;
+  border: 3px solid #fdba74;
+  box-shadow: 0 0 20px rgba(253, 186, 116, 0.95);
+  animation: shockwaveHeroInner 0.45s ease-out forwards;
+}
+
+.shockwave-hero-emitter .shockwave-core-flash {
+  background: radial-gradient(circle, #ffffff 10%, #fca5a5 40%, #ef4444 80%, transparent 100%);
+  box-shadow: 0 0 32px rgba(239, 68, 68, 1), 0 0 50px rgba(220, 38, 38, 0.9);
+  animation: shockwaveHeroFlash 0.38s ease-out forwards;
+}
+
+/* Ground Radial Crater Ripple on Hero hit */
+.shockwave-hero-crater-ripple {
+  position: absolute;
+  width: 180px;
+  height: 70px;
+  border-radius: 50%;
+  border: 2px dashed rgba(239, 68, 68, 0.7);
+  background: radial-gradient(ellipse at center, rgba(185, 28, 28, 0.35) 0%, transparent 70%);
+  animation: heroCraterRipple 0.6s ease-out forwards;
+}
+
+/* Dust sparks dispersing from impact */
+.shockwave-hero-dust-sparks {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  box-shadow:
+    -25px -20px 0 2px #fca5a5,
+    28px -18px 0 2px #fef08a,
+    -18px 25px 0 3px #ef4444,
+    22px 22px 0 2px #ea580c;
+  animation: heroDustScatter 0.5s ease-out forwards;
+}
+
+/* 2. Super-Block Deflection Barrier Shockwave Variation */
+.shockwave-block-emitter .shockwave-ring.ring-outer {
+  width: 120px;
+  height: 120px;
+  border: 3.5px solid #38bdf8;
+  box-shadow: 0 0 26px rgba(56, 189, 248, 0.95), inset 0 0 16px rgba(250, 204, 21, 0.8);
+  animation: shockwaveBlockOuter 0.6s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+}
+
+.shockwave-block-emitter .shockwave-ring.ring-inner {
+  width: 75px;
+  height: 75px;
+  border: 2.5px solid #fef08a;
+  box-shadow: 0 0 18px rgba(254, 240, 138, 0.9);
+}
+
+.shockwave-shield-barrier-flare {
+  position: absolute;
+  font-size: 2rem;
+  animation: shieldBarrierBurst 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+/* Shockwave Keyframe Animations */
+@keyframes shockwaveExpandOuter {
+  0% {
+    transform: translate(-50%, -50%) scale(0.1);
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes shockwaveExpandInner {
+  0% {
+    transform: translate(-50%, -50%) scale(0.15);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.3);
+    opacity: 0;
+  }
+}
+
+@keyframes shockwaveCoreBurst {
+  0% {
+    transform: scale(0.2);
+    opacity: 1;
+  }
+  40% {
+    transform: scale(1.6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes shockwaveHeroOuter {
+  0% {
+    transform: translate(-50%, -50%) scale(0.1);
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.1);
+    opacity: 0;
+  }
+}
+
+@keyframes shockwaveHeroInner {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.7);
+    opacity: 0;
+  }
+}
+
+@keyframes shockwaveHeroFlash {
+  0% {
+    transform: scale(0.2);
+    opacity: 1;
+  }
+  30% {
+    transform: scale(1.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@keyframes heroCraterRipple {
+  0% {
+    transform: scale(0.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes heroDustScatter {
+  0% {
+    transform: scale(0.3) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.0) rotate(45deg);
+    opacity: 0;
+  }
+}
+
+@keyframes shockwaveBlockOuter {
+  0% {
+    transform: translate(-50%, -50%) scale(0.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.8);
+    opacity: 0;
+  }
+}
+
+@keyframes shieldBarrierBurst {
+  0% {
+    transform: scale(0.3) rotate(-15deg);
+    opacity: 0;
+    filter: drop-shadow(0 0 4px #38bdf8);
+  }
+  35% {
+    transform: scale(1.4) rotate(0deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 20px #38bdf8);
+  }
+  70% {
+    transform: scale(1.2);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.6) translateY(-10px);
+    opacity: 0;
+  }
 }
 
 

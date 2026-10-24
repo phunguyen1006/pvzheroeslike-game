@@ -141,6 +141,62 @@ class SoundManager {
     osc.stop(now + 0.18)
   }
 
+  // 6b. Super-Block Meter Charge (1-3 rising ding chimes)
+  playBlockCharge(amount: number = 1) {
+    this.initContext()
+    if (!this.ctx || this.isMuted) return
+    const count = Math.min(3, Math.max(1, amount))
+    const now = this.ctx.currentTime
+    const baseFreqs = [880, 1174.66, 1479.98] // A5, D6, F#6 bright sparkling rising chord
+    for (let i = 0; i < count; i++) {
+      const noteTime = now + i * 0.07
+      const osc = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(baseFreqs[i], noteTime)
+      osc.frequency.exponentialRampToValueAtTime(baseFreqs[i] * 1.05, noteTime + 0.08)
+      gain.gain.setValueAtTime(0.28, noteTime)
+      gain.gain.linearRampToValueAtTime(0.01, noteTime + 0.12)
+      osc.connect(gain)
+      gain.connect(this.ctx.destination)
+      osc.start(noteTime)
+      osc.stop(noteTime + 0.12)
+    }
+  }
+
+  // 6c. Kinetic Shockwave Air-Blast (deep visceral sub-thump + sonic whoosh)
+  playShockwaveImpact() {
+    this.initContext()
+    if (!this.ctx || this.isMuted) return
+    const now = this.ctx.currentTime
+
+    // Sub-bass thud
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    osc.type = 'triangle'
+    osc.frequency.setValueAtTime(95, now)
+    osc.frequency.exponentialRampToValueAtTime(28, now + 0.22)
+    gain.gain.setValueAtTime(0.45, now)
+    gain.gain.linearRampToValueAtTime(0.01, now + 0.25)
+    osc.connect(gain)
+    gain.connect(this.ctx.destination)
+    osc.start(now)
+    osc.stop(now + 0.25)
+
+    // Sonic dispersal transient
+    const highOsc = this.ctx.createOscillator()
+    const highGain = this.ctx.createGain()
+    highOsc.type = 'sine'
+    highOsc.frequency.setValueAtTime(320, now)
+    highOsc.frequency.exponentialRampToValueAtTime(60, now + 0.14)
+    highGain.gain.setValueAtTime(0.25, now)
+    highGain.gain.linearRampToValueAtTime(0.01, now + 0.16)
+    highOsc.connect(highGain)
+    highGain.connect(this.ctx.destination)
+    highOsc.start(now)
+    highOsc.stop(now + 0.16)
+  }
+
   // 7. Super-Block Trigger Fanfare (heroic shield burst chords)
   playSuperBlock() {
     this.initContext()

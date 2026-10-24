@@ -1,5 +1,6 @@
-﻿import type { HeroState, GameState, CombatResult, CombatEvent, Side, Card } from './types'
+﻿import type { HeroState, GameState, CombatResult, CombatEvent, Side, Card, Minion } from './types'
 import { SUPERPOWERS } from '../data/superpowers'
+import { triggerOnMultipleDeaths } from './triggers'
 
 export interface HeroDamageResult {
   updatedHero: HeroState
@@ -163,6 +164,7 @@ export function resolveSingleLaneCombat(
   let plantTeamUp = lane.plantTeamUpMinion ? { ...lane.plantTeamUpMinion } : null
   let zombie = lane.zombieMinion ? { ...lane.zombieMinion } : null
   const events: CombatEvent[] = []
+  const deadUnits: { minion: Minion; laneIndex: number }[] = []
 
   // ========================================================
   // 1. PRE-COMBAT ENVIRONMENT TRIGGERS
@@ -183,6 +185,7 @@ export function resolveSingleLaneCombat(
         description: `Spikeweed Sector gây 2 sát thương lên ${zombie.name}${zombie.currentHealth <= 0 ? ' (Tiêu diệt trước giao tranh!)' : ''}`,
       })
       if (zombie.currentHealth <= 0) {
+        deadUnits.push({ minion: zombie, laneIndex })
         zombie = null
       }
     } else if (lane.environment.id === 'zombie_moon_base_z' && zombie) {
@@ -593,6 +596,16 @@ export function resolveSingleLaneCombat(
     }
   }
 
+  if (plant && plant.currentHealth <= 0) {
+    deadUnits.push({ minion: plant, laneIndex })
+  }
+  if (plantTeamUp && plantTeamUp.currentHealth <= 0) {
+    deadUnits.push({ minion: plantTeamUp, laneIndex })
+  }
+  if (zombie && zombie.currentHealth <= 0) {
+    deadUnits.push({ minion: zombie, laneIndex })
+  }
+
   // Update lane state, clearing defeated minions
   lane.plantMinion = plant && plant.currentHealth > 0 ? plant : null
   lane.plantTeamUpMinion = plantTeamUp && plantTeamUp.currentHealth > 0 ? plantTeamUp : null
@@ -608,19 +621,28 @@ export function resolveSingleLaneCombat(
     winner = 'plants'
   }
 
+  let finalState: GameState = {
+    ...gameState,
+    plantHero: currentPlantHero,
+    zombieHero: currentZombieHero,
+    plantDeck: updatedPlantDeck,
+    plantHand: updatedPlantHand,
+    lanes: updatedLanes,
+    winner,
+    pendingSuperBlock,
+  }
+
+  if (deadUnits.length > 0) {
+    const deathRes = triggerOnMultipleDeaths(finalState, deadUnits)
+    finalState = deathRes.updatedState
+    events.push(...deathRes.events)
+    winner = finalState.winner
+  }
+
   return {
-    updatedState: {
-      ...gameState,
-      plantHero: currentPlantHero,
-      zombieHero: currentZombieHero,
-      plantDeck: updatedPlantDeck,
-      plantHand: updatedPlantHand,
-      lanes: updatedLanes,
-      winner,
-      pendingSuperBlock,
-    },
+    updatedState: finalState,
     events,
-    hasSuperBlock: pendingSuperBlock !== null && pendingSuperBlock !== gameState.pendingSuperBlock,
+    hasSuperBlock: finalState.pendingSuperBlock !== null && finalState.pendingSuperBlock !== gameState.pendingSuperBlock,
     winner,
   }
 }
@@ -643,8 +665,11 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
   let currentZombieHero: HeroState = { ...gameState.zombieHero }
   let updatedPlantDeck = [...gameState.plantDeck]
   let updatedPlantHand = [...gameState.plantHand]
+  let updatedZombieHand = [...gameState.zombieHand]
+  let updatedPlantGraveyard = [...gameState.plantGraveyard]
+  let updatedZombieGraveyard = [...gameState.zombieGraveyard]
   let pendingSuperBlock = gameState.pendingSuperBlock || null
-  const updatedLanes = gameState.lanes.map(l => ({ ...l }))
+  let updatedLanes = gameState.lanes.map(l => ({ ...l }))
   const events: CombatEvent[] = []
   let plantHeroDamageTaken = 0
   let zombieHeroDamageTaken = 0
@@ -654,6 +679,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
     let plant = lane.plantMinion ? { ...lane.plantMinion } : null
     let plantTeamUp = lane.plantTeamUpMinion ? { ...lane.plantTeamUpMinion } : null
     let zombie = lane.zombieMinion ? { ...lane.zombieMinion } : null
+    const deadUnitsThisLane: { minion: Minion; laneIndex: number }[] = []
 
     // ========================================================
     // 1. PRE-COMBAT ENVIRONMENT TRIGGERS
@@ -674,6 +700,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
           description: `Spikeweed Sector gây 2 sát thương lên ${zombie.name}${zombie.currentHealth <= 0 ? ' (Tiêu diệt trước giao tranh!)' : ''}`,
         })
         if (zombie.currentHealth <= 0) {
+          deadUnitsThisLane.push({ minion: zombie, laneIndex: i })
           zombie = null
         }
       } else if (lane.environment.id === 'zombie_moon_base_z' && zombie) {
@@ -1093,10 +1120,46 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
       }
     }
 
+    if (plant && plant.currentHealth <= 0) {
+      deadUnitsThisLane.push({ minion: plant, laneIndex: i })
+    }
+    if (plantTeamUp && plantTeamUp.currentHealth <= 0) {
+      deadUnitsThisLane.push({ minion: plantTeamUp, laneIndex: i })
+    }
+    if (zombie && zombie.currentHealth <= 0) {
+      deadUnitsThisLane.push({ minion: zombie, laneIndex: i })
+    }
+
     // Update lane state, clearing defeated minions
     lane.plantMinion = plant && plant.currentHealth > 0 ? plant : null
     lane.plantTeamUpMinion = plantTeamUp && plantTeamUp.currentHealth > 0 ? plantTeamUp : null
     lane.zombieMinion = zombie && zombie.currentHealth > 0 ? zombie : null
+
+    if (deadUnitsThisLane.length > 0) {
+      const intermediateState: GameState = {
+        ...gameState,
+        plantHero: currentPlantHero,
+        zombieHero: currentZombieHero,
+        plantDeck: updatedPlantDeck,
+        plantHand: updatedPlantHand,
+        zombieHand: updatedZombieHand,
+        plantGraveyard: updatedPlantGraveyard,
+        zombieGraveyard: updatedZombieGraveyard,
+        lanes: updatedLanes,
+        pendingSuperBlock,
+        winner: null,
+      }
+      const deathRes = triggerOnMultipleDeaths(intermediateState, deadUnitsThisLane)
+      currentPlantHero = deathRes.updatedState.plantHero
+      currentZombieHero = deathRes.updatedState.zombieHero
+      updatedPlantHand = deathRes.updatedState.plantHand
+      updatedZombieHand = deathRes.updatedState.zombieHand
+      updatedPlantGraveyard = deathRes.updatedState.plantGraveyard
+      updatedZombieGraveyard = deathRes.updatedState.zombieGraveyard
+      updatedLanes = deathRes.updatedState.lanes
+      pendingSuperBlock = deathRes.updatedState.pendingSuperBlock || null
+      events.push(...deathRes.events)
+    }
   }
 
   // Determine game winner
@@ -1116,6 +1179,9 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
       zombieHero: currentZombieHero,
       plantDeck: updatedPlantDeck,
       plantHand: updatedPlantHand,
+      zombieHand: updatedZombieHand,
+      plantGraveyard: updatedPlantGraveyard,
+      zombieGraveyard: updatedZombieGraveyard,
       lanes: updatedLanes,
       winner,
       pendingSuperBlock,

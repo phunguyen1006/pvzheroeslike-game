@@ -135,6 +135,12 @@ export interface CombatResult {
   winner: Side | null
 }
 
+export interface DeathTriggerResult {
+  updatedState: GameState
+  events: CombatEvent[]
+  logs: string[]
+}
+
 export interface FloatingText {
   id: string
   laneIndex?: number

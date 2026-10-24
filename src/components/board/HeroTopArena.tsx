@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import type { HeroState, Side, Phase } from '../../engine/types'
 import { ASSET_MANIFEST } from '../../data/assetsManifest'
+import { soundManager } from '../../audio/SoundManager'
 
 export interface HeroTopArenaProps {
   hero: HeroState
@@ -36,6 +37,36 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
   const isZombie = side === 'zombies'
   const maxBlocks = 3
   const remainingBlocks = Math.max(0, maxBlocks - (hero.blockCount || 0))
+  const blockMeterVal = hero.blockMeter || 0
+  const isShieldReady = hero.isShieldActive || blockMeterVal >= 8
+
+  // Visual feedback when Opponent Super-Block meter charges (1-3 segments bouncing & flashing)
+  const [activeChargeRoll, setActiveChargeRoll] = useState<number | null>(null)
+  const [flashingSegments, setFlashingSegments] = useState<number[]>([])
+  const prevMeterRef = useRef(blockMeterVal)
+
+  useEffect(() => {
+    const prev = prevMeterRef.current
+    if (blockMeterVal > prev && prev < 8) {
+      const diff = Math.min(3, blockMeterVal - prev)
+      setActiveChargeRoll(diff)
+      const chargedList: number[] = []
+      for (let i = prev; i < blockMeterVal && i < 8; i++) {
+        chargedList.push(i)
+      }
+      setFlashingSegments(chargedList)
+      soundManager.playBlockCharge(diff)
+
+      const timer = setTimeout(() => {
+        setActiveChargeRoll(null)
+        setFlashingSegments([])
+      }, 1000)
+
+      prevMeterRef.current = blockMeterVal
+      return () => clearTimeout(timer)
+    }
+    prevMeterRef.current = blockMeterVal
+  }, [blockMeterVal])
 
   const isCurrentTurnActive = isZombie
     ? phase === 'ZOMBIE_PLAY' || phase === 'ZOMBIE_TRICKS'
@@ -112,7 +143,7 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
         </div>
       </div>
 
-      {/* 2. Opponent Podium: Hero Standing in Stadium Dirt Pit with Crest Shield & Resource */}
+      {/* 2. Opponent Podium: Hero Standing in Stadium Dirt Pit with Crest Shield, Resource & Superpower Dial */}
       <div
         className={`opponent-hero-podium ${isTargetable ? 'is-targetable-hero' : ''}`}
         onClick={onHeroClick}
@@ -141,7 +172,7 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
           )}
         </div>
 
-        {/* Opponent Vitals Cluster: Crest Shield HP + Super-Block Shields + Resource Orb */}
+        {/* Opponent Vitals Cluster: Crest Shield HP + Super-Block Shields + Resource Orb + Superpower Dial */}
         <div className="opponent-vitals-cluster">
           {/* Crest Shield with Glossy Heart HP */}
           <div className="hero-crest-shield opponent-crest-shield">
@@ -187,6 +218,67 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
             <span className="resource-orb-digit">
               {isZombie ? hero.brains : hero.sun}
             </span>
+          </div>
+
+          {/* Opponent Superpower Device / 8-Segment Gauge with Charge Animation */}
+          <div
+            className={`hero-superpower-device opponent-superpower-device ${
+              isShieldReady ? 'device-shield-active' : ''
+            } ${activeChargeRoll !== null ? 'device-is-charging' : ''}`}
+            title={`Super-Block Gauge đối thủ: ${blockMeterVal}/8 Vạch (${remainingBlocks}/3 Shields)`}
+          >
+            {/* Floating 1-3 Roll Number Badge (Pop-up on Meter Charge) */}
+            {activeChargeRoll !== null && (
+              <div
+                className="superpower-roll-bounce-badge opponent-roll-badge"
+                key={`opp-roll-${activeChargeRoll}-${blockMeterVal}`}
+              >
+                <span className="roll-symbol">⚡</span>
+                <span className="roll-val">+{activeChargeRoll}</span>
+              </div>
+            )}
+
+            <div className="superpower-outer-dial opponent-outer-dial">
+              {Array.from({ length: 8 }).map((_, i) => {
+                const isFilled = i < blockMeterVal
+                const isNewlyCharged = flashingSegments.includes(i)
+                const isLastFilled = i === blockMeterVal - 1
+
+                return (
+                  <div
+                    key={i}
+                    className={`dial-segment-pip segment-${i} ${
+                      isFilled ? 'segment-lit opponent-segment-lit' : 'segment-dim'
+                    } ${
+                      isNewlyCharged
+                        ? 'segment-charging-flash'
+                        : isLastFilled
+                        ? 'segment-pulse'
+                        : ''
+                    }`}
+                    style={{
+                      transform: `rotate(${i * 45}deg)`,
+                    }}
+                  >
+                    <div className="segment-nub" />
+                  </div>
+                )
+              })}
+
+              {/* Central Superpower / Shield Emblem */}
+              <div className={`dial-center-core ${activeChargeRoll !== null ? 'core-charge-pulse' : ''}`}>
+                {isShieldReady ? (
+                  <div className="core-shield-burst-active">
+                    <span className="burst-icon">🛡️</span>
+                    <span className="burst-glow-ring" />
+                  </div>
+                ) : (
+                  <div className="core-shield-idle">
+                    <span className="core-meter-text">{blockMeterVal}/8</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

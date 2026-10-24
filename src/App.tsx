@@ -18,7 +18,7 @@ import { MulliganModal } from './components/ui/MulliganModal'
 import { MainMenu } from './components/screens/MainMenu'
 import { HeroSelect } from './components/screens/HeroSelect'
 import { DeckBuilder } from './components/screens/DeckBuilder'
-import type { Projectile, FloatingTextItem } from './components/board/CombatVFXLayer'
+import type { Projectile, FloatingTextItem, ShockwaveItem } from './components/board/CombatVFXLayer'
 import { soundManager } from './audio/SoundManager'
 import './App.css'
 
@@ -50,6 +50,7 @@ export function App() {
   // Combat Visual & Sound FX States
   const [projectiles, setProjectiles] = useState<Projectile[]>([])
   const [floatingTexts, setFloatingTexts] = useState<FloatingTextItem[]>([])
+  const [shockwaves, setShockwaves] = useState<ShockwaveItem[]>([])
   const [isScreenShaking, setIsScreenShaking] = useState(false)
   const [plantHeroHurt, setPlantHeroHurt] = useState(false)
   const [zombieHeroHurt, setZombieHeroHurt] = useState(false)
@@ -339,11 +340,34 @@ export function App() {
               }, 850)
             }
 
+            // 2b. Kinetic Shockwave VFX & Impact Ripple
+            const swId = `sw-${idx}-${Date.now()}-${evIdx}`
+            const shockwaveType = ev.isBlocked
+              ? 'block'
+              : ev.target === 'hero'
+              ? 'hero_damage'
+              : 'impact'
+
+            setShockwaves((prev) => [
+              ...prev,
+              {
+                id: swId,
+                laneIndex: idx,
+                target: targetType,
+                type: shockwaveType,
+                intensity: ev.damageDealt,
+              },
+            ])
+            setTimeout(() => {
+              setShockwaves((prev) => prev.filter((s) => s.id !== swId))
+            }, 750)
+
             // 3. Audio & Hero / Minion Hit Feedback
             if (ev.isBlocked) {
               soundManager.playShieldBlock()
             } else if (ev.target === 'hero' && ev.damageDealt > 0) {
               soundManager.playHeroDamage()
+              soundManager.playShockwaveImpact()
               if (ev.targetSide === 'plants') {
                 setPlantHeroHurt(true)
                 setTimeout(() => setPlantHeroHurt(false), 450)
@@ -358,6 +382,7 @@ export function App() {
               }
             } else if (ev.damageDealt > 0) {
               soundManager.playAttackHit()
+              soundManager.playShockwaveImpact()
             }
           }, 350)
         }, delay)
@@ -531,6 +556,7 @@ export function App() {
               activeCombatLaneIndex={activeCombatLaneIndex}
               projectiles={projectiles}
               floatingTexts={floatingTexts}
+              shockwaves={shockwaves}
               onSelectLane={handleSelectLane}
               onDropCardToLane={handleDropCardToLane}
             />
@@ -579,46 +605,89 @@ export function App() {
                 />
               </div>
 
-              {/* Big Circular PvZ Heroes Action Button (FIGHT! / GO! / WAITING) */}
-              <div className="arena-action-button-slot">
-                {gameState.phase === 'FIGHT' ? (
-                  <button
-                    className={`arena-turn-action-btn fight-active-btn ${
-                      isCombatResolving ? 'is-resolving-active' : ''
-                    }`}
-                    onClick={handleStartCombat}
-                    disabled={isCombatResolving}
-                    title="Bắt đầu giao tranh cả 5 làn!"
-                  >
-                    <span className="action-btn-icon">⚔️</span>
-                    <span className="action-btn-label">
-                      {isCombatResolving ? 'ĐANG ĐÁNH' : 'FIGHT!'}
-                    </span>
-                  </button>
-                ) : isPlayerPlantTurn ? (
-                  <button
-                    className="arena-turn-action-btn go-active-btn"
-                    onClick={handleNextPhase}
-                    title="Xong lượt ra quân Plant, chuyển sang Zombie Tricks!"
-                  >
-                    <span className="action-btn-icon">⏩</span>
-                    <span className="action-btn-label">GO!</span>
-                  </button>
-                ) : (
+              {/* Authentic PvZ Heroes 4-Phase Circular Turn Dial (Action Button) */}
+              <div className="arena-phase-dial-container" title={`Giai đoạn: ${gameState.phase} (Lượt ${gameState.turn})`}>
+                {/* Turn Number Header Pill */}
+                <div className="phase-dial-turn-pill">
+                  <span className="turn-pill-text">LƯỢT {gameState.turn}</span>
+                </div>
+
+                {/* Circular Outer Bezel with 4 Phase Quadrants */}
+                <div className={`phase-dial-bezel phase-active-${gameState.phase.toLowerCase()}`}>
+                  {/* Rotating Dial Indicator Pointer */}
                   <div
-                    className="arena-turn-waiting-bubble"
-                    title={
-                      gameState.phase === 'ZOMBIE_PLAY'
-                        ? 'Zombie đang tính toán ra quân...'
-                        : 'Zombie đang tung chiêu Tricks...'
-                    }
+                    className="phase-dial-pointer"
+                    style={{
+                      transform: `rotate(${
+                        gameState.phase === 'ZOMBIE_PLAY'
+                          ? -45
+                          : gameState.phase === 'PLANT_PLAY'
+                          ? 45
+                          : gameState.phase === 'ZOMBIE_TRICKS'
+                          ? 135
+                          : 225
+                      }deg)`,
+                    }}
                   >
-                    <span className="waiting-spinner-ring" />
-                    <span className="waiting-pill-label">
-                      {gameState.phase === 'ZOMBIE_PLAY' ? 'ZOMBIE' : 'TRICKS'}
-                    </span>
+                    <div className="dial-pointer-head" />
                   </div>
-                )}
+
+                  {/* 4 Phase Quadrant Icons around the Bezel */}
+                  <div className={`dial-quadrant quad-zombie-play ${gameState.phase === 'ZOMBIE_PLAY' ? 'quad-active' : ''}`} title="1. Zombie ra quân">
+                    <span className="quad-icon">🧟</span>
+                  </div>
+                  <div className={`dial-quadrant quad-plant-play ${gameState.phase === 'PLANT_PLAY' ? 'quad-active' : ''}`} title="2. Plant ra quân & phép">
+                    <span className="quad-icon">🌱</span>
+                  </div>
+                  <div className={`dial-quadrant quad-zombie-tricks ${gameState.phase === 'ZOMBIE_TRICKS' ? 'quad-active' : ''}`} title="3. Zombie tung Tricks">
+                    <span className="quad-icon">🎩</span>
+                  </div>
+                  <div className={`dial-quadrant quad-fight ${gameState.phase === 'FIGHT' ? 'quad-active' : ''}`} title="4. Giao tranh cả 5 làn">
+                    <span className="quad-icon">⚔️</span>
+                  </div>
+
+                  {/* Central Action Button (FIGHT! / GO! / WAITING) */}
+                  <div className="phase-dial-core-slot">
+                    {gameState.phase === 'FIGHT' ? (
+                      <button
+                        className={`arena-turn-action-btn fight-active-btn ${
+                          isCombatResolving ? 'is-resolving-active' : ''
+                        }`}
+                        onClick={handleStartCombat}
+                        disabled={isCombatResolving}
+                        title="Bắt đầu giao tranh cả 5 làn!"
+                      >
+                        <span className="action-btn-icon">⚔️</span>
+                        <span className="action-btn-label">
+                          {isCombatResolving ? 'ĐANG ĐÁNH' : 'FIGHT!'}
+                        </span>
+                      </button>
+                    ) : isPlayerPlantTurn ? (
+                      <button
+                        className="arena-turn-action-btn go-active-btn"
+                        onClick={handleNextPhase}
+                        title="Xong lượt ra quân Plant, chuyển sang Zombie Tricks!"
+                      >
+                        <span className="action-btn-icon">⏩</span>
+                        <span className="action-btn-label">GO!</span>
+                      </button>
+                    ) : (
+                      <div
+                        className="arena-turn-waiting-bubble"
+                        title={
+                          gameState.phase === 'ZOMBIE_PLAY'
+                            ? 'Zombie đang tính toán ra quân...'
+                            : 'Zombie đang tung chiêu Tricks...'
+                        }
+                      >
+                        <span className="waiting-spinner-ring" />
+                        <span className="waiting-pill-label">
+                          {gameState.phase === 'ZOMBIE_PLAY' ? 'ZOMBIE' : 'TRICKS'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </footer>

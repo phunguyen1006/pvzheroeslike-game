@@ -353,3 +353,94 @@ export function triggerWhenTrickPlayed(state: GameState, _trickCard: Card, caste
 
   return { updatedState, events }
 }
+
+/**
+ * Triggered when a minion is destroyed on the board
+ * Handles:
+ * 1. Valkyrie in Zombie hand: gets +2 Attack when a Zombie is destroyed
+ * 2. Minion on-death retaliation / triggers (Potato Mine, Punish-Shroom)
+ */
+export function triggerWhenDestroyed(
+  state: GameState,
+  destroyedMinion: Minion,
+  laneIndex: number,
+  destroyedSide: Side
+): AbilityTriggerResult {
+  let updatedState: GameState = {
+    ...state,
+    lanes: state.lanes.map(l => ({ ...l })),
+    plantHand: state.plantHand.map(c => ({ ...c })),
+    zombieHand: state.zombieHand.map(c => ({ ...c })),
+  }
+  const events: string[] = []
+
+  // 1. Minion's own When Destroyed ability
+  if (destroyedMinion.cardId === 'plant_potato_mine') {
+    const lane = updatedState.lanes[laneIndex]
+    if (lane && lane.zombieMinion) {
+      lane.zombieMinion = {
+        ...lane.zombieMinion,
+        currentHealth: Math.max(0, lane.zombieMinion.currentHealth - 2),
+      }
+      events.push(`💥 Potato Mine phát nổ khi bị tiêu diệt: Gây 2 sát thương lên ${lane.zombieMinion.name}!`)
+      if (lane.zombieMinion.currentHealth <= 0) {
+        events.push(`💥 ${lane.zombieMinion.name} đã bị Potato Mine tiêu diệt!`)
+        lane.zombieMinion = null
+      }
+    }
+  }
+
+  // 2. Cascade Triggers for other cards
+  if (destroyedSide === 'zombies') {
+    // Valkyrie: While in Zombie Hero's hand, this gets +2 Attack when a Zombie is destroyed
+    let valkCount = 0
+    updatedState.zombieHand = updatedState.zombieHand.map(card => {
+      if (card.id === 'zombie_valkyrie') {
+        valkCount++
+        return {
+          ...card,
+          attack: (card.attack || 0) + 2,
+        }
+      }
+      return card
+    })
+    if (valkCount > 0) {
+      events.push(`⚔️ Valkyrie trên tay Zombie Hero nhận +2 Tấn công khi ${destroyedMinion.name} hy sinh!`)
+    }
+  }
+
+  if (destroyedSide === 'plants') {
+    const isMushroom =
+      destroyedMinion.cardId.includes('shroom') ||
+      destroyedMinion.name.toLowerCase().includes('shroom') ||
+      destroyedMinion.cardId === 'plant_astro_shroom'
+
+    if (isMushroom) {
+      updatedState.lanes.forEach(l => {
+        if (l.plantMinion && l.plantMinion.cardId === 'plant_punish_shroom') {
+          const zombiesOnBoard = updatedState.lanes.filter(lane => lane.zombieMinion)
+          if (zombiesOnBoard.length > 0) {
+            const targetLane = zombiesOnBoard[Math.floor(Math.random() * zombiesOnBoard.length)]
+            if (targetLane.zombieMinion) {
+              targetLane.zombieMinion = {
+                ...targetLane.zombieMinion,
+                currentHealth: Math.max(0, targetLane.zombieMinion.currentHealth - 2),
+              }
+              events.push(`🍄 Punish-Shroom phẫn nộ vì nấm đồng minh hy sinh: Bắn 2 sát thương lên ${targetLane.zombieMinion.name}!`)
+              if (targetLane.zombieMinion.currentHealth <= 0) {
+                events.push(`💥 ${targetLane.zombieMinion.name} bị Punish-Shroom tiêu diệt!`)
+                targetLane.zombieMinion = null
+              }
+            }
+          } else {
+            const res = applyHeroDamage(updatedState.zombieHero, 2, false)
+            updatedState.zombieHero = res.updatedHero
+            events.push(`🍄 Punish-Shroom phẫn nộ bắn 2 sát thương vào Zombie Hero!`)
+          }
+        }
+      })
+    }
+  }
+
+  return { updatedState, events }
+}

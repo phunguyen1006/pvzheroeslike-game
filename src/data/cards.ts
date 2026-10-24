@@ -9,6 +9,7 @@ export type CardType = 'plant' | 'zombie' | 'trick' | 'environment'
 export type PlantClass = 'Guardian' | 'Kabloom' | 'Mega-Grow' | 'Smarty' | 'Solar'
 export type ZombieClass = 'Beastly' | 'Brainy' | 'Crazy' | 'Hearty' | 'Sneaky'
 export type HeroClass = PlantClass | ZombieClass
+export type Rarity = 'Common' | 'Uncommon' | 'Rare' | 'Super-Rare' | 'Legendary' | 'Event'
 
 export interface CardData {
  id: string
@@ -20,9 +21,18 @@ export interface CardData {
  hp: number
  health: number
  traits: string[]
+ rarity?: Rarity
+ tribe?: string
  armored?: number
  antiHero?: number
  doubleStrike?: boolean
+ amphibious?: boolean
+ bullseye?: boolean
+ teamUp?: boolean
+ frenzy?: boolean
+ deadly?: boolean
+ strikethrough?: boolean
+ freeze?: boolean
  assetPath: string
  image: string
  description: string
@@ -54,9 +64,13 @@ export const PLANT_CARDS: CardData[] = [
  hp: 1,
  health: 1,
  traits: ['Amphibious', 'Team-Up'],
+ rarity: 'Rare',
+ tribe: 'Bean Plant',
+ amphibious: true,
+ teamUp: true,
  assetPath: '/assets/cards/plants/Admiral Navy Bean.png',
  image: '/assets/cards/plants/Admiral Navy Bean.png',
- description: 'Amphibious, Team-Up. When you play another Bean, do 2 damage to the Zombie Hero.',
+ description: 'Amphibious, Team-Up. Khi bạn đặt một lá Bean khác, gây 2 sát thương trực tiếp lên Zombie Hero.',
  heroClass: 'Smarty',
  laneRequirement: 'water'
  },
@@ -70,9 +84,12 @@ export const PLANT_CARDS: CardData[] = [
  hp: 1,
  health: 1,
  traits: ['Bullseye'],
+ rarity: 'Super-Rare',
+ tribe: 'Mushroom Plant',
+ bullseye: true,
  assetPath: '/assets/cards/plants/Astro-Shroom.png',
  image: '/assets/cards/plants/Astro-Shroom.png',
- description: 'Bullseye. When you play another Plant, do 1 damage to the Zombie Hero.',
+ description: 'Bullseye (Bắn chuẩn). Khi bạn xuất trận một Plant khác, gây 1 sát thương Bullseye lên Zombie Hero.',
  heroClass: 'Kabloom',
  laneRequirement: 'any'
  },
@@ -86,10 +103,12 @@ export const PLANT_CARDS: CardData[] = [
  hp: 3,
  health: 3,
  traits: ['Double Strike'],
+ rarity: 'Legendary',
+ tribe: 'Banana Animal Plant',
  doubleStrike: true,
  assetPath: '/assets/cards/plants/Bananasaurus Rex.png',
  image: '/assets/cards/plants/Bananasaurus Rex.png',
- description: 'Double Strike. Dino-Roar: This gets +1/+1.',
+ description: 'Double Strike (Đánh đúp 2 lần). Gầm khủng long (Dino-Roar): Nhận +1 Tấn công và +1 Máu (+1/+1) mỗi khi bạn rút một lá bài.',
  heroClass: 'Mega-Grow',
  laneRequirement: 'ground'
  },
@@ -103,9 +122,11 @@ export const PLANT_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Common',
+ tribe: 'Berry Trick',
  assetPath: '/assets/cards/plants/Berry Blast.png',
  image: '/assets/cards/plants/Berry Blast.png',
- description: 'Do 3 damage to any Zombie or the Zombie Hero.',
+ description: 'Gây 3 sát thương lên một Zombie bất kỳ hoặc bắn thẳng vào Zombie Hero.',
  heroClass: 'Kabloom'
  },
  {
@@ -118,9 +139,11 @@ export const PLANT_CARDS: CardData[] = [
  hp: 3,
  health: 3,
  traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'Pea Plant',
  assetPath: '/assets/cards/plants/Black-Eyed Pea.png',
  image: '/assets/cards/plants/Black-Eyed Pea.png',
- description: 'When a Zombie Trick is played, this gets +1/+1.',
+ description: 'Mỗi khi đối thủ sử dụng một Zombie Trick, Black-Eyed Pea nhận ngay +1 Tấn công và +1 Máu (+1/+1).',
  heroClass: 'Mega-Grow',
  laneRequirement: 'ground'
  },
@@ -134,9 +157,11 @@ export const PLANT_CARDS: CardData[] = [
  hp: 1,
  health: 1,
  traits: [],
+ rarity: 'Uncommon',
+ tribe: 'Leafy Plant',
  assetPath: '/assets/cards/plants/Bonk Choy.png',
  image: '/assets/cards/plants/Bonk Choy.png',
- description: 'When played: This gets +1 Attack this turn.',
+ description: 'Khi xuất trận: Nhận +1 Tấn công trong lượt này (thành 3 Tấn công).',
  heroClass: 'Mega-Grow',
  laneRequirement: 'ground'
  },
@@ -150,9 +175,11 @@ export const PLANT_CARDS: CardData[] = [
  hp: 4,
  health: 4,
  traits: [],
+ rarity: 'Legendary',
+ tribe: 'Fruit Plant',
  assetPath: '/assets/cards/plants/Captain Cucumber.png',
  image: '/assets/cards/plants/Captain Cucumber.png',
- description: 'Other Cards in your hand cost 1 less. When this hurts the Zombie Hero, Conjure a Legendary card.',
+ description: 'Tất cả các lá bài khác trên tay bạn giảm 1 Sun. Khi đánh trúng Zombie Hero, Triệu hồi (Conjure) một lá bài Legendary.',
  heroClass: 'Mega-Grow',
  laneRequirement: 'ground'
  },
@@ -166,9 +193,11 @@ export const PLANT_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'Berry Trick',
  assetPath: '/assets/cards/plants/Cherry Bomb.png',
  image: '/assets/cards/plants/Cherry Bomb.png',
- description: 'Do 4 damage to a Zombie and all Zombies next door.',
+ description: 'Gây 4 sát thương nổ lan lên một Zombie mục tiêu và tất cả Zombie ở các làn liền kề.',
  heroClass: 'Kabloom'
  },
  {
@@ -181,9 +210,12 @@ export const PLANT_CARDS: CardData[] = [
  hp: 7,
  health: 7,
  traits: ['Amphibious', 'Splash Damage 6'],
+ rarity: 'Legendary',
+ tribe: 'Fruit Dragon Plant',
+ amphibious: true,
  assetPath: '/assets/cards/plants/Dark Matter Dragonfruit.png',
  image: '/assets/cards/plants/Dark Matter Dragonfruit.png',
- description: 'Amphibious, Splash Damage 6. Zombie Tricks cost 6 more.',
+ description: 'Amphibious, Splash Damage 6. Tất cả Zombie Tricks của đối phương tốn thêm 6 Não (Brain).',
  heroClass: 'Smarty',
  laneRequirement: 'any'
  },
@@ -197,9 +229,11 @@ export const PLANT_CARDS: CardData[] = [
  hp: 2,
  health: 2,
  traits: [],
+ rarity: 'Legendary',
+ tribe: 'Mint Plant',
  assetPath: '/assets/cards/plants/Doubled Mint.png',
  image: '/assets/cards/plants/Doubled Mint.png',
- description: "Start of Turn: Double this Plant's Attack and Health.",
+ description: 'Đầu mỗi lượt: Nhân đôi chỉ số Tấn công và Máu của Plant này (1/2 -> 2/4 -> 4/8 -> 8/16...).',
  heroClass: 'Mega-Grow',
  laneRequirement: 'ground'
  },
@@ -213,9 +247,11 @@ export const PLANT_CARDS: CardData[] = [
  hp: 6,
  health: 6,
  traits: [],
+ rarity: 'Legendary',
+ tribe: 'Corn Plant',
  assetPath: '/assets/cards/plants/Kernel Corn.png',
  image: '/assets/cards/plants/Kernel Corn.png',
- description: 'When played: Do 4 damage to each Zombie.',
+ description: 'Khi xuất trận: Bắn nổ bắp ngô gây 4 sát thương lên toàn bộ Zombie trên khắp các làn.',
  heroClass: 'Solar',
  laneRequirement: 'ground'
  },
@@ -229,9 +265,11 @@ export const PLANT_CARDS: CardData[] = [
  hp: 1,
  health: 1,
  traits: [],
+ rarity: 'Common',
+ tribe: 'Pea Plant',
  assetPath: '/assets/cards/plants/Peashooter.png',
  image: '/assets/cards/plants/Peashooter.png',
- description: 'A classic pea shooter with steady aim.',
+ description: 'Xạ thủ đậu xanh kinh điển với tầm bắn chuẩn xác và ổn định.',
  heroClass: 'Mega-Grow',
  laneRequirement: 'ground'
  },
@@ -245,9 +283,11 @@ export const PLANT_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Uncommon',
+ tribe: 'Berry Environment',
  assetPath: '/assets/cards/plants/Planet of the Grapes.png',
  image: '/assets/cards/plants/Planet of the Grapes.png',
- description: 'Environment: When a Plant here hurts the Zombie Hero, draw a card.',
+ description: 'Môi trường: Khi một Plant tại đây gây sát thương lên Zombie Hero, rút 1 lá bài.',
  heroClass: 'Smarty',
  laneRequirement: 'any'
  },
@@ -261,9 +301,11 @@ export const PLANT_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'Leafy Trick',
  assetPath: '/assets/cards/plants/Shamrocket.png',
  image: '/assets/cards/plants/Shamrocket.png',
- description: 'Destroy a Zombie that has 4 Attack or more.',
+ description: 'Tiêu diệt ngay một Zombie nguy hiểm có từ 4 Tấn công (Attack) trở lên.',
  heroClass: 'Guardian'
  },
  {
@@ -276,9 +318,12 @@ export const PLANT_CARDS: CardData[] = [
  hp: 2,
  health: 2,
  traits: ['Freeze'],
+ rarity: 'Uncommon',
+ tribe: 'Pea Plant',
+ freeze: true,
  assetPath: '/assets/cards/plants/Snow Pea.png',
  image: '/assets/cards/plants/Snow Pea.png',
- description: 'When this hurts a Zombie, Freeze that Zombie.',
+ description: 'Freeze (Đóng băng). Khi bắn trúng một Zombie, Đóng băng Zombie đó khiến nó bị mất lượt tấn công.',
  heroClass: 'Smarty',
  laneRequirement: 'ground'
  },
@@ -292,9 +337,11 @@ export const PLANT_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'Environment',
  assetPath: '/assets/cards/plants/Solar Winds.png',
  image: '/assets/cards/plants/Solar Winds.png',
- description: 'Environment: End of Turn: If there are no Zombies here, make a Sunflower here.',
+ description: 'Môi trường: Cuối lượt: Nếu làn này không có Zombie, tự động triệu hồi một đóa Sunflower.',
  heroClass: 'Solar',
  laneRequirement: 'ground'
  },
@@ -308,9 +355,11 @@ export const PLANT_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'Root Environment',
  assetPath: '/assets/cards/plants/Spikeweed Sector.png',
  image: '/assets/cards/plants/Spikeweed Sector.png',
- description: 'Environment: Before combat here, do 2 damage to a Zombie here.',
+ description: 'Môi trường: Trước khi giao tranh tại đây, chông gai gây 2 sát thương lên Zombie ở làn này.',
  heroClass: 'Guardian',
  laneRequirement: 'ground'
  },
@@ -324,9 +373,11 @@ export const PLANT_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Uncommon',
+ tribe: 'Bean Trick',
  assetPath: '/assets/cards/plants/Spring Bean.png',
  image: '/assets/cards/plants/Spring Bean.png',
- description: 'Bounce a Zombie.',
+ description: 'Bật nảy (Bounce) một Zombie trở lại tay đối thủ, xóa sạch các buff trên người nó.',
  heroClass: 'Smarty'
  },
  {
@@ -339,9 +390,11 @@ export const PLANT_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Common',
+ tribe: 'Squash Trick',
  assetPath: '/assets/cards/plants/Squash.png',
  image: '/assets/cards/plants/Squash.png',
- description: 'Destroy a Zombie.',
+ description: 'Đè bẹp tiêu diệt ngay lập tức một Zombie bất kỳ.',
  heroClass: 'Solar'
  },
  {
@@ -354,9 +407,12 @@ export const PLANT_CARDS: CardData[] = [
  hp: 1,
  health: 1,
  traits: ['Team-Up'],
+ rarity: 'Common',
+ tribe: 'Flower Plant',
+ teamUp: true,
  assetPath: '/assets/cards/plants/Sunflower.png',
  image: '/assets/cards/plants/Sunflower.png',
- description: 'Team-Up. Start of Turn: You get +1 Sun.',
+ description: 'Team-Up (Đồng đội). Đầu mỗi lượt: Cung cấp thêm +1 Mặt trời (Sun).',
  heroClass: 'Solar',
  laneRequirement: 'ground'
  },
@@ -370,9 +426,12 @@ export const PLANT_CARDS: CardData[] = [
  hp: 7,
  health: 7,
  traits: ['Amphibious'],
+ rarity: 'Legendary',
+ tribe: 'Squash Plant',
+ amphibious: true,
  assetPath: '/assets/cards/plants/The Great Zucchini.png',
  image: '/assets/cards/plants/The Great Zucchini.png',
- description: 'Amphibious. When played: Transform all Zombies into 1/1 Zombies with no abilities.',
+ description: 'Amphibious (Lội nước). Khi xuất trận: Biến đổi tất cả Zombie của đối phương thành Zombie 1/1 vô hại không có kỹ năng.',
  heroClass: 'Smarty',
  laneRequirement: 'any'
  },
@@ -386,9 +445,12 @@ export const PLANT_CARDS: CardData[] = [
  hp: 6,
  health: 6,
  traits: ['Team-Up'],
+ rarity: 'Common',
+ tribe: 'Nut Plant',
+ teamUp: true,
  assetPath: '/assets/cards/plants/Wall-Nut.png',
  image: '/assets/cards/plants/Wall-Nut.png',
- description: 'Team-Up. High health plant that protects teammates.',
+ description: 'Team-Up (Đồng đội). Tấm lá chắn hạt dẻ kiên cố bảo vệ đồng đội phía sau với lượng máu dồi dào.',
  heroClass: 'Guardian',
  laneRequirement: 'ground'
  }
@@ -405,9 +467,12 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: ['Frenzy'],
+ rarity: 'Super-Rare',
+ tribe: 'Environment',
+ frenzy: true,
  assetPath: '/assets/cards/zombies/Area 22.png',
  image: '/assets/cards/zombies/Area 22.png',
- description: 'Environment: Zombies here get +2/+2 and Frenzy.',
+ description: 'Môi trường: Zombie tại làn này nhận +2 Tấn công / +2 Máu (+2/+2) và đặc tính Cuồng nộ (Frenzy).',
  heroClass: 'Beastly',
  laneRequirement: 'ground'
  },
@@ -421,9 +486,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 2,
  health: 2,
  traits: [],
+ rarity: 'Uncommon',
+ tribe: 'Sports Zombie',
  assetPath: '/assets/cards/zombies/Arm Wrestler.png',
  image: '/assets/cards/zombies/Arm Wrestler.png',
- description: 'When a Plant is played in this lane, this gets +1/+1.',
+ description: 'Khi một Plant được đặt vào cùng làn này, Arm Wrestler gồng cơ bắp nhận ngay +1 Tấn công / +1 Máu (+1/+1).',
  heroClass: 'Hearty',
  laneRequirement: 'ground'
  },
@@ -437,9 +504,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'Trick',
  assetPath: '/assets/cards/zombies/Bad Moon Rising.png',
  image: '/assets/cards/zombies/Bad Moon Rising.png',
- description: 'Transform all Zombies into random Zombies that cost 5 Brains or more.',
+ description: 'Trăng máu trỗi dậy: Biến đổi tất cả Zombie trên sân thành các quái vật ngẫu nhiên có giá từ 5 Não (Brain) trở lên.',
  heroClass: 'Brainy'
  },
  {
@@ -452,9 +521,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Common',
+ tribe: 'Professional Trick',
  assetPath: '/assets/cards/zombies/Bungee Plumber.png',
  image: '/assets/cards/zombies/Bungee Plumber.png',
- description: 'Do 2 damage to any Plant or the Plant Hero.',
+ description: 'Thợ sửa ống nước nhảy bungee ném thông bồn gây 2 sát thương lên một Plant hoặc bắn vào Plant Hero.',
  heroClass: 'Crazy'
  },
  {
@@ -467,9 +538,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 2,
  health: 2,
  traits: [],
+ rarity: 'Uncommon',
+ tribe: 'Party Dancing Zombie',
  assetPath: '/assets/cards/zombies/Conga Zombie.png',
  image: '/assets/cards/zombies/Conga Zombie.png',
- description: 'When played: Do 1 damage.',
+ description: 'Khi xuất trận: Gõ trống conga sôi động gây 1 sát thương lên một Plant hoặc Plant Hero.',
  heroClass: 'Crazy',
  laneRequirement: 'ground'
  },
@@ -483,9 +556,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 1,
  health: 1,
  traits: [],
+ rarity: 'Uncommon',
+ tribe: 'Dancing Zombie',
  assetPath: '/assets/cards/zombies/Disco Zombie.png',
  image: '/assets/cards/zombies/Disco Zombie.png',
- description: 'When played: Make a 1/1 Backup Dancer in a random lane.',
+ description: 'Khi xuất trận: Nhảy điệu disco triệu hồi thêm một 1/1 Backup Dancer vào làn ngẫu nhiên.',
  heroClass: 'Crazy',
  laneRequirement: 'ground'
  },
@@ -499,9 +574,12 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 5,
  health: 5,
  traits: ['Bullseye'],
+ rarity: 'Super-Rare',
+ tribe: 'Science Zombie',
+ bullseye: true,
  assetPath: '/assets/cards/zombies/Dr. Spacetime.png',
  image: '/assets/cards/zombies/Dr. Spacetime.png',
- description: 'Bullseye. Cards you Conjure cost 1 Brain less. When this hurts the Plant Hero, Conjure a Galactic Gardens card.',
+ description: 'Bullseye (Bắn chuẩn). Các lá bài bạn Triệu hồi (Conjure) giảm 1 Não. Khi đánh trúng Plant Hero, Triệu hồi một lá bài Galactic Gardens.',
  heroClass: 'Sneaky',
  laneRequirement: 'ground'
  },
@@ -515,9 +593,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'Science Barrel Trick',
  assetPath: '/assets/cards/zombies/Final Mission.png',
  image: '/assets/cards/zombies/Final Mission.png',
- description: 'Destroy a Zombie. Do 4 damage to any Plant or the Plant Hero.',
+ description: 'Hi sinh tiêu diệt một Zombie đồng minh để phóng tên lửa cực mạnh gây 4 sát thương lên Plant hoặc Plant Hero.',
  heroClass: 'Crazy'
  },
  {
@@ -530,9 +610,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Common',
+ tribe: 'Pet Trick',
  assetPath: '/assets/cards/zombies/Locust Swarm.png',
  image: '/assets/cards/zombies/Locust Swarm.png',
- description: 'Destroy a Plant.',
+ description: 'Thả đàn châu chấu đói khát tiêu diệt ngay một Plant bất kỳ.',
  heroClass: 'Beastly'
  },
  {
@@ -545,9 +627,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Common',
+ tribe: 'Gourmet Trick',
  assetPath: '/assets/cards/zombies/Lurch for Lunch.png',
  image: '/assets/cards/zombies/Lurch for Lunch.png',
- description: 'A Zombie does a Bonus Attack.',
+ description: 'Chỉ định một Zombie lập tức thực hiện một đòn Tấn công thêm (Bonus Attack).',
  heroClass: 'Brainy'
  },
  {
@@ -560,9 +644,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Uncommon',
+ tribe: 'Environment',
  assetPath: '/assets/cards/zombies/Medulla Nebula.png',
  image: '/assets/cards/zombies/Medulla Nebula.png',
- description: 'Environment: When you play a Zombie here, you get +2 Brains this turn.',
+ description: 'Môi trường: Khi bạn xuất trận một Zombie tại đây, bạn nhận thêm +2 Não (Brain) trong lượt này.',
  heroClass: 'Brainy',
  laneRequirement: 'ground'
  },
@@ -576,9 +662,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: ['Overshoot 3'],
+ rarity: 'Super-Rare',
+ tribe: 'Environment',
  assetPath: '/assets/cards/zombies/Moon Base Z.png',
  image: '/assets/cards/zombies/Moon Base Z.png',
- description: 'Environment: Before combat here, Zombies here do 3 damage to the Plant Hero (Overshoot 3).',
+ description: 'Môi trường: Trước khi giao tranh tại đây, Zombie bắn 3 sát thương thẳng vào Plant Hero (Overshoot 3).',
  heroClass: 'Crazy',
  laneRequirement: 'ground'
  },
@@ -592,9 +680,12 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 4,
  health: 4,
  traits: ['Frenzy'],
+ rarity: 'Uncommon',
+ tribe: 'Professional Zombie',
+ frenzy: true,
  assetPath: '/assets/cards/zombies/Newspaper Zombie.png',
  image: '/assets/cards/zombies/Newspaper Zombie.png',
- description: 'When hurt: This gets +4 Attack and Frenzy.',
+ description: 'Khi bị thương: Báo rách khiến Zombie nổi giận, nhận ngay +4 Tấn công và đặc tính Cuồng nộ (Frenzy).',
  heroClass: 'Crazy',
  laneRequirement: 'ground'
  },
@@ -608,9 +699,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 4,
  health: 4,
  traits: [],
+ rarity: 'Common',
+ tribe: 'History Zombie',
  assetPath: '/assets/cards/zombies/Ra Zombie.png',
  image: '/assets/cards/zombies/Ra Zombie.png',
- description: 'When played: The Plant Hero loses 2 Sun this turn.',
+ description: 'Khi xuất trận: Tỏa ánh hào quang mặt trời cướp mất 2 Sun của Plant Hero trong lượt này.',
  heroClass: 'Hearty',
  laneRequirement: 'ground'
  },
@@ -624,9 +717,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'Science Trick',
  assetPath: '/assets/cards/zombies/Rocket Science.png',
  image: '/assets/cards/zombies/Rocket Science.png',
- description: 'Destroy a Plant that has 4 Attack or more.',
+ description: 'Bắn tên lửa nghiên cứu tiêu diệt một Plant có từ 4 Tấn công (Attack) trở lên.',
  heroClass: 'Brainy'
  },
  {
@@ -639,9 +734,12 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 1,
  health: 1,
  traits: ['Amphibious'],
+ rarity: 'Common',
+ tribe: 'Pirate Imp Zombie',
+ amphibious: true,
  assetPath: '/assets/cards/zombies/Swabbie.png',
  image: '/assets/cards/zombies/Swabbie.png',
- description: 'Amphibious. 0-cost pirate imp minion.',
+ description: 'Amphibious (Lội nước). Thây ma cướp biển tí hon giá 0 Não, chiến đấu tốt trên làn Nước.',
  heroClass: 'Sneaky',
  laneRequirement: 'water'
  },
@@ -655,9 +753,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Legendary',
+ tribe: 'Science Trick',
  assetPath: '/assets/cards/zombies/Teleport.png',
  image: '/assets/cards/zombies/Teleport.png',
- description: "You may play a Zombie when it's time for Tricks this turn. Draw a card.",
+ description: 'Rút 1 lá bài. Cho phép bạn xuất trận một Zombie bất ngờ ngay trong giai đoạn Zombie Tricks lượt này.',
  heroClass: 'Brainy'
  },
  {
@@ -670,9 +770,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Uncommon',
+ tribe: 'Environment',
  assetPath: '/assets/cards/zombies/Total Eclipse.png',
  image: '/assets/cards/zombies/Total Eclipse.png',
- description: 'Environment: Plants here get -1/-1.',
+ description: 'Môi trường: Nhật thực toàn phần khiến tất cả Plants tại làn này bị suy yếu (-1/-1).',
  heroClass: 'Beastly',
  laneRequirement: 'ground'
  },
@@ -686,9 +788,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 6,
  health: 6,
  traits: [],
+ rarity: 'Legendary',
+ tribe: 'Party Moustache Zombie',
  assetPath: '/assets/cards/zombies/Trickster.png',
  image: '/assets/cards/zombies/Trickster.png',
- description: 'While in your hand, this costs 1 Brain less when you play a Trick. When played: This does a Bonus Attack.',
+ description: 'Khi ở trên tay: Giảm 1 Não (Brain) mỗi khi bạn sử dụng một Zombie Trick. Khi xuất trận: Lập tức thực hiện 1 đòn Đánh thêm (Bonus Attack).',
  heroClass: 'Brainy',
  laneRequirement: 'ground'
  },
@@ -702,9 +806,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 6,
  health: 6,
  traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'History Zombie',
  assetPath: '/assets/cards/zombies/Valkyrie.png',
  image: '/assets/cards/zombies/Valkyrie.png',
- description: 'While in your hand, this gets +2 Attack when a Zombie is destroyed.',
+ description: 'Khi ở trên tay: Nhận +2 Tấn công mỗi khi một Zombie đồng minh bị tiêu diệt.',
  heroClass: 'Crazy',
  laneRequirement: 'ground'
  },
@@ -718,9 +824,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'Science Gourmet Trick',
  assetPath: '/assets/cards/zombies/Weed Spray.png',
  image: '/assets/cards/zombies/Weed Spray.png',
- description: 'Destroy each Plant with 2 Attack or less.',
+ description: 'Phun thuốc diệt cỏ tiêu diệt tất cả Plants có từ 2 Tấn công (Attack) trở xuống trên khắp các làn.',
  heroClass: 'Hearty'
  },
  {
@@ -732,10 +840,12 @@ export const ZOMBIE_CARDS: CardData[] = [
  attack: 9,
  hp: 9,
  health: 9,
- traits: ['Graveturning'],
+ traits: [],
+ rarity: 'Legendary',
+ tribe: 'Science Gargantuar Zombie',
  assetPath: '/assets/cards/zombies/Zombot 1000.png',
  image: '/assets/cards/zombies/Zombot 1000.png',
- description: 'When played: Destroy all Plants.',
+ description: 'Khi xuất trận: Siêu người máy khổng lồ hủy diệt toàn bộ Plants trên tất cả các làn đấu của đối phương.',
  heroClass: 'Beastly',
  laneRequirement: 'ground'
  },
@@ -749,9 +859,11 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 1,
  health: 1,
  traits: [],
+ rarity: 'Common',
+ tribe: 'Professional Zombie',
  assetPath: '/assets/cards/zombies/Swabbie.png',
  image: '/assets/cards/zombies/Swabbie.png',
- description: 'Regular 1/1 zombie minion.',
+ description: 'Thây ma áo nâu cơ bản 1/1, kiên trì tiến bước trên chiến trường.',
  heroClass: 'Hearty',
  laneRequirement: 'ground'
  },
@@ -765,10 +877,12 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 5,
  health: 5,
  traits: ['Armored 2'],
+ rarity: 'Super-Rare',
+ tribe: 'History Zombie',
  armored: 2,
  assetPath: '/assets/cards/zombies/Arm Wrestler.png',
  image: '/assets/cards/zombies/Arm Wrestler.png',
- description: 'Armored 2: Reduces all incoming damage by 2.',
+ description: 'Armored 2 (Bọc giáp 2). Giáp sắt hiệp sĩ cổ đại giảm 2 sát thương nhận vào từ mọi nguồn.',
  heroClass: 'Hearty',
  laneRequirement: 'ground'
  },
@@ -782,10 +896,13 @@ export const ZOMBIE_CARDS: CardData[] = [
  hp: 6,
  health: 6,
  traits: ['Armored 1', 'Frenzy'],
+ rarity: 'Super-Rare',
+ tribe: 'Sports Zombie',
  armored: 1,
+ frenzy: true,
  assetPath: '/assets/cards/zombies/Disco Zombie.png',
  image: '/assets/cards/zombies/Disco Zombie.png',
- description: 'Armored 1, Frenzy. Tough and athletic football zombie.',
+ description: 'Armored 1, Frenzy (Cuồng nộ). Ngôi sao bóng bầu dục dũng mãnh, giảm 1 sát thương và đánh tiếp khi hạ gục Plant.',
  heroClass: 'Hearty',
  laneRequirement: 'ground'
  }
@@ -1121,3 +1238,28 @@ export function getInitialDeck(side: 'plant' | 'zombie' | Team): CardData[] {
  const pool = getCardsBySide(side);
  return pool.slice(0, 10);
 }
+
+export function getCardsByRarity(rarity: Rarity, side?: 'plant' | 'zombie' | Team): CardData[] {
+ const pool = side ? getCardsBySide(side) : ALL_CARDS;
+ return pool.filter((card) => card.rarity === rarity);
+}
+
+export function getCardsByTribe(tribeKeyword: string, side?: 'plant' | 'zombie' | Team): CardData[] {
+ const pool = side ? getCardsBySide(side) : ALL_CARDS;
+ const keyword = tribeKeyword.toLowerCase();
+ return pool.filter((card) => card.tribe && card.tribe.toLowerCase().includes(keyword));
+}
+
+export function getCardsByHeroClass(heroClass: HeroClass, side?: 'plant' | 'zombie' | Team): CardData[] {
+ const pool = side ? getCardsBySide(side) : ALL_CARDS;
+ return pool.filter((card) => card.heroClass === heroClass);
+}
+
+export function getLegendaryCards(side?: 'plant' | 'zombie' | Team): CardData[] {
+ return getCardsByRarity('Legendary', side);
+}
+
+export function getSuperRareCards(side?: 'plant' | 'zombie' | Team): CardData[] {
+ return getCardsByRarity('Super-Rare', side);
+}
+

@@ -159,14 +159,15 @@ export function getAIDecision(
     )
 
     const shouldPreserveBrains =
-      difficulty === 'expert' &&
+      (difficulty === 'expert' || difficulty === 'normal') &&
       highValueTricks.length > 0 &&
       resource <= 6 &&
-      state.lanes.some((l) => l.plantMinion && l.plantMinion.currentAttack >= 3)
+      state.lanes.some((l) => l.plantMinion && (l.plantMinion.currentAttack >= 3 || l.plantMinion.currentHealth >= 4))
 
     if (shouldPreserveBrains) {
-      // Find a cheaper minion so we leave at least 2-3 brains for tricks
-      const affordableMinions = playableMinions.filter((m) => m.cost <= resource - 2)
+      // Find the minimum cost of our high-value tricks to guarantee we can cast at least one
+      const targetTrickCost = Math.min(...highValueTricks.map((t) => t.cost))
+      const affordableMinions = playableMinions.filter((m) => m.cost <= resource - targetTrickCost)
       if (affordableMinions.length > 0) {
         const cheapMinion = affordableMinions.sort((a, b) => b.health - a.health)[0]
         const openLane = state.lanes.findIndex(
@@ -179,6 +180,12 @@ export function getAIDecision(
             laneIndex: openLane,
             reason: 'Preserving brains for high-value Tricks',
           }
+        }
+      } else {
+        // If all minions would consume our trick budget, pass to guarantee brains in ZOMBIE_TRICKS
+        return {
+          action: 'PASS',
+          reason: 'Preserving all brains for high-value Tricks in ZOMBIE_TRICKS phase',
         }
       }
     }
@@ -203,6 +210,28 @@ export function getAIDecision(
         card: armWrestler,
         laneIndex: 0,
         reason: 'Deploy Arm Wrestler on Heights for lane advantage',
+      }
+    }
+
+    // B2. Priority: Anti-Hero minion on Open Lane for direct Plant Hero face damage
+    const openLanes = state.lanes
+      .map((lane, idx) => ({ lane, idx }))
+      .filter(({ lane }) => !lane.zombieMinion && !lane.plantMinion)
+
+    const antiHeroMinion = playableMinions.find(
+      (c) => Boolean(c.antiHero) || hasCardTrait(c, 'antiHero') || hasCardTrait(c, 'anti-hero')
+    )
+    if (antiHeroMinion && openLanes.length > 0) {
+      for (const { lane, idx } of openLanes) {
+        const validation = canPlayCardToLane(antiHeroMinion, lane, 'zombies')
+        if (validation.allowed) {
+          return {
+            action: 'PLAY_MINION',
+            card: antiHeroMinion,
+            laneIndex: idx,
+            reason: `Deploy Anti-Hero minion to open lane ${idx + 1} for direct Plant Hero face damage`,
+          }
+        }
       }
     }
 
@@ -236,10 +265,6 @@ export function getAIDecision(
     }
 
     // D. Aggression: Exploit Open Lanes to hit Plant Hero directly
-    const openLanes = state.lanes
-      .map((lane, idx) => ({ lane, idx }))
-      .filter(({ lane }) => !lane.zombieMinion && !lane.plantMinion)
-
     if (openLanes.length > 0) {
       // Pick highest attack or Bullseye/Frenzy minion for face pressure
       const aggressor = [...playableMinions].sort((a, b) => {

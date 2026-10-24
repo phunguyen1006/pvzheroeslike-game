@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import type { HeroState, Side, Phase } from '../../engine/types'
 import { ASSET_MANIFEST } from '../../data/assetsManifest'
+import { soundManager } from '../../audio/SoundManager'
 
 export interface HeroBottomArenaProps {
   hero: HeroState
@@ -28,6 +29,34 @@ export const HeroBottomArena: React.FC<HeroBottomArenaProps> = ({
 
   const blockMeterVal = hero.blockMeter || 0
   const isShieldReady = hero.isShieldActive || blockMeterVal >= 8
+
+  // Visual feedback when Super-Block meter charges (1-3 segments bouncing & flashing)
+  const [activeChargeRoll, setActiveChargeRoll] = useState<number | null>(null)
+  const [flashingSegments, setFlashingSegments] = useState<number[]>([])
+  const prevMeterRef = useRef(blockMeterVal)
+
+  useEffect(() => {
+    const prev = prevMeterRef.current
+    if (blockMeterVal > prev && prev < 8) {
+      const diff = Math.min(3, blockMeterVal - prev)
+      setActiveChargeRoll(diff)
+      const chargedList: number[] = []
+      for (let i = prev; i < blockMeterVal && i < 8; i++) {
+        chargedList.push(i)
+      }
+      setFlashingSegments(chargedList)
+      soundManager.playBlockCharge(diff)
+
+      const timer = setTimeout(() => {
+        setActiveChargeRoll(null)
+        setFlashingSegments([])
+      }, 1000)
+
+      prevMeterRef.current = blockMeterVal
+      return () => clearTimeout(timer)
+    }
+    prevMeterRef.current = blockMeterVal
+  }, [blockMeterVal])
 
   return (
     <div className={`pvz-bottom-arena-zone ${side}-bottom-zone ${isHurt ? 'hero-bottom-is-hurt' : ''}`}>
@@ -110,20 +139,39 @@ export const HeroBottomArena: React.FC<HeroBottomArenaProps> = ({
 
         {/* Right Side: Circular Superpower Device / 8-Segment Gauge */}
         <div
-          className={`hero-superpower-device ${isShieldReady ? 'device-shield-active' : ''}`}
+          className={`hero-superpower-device player-superpower-device ${
+            isShieldReady ? 'device-shield-active' : ''
+          } ${activeChargeRoll !== null ? 'device-is-charging' : ''}`}
           onClick={isShieldReady ? onSuperBlockClick : undefined}
-          title={`Super-Block Gauge: ${blockMeterVal}/8 Vạch`}
+          title={`Super-Block Gauge: ${blockMeterVal}/8 Vạch (${remainingBlocks}/3 Shields)`}
         >
+          {/* Floating 1-3 Roll Number Badge (Pop-up on Meter Charge) */}
+          {activeChargeRoll !== null && (
+            <div
+              className="superpower-roll-bounce-badge"
+              key={`sp-roll-${activeChargeRoll}-${blockMeterVal}`}
+            >
+              <span className="roll-symbol">⚡</span>
+              <span className="roll-val">+{activeChargeRoll}</span>
+            </div>
+          )}
+
           {/* Circular Metallic Rim with 8 Segment Arcs */}
           <div className="superpower-outer-dial">
             {Array.from({ length: 8 }).map((_, i) => {
               const isFilled = i < blockMeterVal
+              const isNewlyCharged = flashingSegments.includes(i)
               const isLastFilled = i === blockMeterVal - 1
+
               return (
                 <div
                   key={i}
                   className={`dial-segment-pip segment-${i} ${isFilled ? 'segment-lit' : 'segment-dim'} ${
-                    isLastFilled ? 'segment-pulse' : ''
+                    isNewlyCharged
+                      ? 'segment-charging-flash'
+                      : isLastFilled
+                      ? 'segment-pulse'
+                      : ''
                   }`}
                   style={{
                     transform: `rotate(${i * 45}deg)`,
@@ -135,7 +183,7 @@ export const HeroBottomArena: React.FC<HeroBottomArenaProps> = ({
             })}
 
             {/* Central Superpower / Shield Emblem */}
-            <div className="dial-center-core">
+            <div className={`dial-center-core ${activeChargeRoll !== null ? 'core-charge-pulse' : ''}`}>
               {isShieldReady ? (
                 <div className="core-shield-burst-active">
                   <span className="burst-icon">🛡️</span>
