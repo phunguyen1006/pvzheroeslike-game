@@ -80,6 +80,68 @@ export function triggerWhenPlayed(
       break
     }
 
+    case 'plant_cornucopia': {
+      // Cornucopia: Make a random Plant in each other open lane
+      const CORNUCOPIA_PLANT_POOL: {
+        cardId: string
+        name: string
+        attack: number
+        health: number
+        amphibious?: boolean
+        teamUp?: boolean
+        bullseye?: boolean
+        doubleStrike?: boolean
+        armored?: number
+        image: string
+      }[] = [
+        { cardId: 'plant_kernel_corn', name: 'Kernel Corn', attack: 6, health: 6, image: '/assets/cards/plants/Kernel Corn.png' },
+        { cardId: 'plant_briar_rose', name: 'Briar Rose', attack: 3, health: 4, image: '/assets/heroes/plants/Rose.png' },
+        { cardId: 'plant_doubled_mint', name: 'Doubled Mint', attack: 1, health: 2, image: '/assets/cards/plants/Doubled Mint.png' },
+        { cardId: 'plant_repeater', name: 'Repeater', attack: 2, health: 2, doubleStrike: true, image: '/assets/cards/plants/Repeater.png' },
+        { cardId: 'plant_bonk_choy', name: 'Bonk Choy', attack: 2, health: 1, image: '/assets/cards/plants/Bonk Choy.png' },
+        { cardId: 'plant_snow_pea', name: 'Snow Pea', attack: 2, health: 2, image: '/assets/cards/plants/Snow Pea.png' },
+        { cardId: 'plant_peashooter', name: 'Peashooter', attack: 1, health: 1, image: '/assets/cards/plants/Peashooter.png' },
+        { cardId: 'plant_black_eyed_pea', name: 'Black-Eyed Pea', attack: 2, health: 3, image: '/assets/cards/plants/Black-Eyed Pea.png' },
+        { cardId: 'plant_sunflower', name: 'Sunflower', attack: 0, health: 1, teamUp: true, image: '/assets/cards/plants/Sunflower.png' },
+        { cardId: 'plant_the_great_zucchini', name: 'The Great Zucchini', attack: 7, health: 7, amphibious: true, image: '/assets/cards/plants/The Great Zucchini.png' },
+        { cardId: 'plant_admiral_navy_bean', name: 'Admiral Navy Bean', attack: 1, health: 1, amphibious: true, teamUp: true, image: '/assets/cards/plants/Admiral Navy Bean.png' },
+      ]
+
+      let spawnedCount = 0
+      updatedState.lanes.forEach(l => {
+        if (l.index !== laneIndex && !l.plantMinion) {
+          const pool = l.type === 'water'
+            ? CORNUCOPIA_PLANT_POOL.filter(p => p.amphibious)
+            : CORNUCOPIA_PLANT_POOL.filter(p => !p.amphibious)
+          if (pool.length > 0) {
+            const chosen = pool[Math.floor(Math.random() * pool.length)]
+            l.plantMinion = {
+              instanceId: `cornucopia_${Date.now()}_${l.index}_${Math.random()}`,
+              cardId: chosen.cardId,
+              name: chosen.name,
+              side: 'plants',
+              currentAttack: chosen.attack,
+              baseAttack: chosen.attack,
+              currentHealth: chosen.health,
+              maxHealth: chosen.health,
+              amphibious: chosen.amphibious,
+              teamUp: chosen.teamUp,
+              bullseye: chosen.bullseye,
+              doubleStrike: chosen.doubleStrike,
+              armored: chosen.armored,
+              image: chosen.image,
+            }
+            spawnedCount++
+            events.push(`🌽 Sừng Dê Thịnh Vượng Cornucopia: Triệu hồi ${chosen.name} (${chosen.attack}/${chosen.health}) tại ${l.name}!`)
+          }
+        }
+      })
+      if (spawnedCount === 0) {
+        events.push('Cornucopia xuất trận nhưng không còn làn nào trống để triệu hồi thêm Plant!')
+      }
+      break
+    }
+
     case 'zombie_conga_zombie': {
       // Conga Zombie: Do 1 damage to a plant or plant hero
       const targetLane = updatedState.lanes[laneIndex]
@@ -118,6 +180,36 @@ export function triggerWhenPlayed(
           image: '/assets/cards/zombies/Disco Zombie.png',
         }
         events.push(`Disco Zombie nhảy điệu disco: Triệu hồi 1/1 Backup Dancer tại ${target.name}!`)
+      }
+      break
+    }
+
+    case 'zombie_disco_tron_3000': {
+      // Disco-Tron 3000: Make two 1/1 Backup Dancers in other random lanes
+      let dancersCreated = 0
+      for (let i = 0; i < 2; i++) {
+        const availableLanes = updatedState.lanes.filter(
+          l => !l.zombieMinion && l.type !== 'water' && l.index !== laneIndex
+        )
+        if (availableLanes.length > 0) {
+          const chosenLane = availableLanes[Math.floor(Math.random() * availableLanes.length)]
+          updatedState.lanes[chosenLane.index].zombieMinion = {
+            instanceId: `backup_dancer_${Date.now()}_${i}_${Math.random()}`,
+            cardId: 'zombie_backup_dancer',
+            name: 'Backup Dancer',
+            side: 'zombies',
+            currentAttack: 1,
+            baseAttack: 1,
+            currentHealth: 1,
+            maxHealth: 1,
+            image: '/assets/cards/zombies/Disco Zombie.png',
+          }
+          dancersCreated++
+          events.push(`🪩 Disco-Tron 3000 bật đèn laser: Triệu hồi 1/1 Backup Dancer tại ${chosenLane.name}!`)
+        }
+      }
+      if (dancersCreated === 0) {
+        events.push('Disco-Tron 3000 xuất hiện nhưng các làn khác đã kín chỗ!')
       }
       break
     }
@@ -212,19 +304,41 @@ export function triggerWhenPlayed(
 }
 
 /**
+ * Checks whether a minion belongs to the Flower tribe
+ */
+export function isFlowerPlant(minion: Minion): boolean {
+  if (minion.side !== 'plants') return false
+  const id = minion.cardId.toLowerCase()
+  const name = minion.name.toLowerCase()
+  return (
+    id === 'plant_briar_rose' ||
+    id === 'plant_sunflower' ||
+    id === 'plant_snowdrop' ||
+    name.includes('flower') ||
+    name.includes('rose') ||
+    name.includes('sunflower')
+  )
+}
+
+/**
  * Triggered when a minion is hurt by combat or trick
  */
 export function triggerWhenHurt(
   state: GameState,
   minion: Minion,
-  damageDealt: number
+  damageDealt: number,
+  attackerMinion?: Minion,
+  laneIndex?: number
 ): AbilityTriggerResult {
-  let updatedState = { ...state }
+  let updatedState: GameState = {
+    ...state,
+    lanes: state.lanes.map(l => ({ ...l })),
+  }
   const events: string[] = []
 
   if (damageDealt <= 0) return { updatedState, events }
 
-  // Newspaper Zombie: "When hurt: This gets +4 Attack and Frenzy."
+  // 1. Newspaper Zombie: "When hurt: This gets +4 Attack and Frenzy."
   if (minion.cardId === 'zombie_newspaper_zombie') {
     updatedState.lanes.forEach(l => {
       if (l.zombieMinion && l.zombieMinion.instanceId === minion.instanceId) {
@@ -236,6 +350,29 @@ export function triggerWhenHurt(
         events.push(`Báo của Newspaper Zombie bị rách! Tức giận nhận +4 Attack và Cuồng nộ (Frenzy) (hiện có ${l.zombieMinion.currentAttack} ATK)!`)
       }
     })
+  }
+
+  // 2. Briar Rose: "When a Zombie hurts a Flower, destroy that Zombie."
+  if (isFlowerPlant(minion)) {
+    const hasBriarRose = updatedState.lanes.some(
+      l => l.plantMinion?.cardId === 'plant_briar_rose' || l.plantTeamUpMinion?.cardId === 'plant_briar_rose'
+    )
+    if (hasBriarRose) {
+      if (attackerMinion && attackerMinion.side === 'zombies') {
+        updatedState.lanes.forEach(l => {
+          if (l.zombieMinion && l.zombieMinion.instanceId === attackerMinion.instanceId) {
+            events.push(`🌹 Briar Rose trả đũa bằng gai nhọn: Zombie ${l.zombieMinion.name} làm tổn thương loài Hoa (${minion.name}), lập tức bị tiêu diệt!`)
+            l.zombieMinion = null
+          }
+        })
+      } else if (laneIndex !== undefined && updatedState.lanes[laneIndex]?.zombieMinion) {
+        const opposingZombie = updatedState.lanes[laneIndex].zombieMinion
+        if (opposingZombie) {
+          events.push(`🌹 Briar Rose trả đũa bằng gai nhọn: Zombie ${opposingZombie.name} làm tổn thương loài Hoa (${minion.name}), lập tức bị tiêu diệt!`)
+          updatedState.lanes[laneIndex].zombieMinion = null
+        }
+      }
+    }
   }
 
   return { updatedState, events }

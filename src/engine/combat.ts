@@ -1,6 +1,7 @@
 ﻿import type { HeroState, GameState, CombatResult, CombatEvent, Side, Card, Minion } from './types'
 import { SUPERPOWERS } from '../data/superpowers'
 import { triggerOnMultipleDeaths } from './triggers'
+import { isFlowerPlant } from './abilities'
 
 export interface HeroDamageResult {
   updatedHero: HeroState
@@ -296,6 +297,25 @@ export function resolveSingleLaneCombat(
 
     if (dmgToPlant > 0) {
       plant.currentHealth = zombieHasDeadly ? 0 : Math.max(0, plant.currentHealth - dmgToPlant)
+
+      // Briar Rose: When a Zombie hurts a Flower Plant, destroy that Zombie immediately
+      const hasBriarRose = updatedLanes.some(
+        l => l.plantMinion?.cardId === 'plant_briar_rose' || l.plantTeamUpMinion?.cardId === 'plant_briar_rose'
+      )
+      if (hasBriarRose && isFlowerPlant(plant) && zombie.currentHealth > 0) {
+        zombie.currentHealth = 0
+        events.push({
+          laneIndex,
+          attackerSide: 'plants',
+          attackerName: 'Briar Rose',
+          target: 'minion',
+          targetSide: 'zombies',
+          damageDealt: 0,
+          isBlocked: false,
+          isLethal: true,
+          description: `🌹 Briar Rose trả đũa bằng gai nhọn: Zombie ${zombie.name} đã làm tổn thương loài Hoa (${plant.name}), lập tức bị tiêu diệt!`,
+        })
+      }
     }
 
     events.push({
@@ -812,6 +832,25 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
 
       if (dmgToPlant > 0) {
         plant.currentHealth = zombieHasDeadly ? 0 : Math.max(0, plant.currentHealth - dmgToPlant)
+
+        // Briar Rose: When a Zombie hurts a Flower Plant, destroy that Zombie immediately
+        const hasBriarRose = updatedLanes.some(
+          l => l.plantMinion?.cardId === 'plant_briar_rose' || l.plantTeamUpMinion?.cardId === 'plant_briar_rose'
+        )
+        if (hasBriarRose && isFlowerPlant(plant) && zombie.currentHealth > 0) {
+          zombie.currentHealth = 0
+          events.push({
+            laneIndex: i,
+            attackerSide: 'plants',
+            attackerName: 'Briar Rose',
+            target: 'minion',
+            targetSide: 'zombies',
+            damageDealt: 0,
+            isBlocked: false,
+            isLethal: true,
+            description: `🌹 Briar Rose trả đũa bằng gai nhọn: Zombie ${zombie.name} đã làm tổn thương loài Hoa (${plant.name}), lập tức bị tiêu diệt!`,
+          })
+        }
       }
 
       events.push({

@@ -22,6 +22,8 @@ import {
   getAIDecision,
   triggerOnDeath,
   revealGravestones,
+  isFlowerPlant,
+  convertCardDataToCard,
 } from '../engine/index'
 import type { Minion, Card, HeroState, GameState } from '../engine/types'
 import { getCardById, PLANT_CARDS, ZOMBIE_CARDS } from '../data/cards'
@@ -2067,6 +2069,386 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
       expect(PLANT_CARDS.length).toBe(27)
       expect(ZOMBIE_CARDS.length).toBe(29)
       expect(PLANT_CARDS.length + ZOMBIE_CARDS.length).toBe(56)
+    })
+  })
+
+  // ==========================================================
+  // 15. LEGENDARY & SUPER-RARE STRATEGIC CARDS SUITE (QA Suite)
+  // ==========================================================
+  describe('15. Legendary & Super-Rare Strategic Cards Suite (QA Suite)', () => {
+    // --------------------------------------------------------
+    // 1. Plant Wall-Nut (Team-Up & Damage Absorption)
+    // --------------------------------------------------------
+    it('verifies Wall-Nut Team-Up allows placement in occupied lane and absorbs combat damage protecting plant hero', () => {
+      let state = createInitialGameState()
+      state.phase = 'PLANT_PLAY'
+      state.plantHero.sun = 5
+
+      const wallNutData = getCardById('plant_wall_nut')!
+      expect(wallNutData).toBeDefined()
+      const wallNutCard = convertCardDataToCard(wallNutData, 'plants')
+      expect(wallNutCard.cost).toBe(1)
+      expect(wallNutCard.attack).toBe(0)
+      expect(wallNutCard.health).toBe(6)
+      expect(wallNutCard.teamUp).toBe(true)
+
+      // A. Play Wall-Nut onto empty ground lane (Lane 1)
+      state.plantHand = [wallNutCard]
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        cardId: wallNutCard.id,
+        side: 'plants',
+        laneIndex: 1,
+      })
+      const playedWallNut = state.lanes[1].plantMinion
+      expect(playedWallNut).toBeDefined()
+      expect(playedWallNut?.name).toBe('Wall-Nut')
+      expect(playedWallNut?.currentAttack).toBe(0)
+      expect(playedWallNut?.currentHealth).toBe(6)
+      expect(playedWallNut?.teamUp).toBe(true)
+      expect(state.plantHero.sun).toBe(4) // 5 - 1
+
+      // B. Place a 3 ATK Zombie in Lane 1 and execute combat
+      state.lanes[1].zombieMinion = createMockMinion('z_walker', 'Conehead Zombie', 'zombies', 3, 4)
+      const plantHeroHpBefore = state.plantHero.hp
+      const combatRes = resolveSingleLaneCombat(state, 1)
+
+      // Wall-Nut absorbs 3 damage: 6 - 3 = 3 HP
+      expect(combatRes.updatedState.lanes[1].plantMinion?.currentHealth).toBe(3)
+      // Zombie took 0 damage because Wall-Nut has 0 ATK
+      expect(combatRes.updatedState.lanes[1].zombieMinion?.currentHealth).toBe(4)
+      // Plant Hero was protected and took 0 damage!
+      expect(combatRes.updatedState.plantHero.hp).toBe(plantHeroHpBefore)
+
+      // C. Team-Up: Play a second Wall-Nut into Lane 2 which already has a Peashooter
+      state.lanes[2].plantMinion = createMockMinion('p_pea', 'Peashooter', 'plants', 1, 1)
+      state.plantHand = [wallNutCard]
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        cardId: wallNutCard.id,
+        side: 'plants',
+        laneIndex: 2,
+      })
+
+      // Both plants coexist in Lane 2!
+      expect(state.lanes[2].plantMinion?.name).toBe('Peashooter')
+      expect(state.lanes[2].plantTeamUpMinion?.name).toBe('Wall-Nut')
+      expect(state.lanes[2].plantTeamUpMinion?.currentHealth).toBe(6)
+    })
+
+    // --------------------------------------------------------
+    // 2. Plant Cornucopia (Multi-Lane Summoning)
+    // --------------------------------------------------------
+    it('verifies Cornucopia summons random Plants across all other valid empty lanes including Amphibious on Water', () => {
+      let state = createInitialGameState()
+      state.phase = 'PLANT_PLAY'
+      state.plantHero.sun = 10
+
+      const cornucopiaData = getCardById('plant_cornucopia')!
+      expect(cornucopiaData).toBeDefined()
+      const cornucopiaCard = convertCardDataToCard(cornucopiaData, 'plants')
+      expect(cornucopiaCard.cost).toBe(10)
+
+      // Play Cornucopia in Lane 2 (Ground)
+      state.plantHand = [cornucopiaCard]
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        cardId: cornucopiaCard.id,
+        side: 'plants',
+        laneIndex: 2,
+      })
+
+      // Lane 2 has Cornucopia itself
+      expect(state.lanes[2].plantMinion?.cardId).toBe('plant_cornucopia')
+      expect(state.lanes[2].plantMinion?.currentAttack).toBe(6)
+      expect(state.lanes[2].plantMinion?.currentHealth).toBe(6)
+
+      // Every other empty lane (0, 1, 3, 4) must now be populated with a plant minion!
+      for (const idx of [0, 1, 3, 4]) {
+        const spawned = state.lanes[idx].plantMinion
+        expect(spawned).not.toBeNull()
+        expect(spawned?.side).toBe('plants')
+        expect(spawned?.currentHealth).toBeGreaterThan(0)
+      }
+
+      // Lane 4 is Water Lane -> Must be Amphibious!
+      const waterMinion = state.lanes[4].plantMinion
+      expect(waterMinion?.amphibious).toBe(true)
+
+      // Combat log must mention Cornucopia summons
+      const summonLogs = state.combatLog.filter(l => l.includes('Cornucopia'))
+      expect(summonLogs.length).toBeGreaterThanOrEqual(1)
+    })
+
+    it('verifies Cornucopia handles fully occupied board gracefully without overriding existing plants', () => {
+      let state = createInitialGameState()
+      state.phase = 'PLANT_PLAY'
+      state.plantHero.sun = 10
+
+      // Pre-fill all other lanes with existing plants
+      state.lanes[0].plantMinion = createMockMinion('p0', 'Existing Sunflower', 'plants', 0, 1)
+      state.lanes[1].plantMinion = createMockMinion('p1', 'Existing Peashooter', 'plants', 1, 1)
+      state.lanes[3].plantMinion = createMockMinion('p3', 'Existing Repeater', 'plants', 2, 2)
+      state.lanes[4].plantMinion = createMockMinion('p4', 'Existing Amphibious Bean', 'plants', 1, 1, { amphibious: true })
+
+      const cornucopiaData = getCardById('plant_cornucopia')!
+      const cornucopiaCard = convertCardDataToCard(cornucopiaData, 'plants')
+      state.plantHand = [cornucopiaCard]
+
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        cardId: cornucopiaCard.id,
+        side: 'plants',
+        laneIndex: 2,
+      })
+
+      // Existing plants must be preserved, not overwritten
+      expect(state.lanes[0].plantMinion?.name).toBe('Existing Sunflower')
+      expect(state.lanes[1].plantMinion?.name).toBe('Existing Peashooter')
+      expect(state.lanes[2].plantMinion?.cardId).toBe('plant_cornucopia')
+      expect(state.lanes[3].plantMinion?.name).toBe('Existing Repeater')
+      expect(state.lanes[4].plantMinion?.name).toBe('Existing Amphibious Bean')
+
+      // Combat log notes that no empty lanes were available
+      const noSpaceLog = state.combatLog.find(l => l.includes('không còn làn nào trống'))
+      expect(noSpaceLog).toBeDefined()
+    })
+
+    // --------------------------------------------------------
+    // 3. Plant Briar Rose (Retaliatory Retribution)
+    // --------------------------------------------------------
+    it('verifies Briar Rose retaliatory strike destroys any Zombie that hurts an ally Flower plant', () => {
+      const state = createInitialGameState()
+      // Briar Rose in Lane 1
+      state.lanes[1].plantMinion = createMockMinion('p_rose', 'Briar Rose', 'plants', 3, 4, {
+        cardId: 'plant_briar_rose',
+      })
+      // Sunflower (Flower Plant) in Lane 2
+      const sunflower = createMockMinion('p_sunflower', 'Sunflower', 'plants', 0, 1, {
+        cardId: 'plant_sunflower',
+      })
+      state.lanes[2].plantMinion = sunflower
+
+      // Zombie in Lane 2 (Conehead Zombie)
+      const zombieAttacker = createMockMinion('z_cone', 'Conehead Zombie', 'zombies', 2, 3, {
+        cardId: 'zombie_conehead',
+      })
+      state.lanes[2].zombieMinion = zombieAttacker
+
+      // Flower classification check
+      expect(isFlowerPlant(sunflower)).toBe(true)
+
+      // Zombie damages Sunflower
+      const hurtRes = triggerWhenHurt(state, sunflower, 2, zombieAttacker, 2)
+
+      // Briar Rose immediately destroys the attacking Zombie!
+      expect(hurtRes.updatedState.lanes[2].zombieMinion).toBeNull()
+      const retaliationEvent = hurtRes.events.find(e => e.includes('Briar Rose trả đũa'))
+      expect(retaliationEvent).toBeDefined()
+      expect(retaliationEvent).toContain('Conehead Zombie')
+    })
+
+    it('verifies Briar Rose also destroys the attacking Zombie when Briar Rose itself is hurt', () => {
+      const state = createInitialGameState()
+      const briarRose = createMockMinion('p_rose', 'Briar Rose', 'plants', 3, 4, {
+        cardId: 'plant_briar_rose',
+      })
+      state.lanes[1].plantMinion = briarRose
+
+      const attackingZombie = createMockMinion('z_garg', 'Gargantuar', 'zombies', 5, 5, {
+        cardId: 'zombie_gargantuar',
+      })
+      state.lanes[1].zombieMinion = attackingZombie
+
+      expect(isFlowerPlant(briarRose)).toBe(true)
+
+      // Gargantuar attacks Briar Rose
+      const hurtRes = triggerWhenHurt(state, briarRose, 5, attackingZombie, 1)
+
+      // Gargantuar is destroyed by Briar Rose thorns!
+      expect(hurtRes.updatedState.lanes[1].zombieMinion).toBeNull()
+      expect(hurtRes.events.some(e => e.includes('Briar Rose trả đũa'))).toBe(true)
+    })
+
+    it('verifies Briar Rose does NOT destroy Zombie when a non-Flower plant is hurt', () => {
+      const state = createInitialGameState()
+      // Briar Rose in Lane 1
+      state.lanes[1].plantMinion = createMockMinion('p_rose', 'Briar Rose', 'plants', 3, 4, {
+        cardId: 'plant_briar_rose',
+      })
+      // Peashooter (Pea Plant, NOT Flower) in Lane 2
+      const peashooter = createMockMinion('p_pea', 'Peashooter', 'plants', 1, 1, {
+        cardId: 'plant_peashooter',
+      })
+      state.lanes[2].plantMinion = peashooter
+
+      const attackingZombie = createMockMinion('z_imp', 'Imp', 'zombies', 1, 1, {
+        cardId: 'zombie_basic',
+      })
+      state.lanes[2].zombieMinion = attackingZombie
+
+      expect(isFlowerPlant(peashooter)).toBe(false)
+
+      const hurtRes = triggerWhenHurt(state, peashooter, 1, attackingZombie, 2)
+
+      // Zombie is NOT destroyed because Peashooter is not a Flower!
+      expect(hurtRes.updatedState.lanes[2].zombieMinion).not.toBeNull()
+      expect(hurtRes.events.filter(e => e.includes('Briar Rose')).length).toBe(0)
+    })
+
+    // --------------------------------------------------------
+    // 4. Zombie Bad Moon Rising (High-Tier Transformation)
+    // --------------------------------------------------------
+    it('verifies Bad Moon Rising transforms all active Zombies into high-tier units with Cost >= 5 and Amphibious on Water', () => {
+      const state = createInitialGameState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 7
+
+      // Lane 0: 1/1 Basic Browncoat Zombie
+      state.lanes[0].zombieMinion = createMockMinion('z0', 'Browncoat Zombie', 'zombies', 1, 1, {
+        cardId: 'zombie_basic',
+      })
+      // Lane 1: 1/1 Backup Dancer
+      state.lanes[1].zombieMinion = createMockMinion('z1', 'Backup Dancer', 'zombies', 1, 1, {
+        cardId: 'zombie_backup_dancer',
+      })
+      // Lane 4 (Water Lane): 1/1 Swimp
+      state.lanes[4].zombieMinion = createMockMinion('z4', 'Swimp', 'zombies', 1, 1, {
+        cardId: 'zombie_swimp',
+        amphibious: true,
+      })
+
+      const bmrCard = createMockCard('zombie_bad_moon_rising', 'Bad Moon Rising', 'zombies', 7, 0, 0, {
+        type: 'trick',
+      })
+      state.zombieHand = [bmrCard]
+
+      const res = executeTrick(state, bmrCard, 'zombies')
+      expect(res.success).toBe(true)
+
+      // All 3 zombies are transformed into powerful high-tier zombies
+      const z0 = res.updatedState.lanes[0].zombieMinion!
+      const z1 = res.updatedState.lanes[1].zombieMinion!
+      const z4 = res.updatedState.lanes[4].zombieMinion!
+
+      expect(z0).toBeDefined()
+      expect(z0.currentAttack).toBeGreaterThanOrEqual(4)
+      expect(z0.currentHealth).toBeGreaterThanOrEqual(4)
+
+      expect(z1).toBeDefined()
+      expect(z1.currentAttack).toBeGreaterThanOrEqual(4)
+      expect(z1.currentHealth).toBeGreaterThanOrEqual(4)
+
+      // Water lane zombie must be Amphibious!
+      expect(z4).toBeDefined()
+      expect(z4.amphibious).toBe(true)
+      expect(z4.name).toBe('Deep Sea Gargantuar')
+
+      expect(res.message).toContain('Bad Moon Rising! Trăng máu trỗi dậy')
+    })
+
+    it('verifies Bad Moon Rising handles empty board without throwing errors or mutating lanes', () => {
+      const state = createInitialGameState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 7
+
+      const bmrCard = createMockCard('zombie_bad_moon_rising', 'Bad Moon Rising', 'zombies', 7, 0, 0, {
+        type: 'trick',
+      })
+      const res = executeTrick(state, bmrCard, 'zombies')
+
+      expect(res.success).toBe(true)
+      expect(res.message).toContain('không có Zombie nào trên sân')
+      state.lanes.forEach(l => {
+        expect(l.zombieMinion).toBeNull()
+      })
+    })
+
+    // --------------------------------------------------------
+    // 5. Zombie Disco-Tron 3000 (Gravestone & Dancers Summon)
+    // --------------------------------------------------------
+    it('verifies Disco-Tron 3000 enters anonymously as Gravestone and spawns 2 Backup Dancers upon reveal', () => {
+      let state = createInitialGameState()
+      state.phase = 'ZOMBIE_PLAY'
+      state.zombieHero.brains = 6
+
+      const discoTronData = getCardById('zombie_disco_tron_3000')!
+      expect(discoTronData).toBeDefined()
+      const discoTronCard = convertCardDataToCard(discoTronData, 'zombies')
+      expect(discoTronCard.cost).toBe(6)
+      expect(discoTronCard.attack).toBe(4)
+      expect(discoTronCard.health).toBe(4)
+
+      // Play Disco-Tron 3000 into Lane 1 during ZOMBIE_PLAY
+      state.zombieHand = [discoTronCard]
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        cardId: discoTronCard.id,
+        side: 'zombies',
+        laneIndex: 1,
+      })
+
+      // Must be placed as an anonymous Gravestone
+      const gravestoneMinion = state.lanes[1].zombieMinion
+      expect(gravestoneMinion).toBeDefined()
+      expect(gravestoneMinion?.isGravestone).toBe(true)
+      // Dancers must NOT be spawned yet
+      const activeZombiesBeforeReveal = state.lanes.filter(l => l.zombieMinion !== null)
+      expect(activeZombiesBeforeReveal.length).toBe(1)
+
+      // Step to PLANT_PLAY: stays hidden
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('PLANT_PLAY')
+      expect(state.lanes[1].zombieMinion?.isGravestone).toBe(true)
+
+      // Step to ZOMBIE_TRICKS: Gravestones reveal automatically!
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('ZOMBIE_TRICKS')
+
+      // Disco-Tron 3000 revealed!
+      const revealed = state.lanes[1].zombieMinion
+      expect(revealed?.isGravestone).toBe(false)
+      expect(revealed?.name).toBe('Disco-Tron 3000')
+      expect(revealed?.currentAttack).toBe(4)
+      expect(revealed?.currentHealth).toBe(4)
+
+      // Two 1/1 Backup Dancers spawned in other lanes!
+      const totalZombies = state.lanes.filter(l => l.zombieMinion !== null)
+      expect(totalZombies.length).toBe(3) // Disco-Tron + 2 Backup Dancers
+
+      const dancers = state.lanes.filter(
+        l => l.zombieMinion && l.zombieMinion.name === 'Backup Dancer'
+      )
+      expect(dancers.length).toBe(2)
+      for (const dancerLane of dancers) {
+        expect(dancerLane.zombieMinion?.currentAttack).toBe(1)
+        expect(dancerLane.zombieMinion?.currentHealth).toBe(1)
+        expect(dancerLane.zombieMinion?.side).toBe('zombies')
+      }
+    })
+
+    // --------------------------------------------------------
+    // 6. Zombie Teleport (Trick Mechanics)
+    // --------------------------------------------------------
+    it('verifies Teleport trick draws 1 card and activates teleportActive flag for playing zombies in Tricks phase', () => {
+      const state = createInitialGameState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 1
+      state.teleportActive = false
+
+      const initialDeckCount = state.zombieDeck.length
+      const initialHandCount = state.zombieHand.length
+
+      const teleportCard = createMockCard('zombie_teleport', 'Teleport', 'zombies', 1, 0, 0, {
+        type: 'trick',
+      })
+      const res = executeTrick(state, teleportCard, 'zombies')
+
+      expect(res.success).toBe(true)
+      expect(res.updatedState.teleportActive).toBe(true)
+      expect(res.updatedState.zombieDeck.length).toBe(initialDeckCount - 1)
+      expect(res.updatedState.zombieHand.length).toBe(initialHandCount + 1)
+      expect(res.message).toContain('Teleport: Dịch chuyển tức thời')
     })
   })
 })

@@ -95,6 +95,7 @@ export function convertCardDataToCard(cardData: any, side: Side): Card {
     armored: cardData.armored ?? (cardData.traits?.some((t: string) => t.toLowerCase().includes('armored 2')) ? 2 : cardData.traits?.some((t: string) => t.toLowerCase().includes('armored')) ? 1 : undefined),
     antiHero: cardData.antiHero ?? (cardData.traits?.some((t: string) => t.toLowerCase().includes('antihero') || t.toLowerCase().includes('anti-hero')) ? 2 : undefined),
     doubleStrike: Boolean(cardData.doubleStrike || cardData.traits?.some((t: string) => t.toLowerCase().includes('double strike') || t.toLowerCase().includes('doublestrike'))),
+    gravestone: Boolean(cardData.gravestone || cardData.traits?.some((t: string) => t.toLowerCase().includes('gravestone'))),
     description: cardData.description,
     heroClass: cardData.heroClass,
     laneRequirement: cardData.laneRequirement,
@@ -301,7 +302,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case 'PLAY_CARD': {
-      const { side, cardId, laneIndex } = action
+      const { side, laneIndex } = action
+      const cardId = action.cardId || (action as any).card?.id
 
       // Phase validation
       if (side === 'zombies' && state.phase === 'ZOMBIE_PLAY') {
