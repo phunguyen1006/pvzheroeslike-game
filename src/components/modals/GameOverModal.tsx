@@ -12,6 +12,13 @@ export interface GameOverModalProps {
   totalDamageDealt?: number
   minionsDefeated?: number
   starsWon?: number
+  eventTicketsEarned?: {
+    base: number
+    boost: number
+    total: number
+    isBoosted: boolean
+    heroName?: string
+  }
   onRematch: () => void
   onMainMenu?: () => void
   onHeroSelect?: () => void
@@ -36,6 +43,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   totalDamageDealt,
   minionsDefeated,
   starsWon,
+  eventTicketsEarned,
   onRematch,
   onMainMenu,
   onHeroSelect,
@@ -158,6 +166,21 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               </div>
             )}
           </div>
+
+          {/* Event Tickets Reward Banner */}
+          {eventTicketsEarned && eventTicketsEarned.total > 0 && (
+            <div className="gameover-event-ticket-banner">
+              <div className="ticket-banner-badge">
+                <span className="ticket-icon">🎟️</span>
+                <span className="ticket-amount">+{eventTicketsEarned.total} VÉ SỰ KIỆN</span>
+              </div>
+              {eventTicketsEarned.isBoosted && (
+                <span className="ticket-boost-note">
+                  ⚡ X2 Vé Tăng Tốc từ Hero [{eventTicketsEarned.heroName || 'Sự Kiện'}] (+{eventTicketsEarned.boost} Thưởng)!
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Action Decision Buttons */}

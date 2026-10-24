@@ -4,10 +4,15 @@ import {
   CHAPTER_2_MISSIONS,
   ALL_CAMPAIGN_MISSIONS,
   CAMPAIGN_CHAPTERS,
+  ZOMBIE_CHAPTER_1_MISSIONS,
+  ZOMBIE_CAMPAIGN_CHAPTERS,
+  ALL_ZOMBIE_CAMPAIGN_MISSIONS,
   buildMissionLanes,
   calculateMissionStars,
   loadCampaignProgress,
   saveCampaignProgress,
+  loadZombieCampaignProgress,
+  saveZombieCampaignProgress,
 } from '../data/campaign'
 import { createInitialGameState, gameReducer } from '../engine/reducer'
 import { ALL_CARDS, PLANT_CARDS, ZOMBIE_CARDS } from '../data/cards'
@@ -483,3 +488,176 @@ describe('Deck Builder - Cost Range Filters & JSON Deck Code Export/Import', () 
     expect(exceedsCap.error).toContain('vượt quá giới hạn tối đa 40 lá')
   })
 })
+
+describe('Zombie Campaign Mode - Chapter 1: Zombie Onslaught Specifications', () => {
+  let store: Record<string, string> = {}
+
+  beforeEach(() => {
+    store = {}
+    globalThis.localStorage = {
+      getItem: (key: string) => store[key] ?? null,
+      setItem: (key: string, value: string) => {
+        store[key] = value
+      },
+      removeItem: (key: string) => {
+        delete store[key]
+      },
+      clear: () => {
+        store = {}
+      },
+      length: 0,
+      key: () => null,
+    } as any
+  })
+
+  it('contains exactly 5 progressive missions in Zombie Chapter 1', () => {
+    expect(ZOMBIE_CHAPTER_1_MISSIONS).toHaveLength(5)
+    expect(ZOMBIE_CHAPTER_1_MISSIONS.map((m) => m.missionNumber)).toEqual([1, 2, 3, 4, 5])
+    expect(ZOMBIE_CHAPTER_1_MISSIONS.every((m) => m.faction === 'zombies')).toBe(true)
+    expect(ALL_ZOMBIE_CAMPAIGN_MISSIONS).toHaveLength(5)
+    expect(ZOMBIE_CAMPAIGN_CHAPTERS).toHaveLength(1)
+  })
+
+  it('Mission Z1 matches Green Shadow boss with starting Brains bonus', () => {
+    const mz1 = ZOMBIE_CHAPTER_1_MISSIONS[0]
+    expect(mz1.id).toBe('zombie_mission_1')
+    expect(mz1.bossHeroId).toBe('hero_green_shadow')
+    expect(mz1.bossHeroName).toBe('Green Shadow')
+    expect(mz1.playerHeroId).toBe('hero_super_brainz')
+    expect(mz1.difficulty).toBe('easy')
+    expect(mz1.rule.startingBrainsBonus).toBe(1)
+    expect(mz1.rewards.unlocksNext).toBe(true)
+  })
+
+  it('Mission Z2 matches Solar Flare boss with pre-placed Sunflower and Swabbie', () => {
+    const mz2 = ZOMBIE_CHAPTER_1_MISSIONS[1]
+    expect(mz2.bossHeroId).toBe('hero_solar_flare')
+    expect(mz2.difficulty).toBe('normal')
+
+    const sunflower = mz2.rule.initialMinions?.find(
+      (m) => m.cardId === 'plant_sunflower'
+    )
+    expect(sunflower).toBeDefined()
+    expect(sunflower?.laneIndex).toBe(0)
+    expect(sunflower?.side).toBe('plants')
+
+    const swabbie = mz2.rule.initialMinions?.find(
+      (m) => m.cardId === 'zombie_swabbie'
+    )
+    expect(swabbie).toBeDefined()
+    expect(swabbie?.laneIndex).toBe(4)
+    expect(swabbie?.side).toBe('zombies')
+  })
+
+  it('Mission Z3 matches Wall-Knight boss with Cone Zone and pre-placed Wall-Nut', () => {
+    const mz3 = ZOMBIE_CHAPTER_1_MISSIONS[2]
+    expect(mz3.bossHeroId).toBe('hero_wall_knight')
+    expect(mz3.difficulty).toBe('normal')
+
+    const coneZone = mz3.rule.initialEnvironments?.find(
+      (e) => e.environmentCardId === 'zombie_cone_zone'
+    )
+    expect(coneZone).toBeDefined()
+    expect(coneZone?.laneIndex).toBe(1)
+
+    const wallNut = mz3.rule.initialMinions?.find(
+      (m) => m.cardId === 'plant_wall_nut'
+    )
+    expect(wallNut).toBeDefined()
+    expect(wallNut?.laneIndex).toBe(0)
+    expect(wallNut?.side).toBe('plants')
+  })
+
+  it('Mission Z4 matches Spudow with Spikeweed Sector, Laser Base Alpha and +1 Brains', () => {
+    const mz4 = ZOMBIE_CHAPTER_1_MISSIONS[3]
+    expect(mz4.bossHeroId).toBe('hero_spudow')
+    expect(mz4.difficulty).toBe('hard')
+    expect(mz4.rule.startingBrainsBonus).toBe(1)
+
+    const spikeweed = mz4.rule.initialEnvironments?.find(
+      (e) => e.environmentCardId === 'plant_spikeweed_sector'
+    )
+    expect(spikeweed).toBeDefined()
+    expect(spikeweed?.laneIndex).toBe(0)
+
+    const laserBase = mz4.rule.initialEnvironments?.find(
+      (e) => e.environmentCardId === 'zombie_laser_base_alpha'
+    )
+    expect(laserBase).toBeDefined()
+    expect(laserBase?.laneIndex).toBe(2)
+  })
+
+  it('Mission Z5 matches Chompzilla Boss Finale with dual environments and +2 energy', () => {
+    const mz5 = ZOMBIE_CHAPTER_1_MISSIONS[4]
+    expect(mz5.bossHeroId).toBe('hero_chompzilla')
+    expect(mz5.difficulty).toBe('boss')
+    expect(mz5.rule.startingSunBonus).toBe(2)
+    expect(mz5.rule.startingBrainsBonus).toBe(2)
+    expect(mz5.rewards.gems).toBe(500)
+    expect(mz5.rule.initialEnvironments).toHaveLength(2)
+
+    const bog = mz5.rule.initialEnvironments?.find(
+      (e) => e.environmentCardId === 'plant_bog_of_sunken_hope'
+    )
+    expect(bog).toBeDefined()
+    expect(bog?.laneIndex).toBe(3)
+
+    const medulla = mz5.rule.initialEnvironments?.find(
+      (e) => e.environmentCardId === 'zombie_medulla_nebula'
+    )
+    expect(medulla).toBeDefined()
+    expect(medulla?.laneIndex).toBe(1)
+  })
+
+  it('buildMissionLanes accurately populates terrain and minions for Zombie Mission Z3', () => {
+    const mz3 = ZOMBIE_CHAPTER_1_MISSIONS[2]
+    const lanes = buildMissionLanes(mz3)
+
+    expect(lanes[1].environment?.id).toBe('zombie_cone_zone')
+    expect(lanes[0].plantMinion?.cardId).toBe('plant_wall_nut')
+    expect(lanes[0].plantMinion?.side).toBe('plants')
+  })
+
+  it('calculateMissionStars scores Zombie campaign missions evaluating Zombie victory', () => {
+    const mz1 = ZOMBIE_CHAPTER_1_MISSIONS[0]
+    // Plant win means Zombie player lost -> 0 stars
+    expect(calculateMissionStars(mz1, 'plants', 20, 5)).toBe(0)
+
+    // Zombie win with low HP and slow turns -> 1 star
+    expect(calculateMissionStars(mz1, 'zombies', 8, 12)).toBe(1)
+
+    // Zombie win with HP >= 12 -> 2 stars
+    expect(calculateMissionStars(mz1, 'zombies', 14, 10)).toBe(2)
+
+    // Zombie win in <= 8 turns -> 2 stars
+    expect(calculateMissionStars(mz1, 'zombies', 10, 7)).toBe(2)
+
+    // Zombie win with HP >= 12 AND turns <= 8 -> 3 stars!
+    expect(calculateMissionStars(mz1, 'zombies', 16, 6)).toBe(3)
+  })
+
+  it('loadZombieCampaignProgress and saveZombieCampaignProgress manage isolated zombie progress', () => {
+    // Initial progress
+    const init = loadZombieCampaignProgress()
+    expect(init.unlockedMissionNumber).toBe(1)
+    expect(Object.keys(init.completedMissions)).toHaveLength(0)
+
+    // Save custom progress
+    saveZombieCampaignProgress({
+      unlockedMissionNumber: 2,
+      completedMissions: {
+        zombie_mission_1: { stars: 3, completedAt: '2026-10-24T00:00:00Z' },
+      },
+    })
+
+    const updated = loadZombieCampaignProgress()
+    expect(updated.unlockedMissionNumber).toBe(2)
+    expect(updated.completedMissions['zombie_mission_1']?.stars).toBe(3)
+
+    // Plant progress remains isolated and empty
+    const plantProgress = loadCampaignProgress()
+    expect(plantProgress.unlockedMissionNumber).toBe(1)
+    expect(Object.keys(plantProgress.completedMissions)).toHaveLength(0)
+  })
+})
+

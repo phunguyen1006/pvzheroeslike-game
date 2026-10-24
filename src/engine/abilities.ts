@@ -4,11 +4,63 @@
  */
 
 import type { GameState, Side, Minion, Card, CombatEvent, HeroState } from './types'
-import { applyHeroDamage } from './combat'
+import { applyHeroDamage, triggerBonusAttack } from './combat'
 
 export interface AbilityTriggerResult {
   updatedState: GameState
   events: string[]
+}
+
+export function isSportsZombie(minion: Minion): boolean {
+  const tribe = (minion.tribe || '').toLowerCase()
+  const id = minion.cardId.toLowerCase()
+  const name = minion.name.toLowerCase()
+  return (
+    tribe.includes('sports') ||
+    id.includes('football') ||
+    id.includes('coach') ||
+    id.includes('all_star') ||
+    id.includes('arm_wrestler') ||
+    name.includes('coach') ||
+    name.includes('football')
+  )
+}
+
+export function isScienceZombie(minion: Minion): boolean {
+  const tribe = (minion.tribe || '').toLowerCase()
+  const id = minion.cardId.toLowerCase()
+  const name = minion.name.toLowerCase()
+  return (
+    tribe.includes('science') ||
+    id.includes('scientist') ||
+    id.includes('drone') ||
+    id.includes('spacetime') ||
+    id.includes('interdimensional') ||
+    name.includes('scientist')
+  )
+}
+
+export function isMushroomPlant(minion: Minion): boolean {
+  const tribe = (minion.tribe || '').toLowerCase()
+  const id = minion.cardId.toLowerCase()
+  const name = minion.name.toLowerCase()
+  return (
+    tribe.includes('mushroom') ||
+    id.includes('shroom') ||
+    name.includes('shroom') ||
+    name.includes('mushroom')
+  )
+}
+
+export function isPeaPlant(minion: Minion): boolean {
+  const tribe = (minion.tribe || '').toLowerCase()
+  const id = minion.cardId.toLowerCase()
+  const name = minion.name.toLowerCase()
+  return (
+    tribe.includes('pea') ||
+    id.includes('pea') ||
+    name.includes('pea')
+  )
 }
 
 /**
@@ -390,6 +442,67 @@ export function triggerWhenPlayed(
       }
       break
     }
+
+    case 'zombie_coach': {
+      // Zombie Coach: All Sports Zombies cannot be hurt this turn
+      let sportsCount = 0
+      updatedState.lanes.forEach(l => {
+        if (l.zombieMinion && isSportsZombie(l.zombieMinion)) {
+          l.zombieMinion = {
+            ...l.zombieMinion,
+            isInvulnerable: true,
+            invulnerableThisTurn: true,
+          }
+          sportsCount++
+        }
+      })
+      events.push(`🏈 Zombie Coach thổi còi huấn luyện: ${sportsCount} Zombie thuộc tộc Thể thao (Sports) không thể bị tổn thương trong lượt này!`)
+      break
+    }
+
+    case 'zombie_gadget_scientist': {
+      // Gadget Scientist: All Science Zombies do a bonus attack
+      events.push(`🔬 Gadget Scientist kích hoạt phát minh: Toàn bộ Science Zombies trên sân lập tức tung đòn Bonus Attack!`)
+      for (let i = 0; i < updatedState.lanes.length; i++) {
+        if (updatedState.winner) break
+        const currentZ = updatedState.lanes[i].zombieMinion
+        if (currentZ && isScienceZombie(currentZ) && currentZ.currentHealth > 0) {
+          const bonusRes = triggerBonusAttack(updatedState, i, 'zombies')
+          updatedState = bonusRes.updatedState
+          events.push(...bonusRes.logs)
+        }
+      }
+      break
+    }
+
+    case 'plant_buff_shroom': {
+      // Buff-Shroom: All Mushrooms get +1/+1
+      let mushroomCount = 0
+      updatedState.lanes.forEach(l => {
+        if (l.plantMinion && isMushroomPlant(l.plantMinion)) {
+          l.plantMinion = {
+            ...l.plantMinion,
+            currentAttack: l.plantMinion.currentAttack + 1,
+            baseAttack: l.plantMinion.baseAttack + 1,
+            currentHealth: l.plantMinion.currentHealth + 1,
+            maxHealth: l.plantMinion.maxHealth + 1,
+          }
+          mushroomCount++
+        }
+        if (l.plantTeamUpMinion && isMushroomPlant(l.plantTeamUpMinion)) {
+          l.plantTeamUpMinion = {
+            ...l.plantTeamUpMinion,
+            currentAttack: l.plantTeamUpMinion.currentAttack + 1,
+            baseAttack: l.plantTeamUpMinion.baseAttack + 1,
+            currentHealth: l.plantTeamUpMinion.currentHealth + 1,
+            maxHealth: l.plantTeamUpMinion.maxHealth + 1,
+          }
+          mushroomCount++
+        }
+      })
+      events.push(`🍄 Buff-Shroom giải phóng bào tử: Tăng +1/+1 cho ${mushroomCount} Mushroom trên sân!`)
+      break
+    }
   }
 
   // 2. React to other minions on board
@@ -415,6 +528,44 @@ export function triggerWhenPlayed(
       })
     }
 
+    // The Podfather: "When you play another Pea, that Pea gets +2/+2"
+    const isPea = minion.name.toLowerCase().includes('pea') || minion.cardId.includes('pea')
+    if (isPea) {
+      let podfatherCount = 0
+      updatedState.lanes.forEach(l => {
+        if (l.plantMinion && l.plantMinion.cardId === 'plant_podfather' && l.plantMinion.instanceId !== minion.instanceId) {
+          podfatherCount++
+        }
+        if (l.plantTeamUpMinion && l.plantTeamUpMinion.cardId === 'plant_podfather' && l.plantTeamUpMinion.instanceId !== minion.instanceId) {
+          podfatherCount++
+        }
+      })
+
+      if (podfatherCount > 0) {
+        const buff = podfatherCount * 2
+        const targetLane = updatedState.lanes[laneIndex]
+        if (targetLane.plantMinion?.instanceId === minion.instanceId) {
+          targetLane.plantMinion = {
+            ...targetLane.plantMinion,
+            currentAttack: targetLane.plantMinion.currentAttack + buff,
+            baseAttack: targetLane.plantMinion.baseAttack + buff,
+            currentHealth: targetLane.plantMinion.currentHealth + buff,
+            maxHealth: targetLane.plantMinion.maxHealth + buff,
+          }
+          events.push(`🌱 The Podfather ban sức mạnh (+${buff}/+${buff}) cho ${targetLane.plantMinion.name} (${targetLane.plantMinion.currentAttack}/${targetLane.plantMinion.currentHealth})!`)
+        } else if (targetLane.plantTeamUpMinion?.instanceId === minion.instanceId) {
+          targetLane.plantTeamUpMinion = {
+            ...targetLane.plantTeamUpMinion,
+            currentAttack: targetLane.plantTeamUpMinion.currentAttack + buff,
+            baseAttack: targetLane.plantTeamUpMinion.baseAttack + buff,
+            currentHealth: targetLane.plantTeamUpMinion.currentHealth + buff,
+            maxHealth: targetLane.plantTeamUpMinion.maxHealth + buff,
+          }
+          events.push(`🌱 The Podfather ban sức mạnh (+${buff}/+${buff}) cho ${targetLane.plantTeamUpMinion.name} (${targetLane.plantTeamUpMinion.currentAttack}/${targetLane.plantTeamUpMinion.currentHealth})!`)
+        }
+      }
+    }
+
     // Arm Wrestler (Zombie side reaction): "When a Plant is played in this lane, this gets +1/+1"
     const lane = updatedState.lanes[laneIndex]
     if (lane.zombieMinion && lane.zombieMinion.cardId === 'zombie_arm_wrestler') {
@@ -436,6 +587,7 @@ export function triggerWhenPlayed(
  */
 export function isFlowerPlant(minion: Minion): boolean {
   if (minion.side !== 'plants') return false
+  if (minion.tribe?.toLowerCase().includes('flower')) return true
   const id = minion.cardId.toLowerCase()
   const name = minion.name.toLowerCase()
   return (

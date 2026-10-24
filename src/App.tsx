@@ -17,6 +17,8 @@ import { SuperBlockModal } from './components/ui/SuperBlockModal'
 import { MulliganModal } from './components/ui/MulliganModal'
 import { ComicIntro } from './components/modals/ComicIntro'
 import { CardDetailModal } from './components/modals/CardDetailModal'
+import { SoundSettingsModal } from './components/modals/SoundSettingsModal'
+import { HeroEmotesBar, type EmoteType } from './components/hero/HeroEmotesBar'
 import { PhaseBanner } from './components/ui/PhaseBanner'
 import { MainMenu } from './components/screens/MainMenu'
 import { HeroSelect } from './components/screens/HeroSelect'
@@ -28,7 +30,14 @@ import {
   calculateMissionStars,
   loadCampaignProgress,
   saveCampaignProgress,
+  loadZombieCampaignProgress,
+  saveZombieCampaignProgress,
 } from './data/campaign'
+import {
+  calculateMatchTickets,
+  addEventTickets,
+  type MatchTicketResult,
+} from './data/eventTickets'
 import type { CampaignMission, Minion as MinionType } from './engine/types'
 import type { Projectile, FloatingTextItem, ShockwaveItem } from './components/board/CombatVFXLayer'
 import { soundManager } from './audio/SoundManager'
@@ -38,6 +47,7 @@ export function App() {
   const [currentScreen, setCurrentScreen] = useState<'menu' | 'hero_select' | 'deck_builder' | 'campaign' | 'battle'>('menu')
   const [activeCampaignMission, setActiveCampaignMission] = useState<CampaignMission | null>(null)
   const [campaignStarsWon, setCampaignStarsWon] = useState<number | undefined>(undefined)
+  const [matchTicketsEarned, setMatchTicketsEarned] = useState<MatchTicketResult | undefined>(undefined)
   const [inspectModalData, setInspectModalData] = useState<{
     card?: CardType
     minion?: MinionType
@@ -76,6 +86,29 @@ export function App() {
   const [zombieHeroHurt, setZombieHeroHurt] = useState(false)
   const [isMuted, setIsMuted] = useState(soundManager.getMuted())
   const [isCombatLogOpen, setIsCombatLogOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [playerEmote, setPlayerEmote] = useState<{ text: string; emoji?: string } | null>(null)
+  const [opponentEmote, setOpponentEmote] = useState<{ text: string; emoji?: string } | null>(null)
+
+  const handleTriggerPlayerEmote = (type: EmoteType, speech: string, emoji: string) => {
+    setPlayerEmote({ text: speech, emoji })
+
+    // AI opponent reactive retort
+    const opponentReplies: Record<EmoteType, { text: string; emoji: string; replyType: EmoteType }> = {
+      hello: { text: 'Chuẩn bị tinh thần đi!', emoji: '👋', replyType: 'hello' },
+      taunt: { text: 'Chưa biết mèo nào cắn mỉu nào đâu!', emoji: '😏', replyType: 'taunt' },
+      oops: { text: 'Haha! Đúng lúc sơ hở rồi!', emoji: '😈', replyType: 'taunt' },
+      victory: { text: 'Còn quá sớm để ăn mừng!', emoji: '🛡️', replyType: 'oops' },
+    }
+
+    setTimeout(() => {
+      const reply = opponentReplies[type]
+      if (reply) {
+        setOpponentEmote({ text: reply.text, emoji: reply.emoji })
+        soundManager.playEmote(reply.replyType)
+      }
+    }, 1400)
+  }
 
   const isPlayerPlantTurn = gameState.phase === 'PLANT_PLAY'
 
@@ -90,6 +123,7 @@ export function App() {
   const handleStartWithHeroes = (plantId: string, zombieId: string, diff: AIDifficulty = 'normal') => {
     setActiveCampaignMission(null)
     setCampaignStarsWon(undefined)
+    setMatchTicketsEarned(undefined)
     setSelectedHeroes({ plant: plantId, zombie: zombieId })
     setAiDifficulty(diff)
     dispatch({
@@ -107,8 +141,16 @@ export function App() {
   const handleStartCampaignMission = (mission: CampaignMission) => {
     setActiveCampaignMission(mission)
     setCampaignStarsWon(undefined)
-    const pId = mission.playerHeroId || 'hero_green_shadow'
-    const zId = mission.bossHeroId
+    setMatchTicketsEarned(undefined)
+
+    const isZombieFaction = mission.faction === 'zombies'
+    const pId = isZombieFaction
+      ? mission.bossHeroId
+      : (mission.playerHeroId || 'hero_green_shadow')
+    const zId = isZombieFaction
+      ? (mission.playerHeroId || 'hero_super_brainz')
+      : mission.bossHeroId
+
     setSelectedHeroes({ plant: pId, zombie: zId })
 
     const diff: AIDifficulty =
@@ -134,36 +176,82 @@ export function App() {
     setCurrentScreen('battle')
   }
 
-  // Calculate campaign stars and persist progress upon match conclusion
+  // Calculate campaign stars and persist progress + event tickets upon match conclusion
   useEffect(() => {
-    if (gameState.winner && activeCampaignMission) {
-      const stars = calculateMissionStars(
-        activeCampaignMission,
+    if (gameState.winner) {
+      // 1. Weekly Event Tickets Calculation & Award
+      const isZombiePlayer = activeCampaignMission?.faction === 'zombies'
+      const playerSide = isZombiePlayer ? 'zombies' : 'plants'
+      const playerHeroId = isZombiePlayer ? selectedHeroes.zombie : selectedHeroes.plant
+      const ticketResult = calculateMatchTickets(
         gameState.winner,
-        gameState.plantHero.hp,
-        gameState.turn
+        playerSide,
+        playerHeroId
       )
-      setCampaignStarsWon(stars)
+      if (ticketResult.total > 0) {
+        addEventTickets(ticketResult.total)
+      }
+      setMatchTicketsEarned(ticketResult)
 
-      if (stars > 0) {
-        const progress = loadCampaignProgress()
-        const prevRecord = progress.completedMissions[activeCampaignMission.id]
-        const prevStars = prevRecord?.stars || 0
-        progress.completedMissions[activeCampaignMission.id] = {
-          stars: Math.max(stars, prevStars),
-          completedAt: new Date().toISOString(),
-        }
+      // 2. Campaign Mission Stars & Progress
+      if (activeCampaignMission) {
+        const playerHp = isZombiePlayer
+          ? gameState.zombieHero.hp
+          : gameState.plantHero.hp
+        const stars = calculateMissionStars(
+          activeCampaignMission,
+          gameState.winner,
+          playerHp,
+          gameState.turn
+        )
+        setCampaignStarsWon(stars)
 
-        if (activeCampaignMission.rewards.unlocksNext) {
-          progress.unlockedMissionNumber = Math.max(
-            progress.unlockedMissionNumber,
-            activeCampaignMission.missionNumber + 1
-          )
+        if (stars > 0) {
+          if (isZombiePlayer) {
+            const zProgress = loadZombieCampaignProgress()
+            const prevRecord = zProgress.completedMissions[activeCampaignMission.id]
+            const prevStars = prevRecord?.stars || 0
+            zProgress.completedMissions[activeCampaignMission.id] = {
+              stars: Math.max(stars, prevStars),
+              completedAt: new Date().toISOString(),
+            }
+
+            if (activeCampaignMission.rewards.unlocksNext) {
+              zProgress.unlockedMissionNumber = Math.max(
+                zProgress.unlockedMissionNumber,
+                activeCampaignMission.missionNumber + 1
+              )
+            }
+            saveZombieCampaignProgress(zProgress)
+          } else {
+            const progress = loadCampaignProgress()
+            const prevRecord = progress.completedMissions[activeCampaignMission.id]
+            const prevStars = prevRecord?.stars || 0
+            progress.completedMissions[activeCampaignMission.id] = {
+              stars: Math.max(stars, prevStars),
+              completedAt: new Date().toISOString(),
+            }
+
+            if (activeCampaignMission.rewards.unlocksNext) {
+              progress.unlockedMissionNumber = Math.max(
+                progress.unlockedMissionNumber,
+                activeCampaignMission.missionNumber + 1
+              )
+            }
+            saveCampaignProgress(progress)
+          }
         }
-        saveCampaignProgress(progress)
       }
     }
-  }, [gameState.winner, activeCampaignMission, gameState.plantHero.hp, gameState.turn])
+  }, [
+    gameState.winner,
+    activeCampaignMission,
+    gameState.plantHero.hp,
+    gameState.zombieHero.hp,
+    gameState.turn,
+    selectedHeroes.plant,
+    selectedHeroes.zombie,
+  ])
 
   // Handle saving custom deck from DeckBuilder
   const handleSaveDeck = (side: 'plants' | 'zombies', deck: CardType[]) => {
@@ -515,6 +603,7 @@ export function App() {
     nextLaneToExecuteRef.current = null
     setShowComicIntro(false)
     setCampaignStarsWon(undefined)
+    setMatchTicketsEarned(undefined)
 
     if (activeCampaignMission) {
       dispatch({
@@ -674,6 +763,9 @@ export function App() {
             unreadLogCount={gameState.combatLog.length}
             isMuted={isMuted}
             onToggleMute={toggleSound}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            activeEmote={opponentEmote}
+            onDismissEmote={() => setOpponentEmote(null)}
             onReturnHome={() => setCurrentScreen('menu')}
           />
 
@@ -701,6 +793,8 @@ export function App() {
             side="plants"
             phase={gameState.phase}
             isHurt={plantHeroHurt}
+            activeEmote={playerEmote}
+            onDismissEmote={() => setPlayerEmote(null)}
             onSuperBlockClick={() => {
               if (gameState.plantHero.blockMeter >= 8) {
                 soundManager.playSuperBlock()
@@ -710,9 +804,9 @@ export function App() {
             }}
           />
 
-          {/* 4. Player Hand Shelf with Iconic Circular Action Button */}
+          {/* 4. Player Hand Shelf with Iconic Circular Action Button & Emotes */}
           <footer className="pvz-player-hand-shelf">
-            {/* Card Selection Status Cue */}
+            {/* Card Selection Status Cue & Hero Emotes Bar */}
             <div className="hand-prompt-strip">
               <span className="prompt-content">
                 {selectedCard
@@ -723,6 +817,11 @@ export function App() {
                   ? '⚔️ Nhấn Nút GIAO TRANH để bắt đầu đọ sức!'
                   : '⏳ Đang chờ lượt đối thủ...'}
               </span>
+              <HeroEmotesBar
+                heroSide="plants"
+                onTriggerEmote={handleTriggerPlayerEmote}
+                disabled={isCombatResolving}
+              />
             </div>
 
             {/* Hand Cards Arc and Circular Action Button */}
@@ -881,6 +980,7 @@ export function App() {
           zombieHeroAvatar={gameState.zombieHero.avatar}
           turnCount={gameState.turn}
           starsWon={campaignStarsWon}
+          eventTicketsEarned={matchTicketsEarned}
           onRematch={handleRematch}
           onCampaignMap={
             activeCampaignMission
@@ -915,6 +1015,15 @@ export function App() {
           onClose={() => setInspectModalData(null)}
         />
       )}
+
+      {/* Sound Settings Modal */}
+      <SoundSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => {
+          setIsSettingsOpen(false)
+          setIsMuted(soundManager.getMuted())
+        }}
+      />
     </div>
   )
 }

@@ -185,22 +185,37 @@ export function resolveSingleLaneCombat(
   // ========================================================
   if (lane.environment) {
     if (lane.environment.id === 'plant_spikeweed_sector' && zombie) {
-      // Spikeweed Sector: 2 damage to zombie before combat
-      zombie.currentHealth = Math.max(0, zombie.currentHealth - 2)
-      events.push({
-        laneIndex,
-        attackerSide: 'plants',
-        attackerName: 'Spikeweed Sector',
-        target: 'minion',
-        targetSide: 'zombies',
-        damageDealt: 2,
-        isBlocked: false,
-        isLethal: zombie.currentHealth <= 0,
-        description: `Spikeweed Sector gây 2 sát thương lên ${zombie.name}${zombie.currentHealth <= 0 ? ' (Tiêu diệt trước giao tranh!)' : ''}`,
-      })
-      if (zombie.currentHealth <= 0) {
-        deadUnits.push({ minion: zombie, laneIndex })
-        zombie = null
+      // Spikeweed Sector: 2 damage to zombie before combat (negated if invulnerable)
+      const isZInv = Boolean(zombie.isInvulnerable || zombie.invulnerableThisTurn)
+      if (isZInv) {
+        events.push({
+          laneIndex,
+          attackerSide: 'plants',
+          attackerName: 'Spikeweed Sector',
+          target: 'minion',
+          targetSide: 'zombies',
+          damageDealt: 0,
+          isBlocked: false,
+          isLethal: false,
+          description: `Spikeweed Sector gây 0 sát thương lên ${zombie.name} (Miễn thương - Invulnerable)!`,
+        })
+      } else {
+        zombie.currentHealth = Math.max(0, zombie.currentHealth - 2)
+        events.push({
+          laneIndex,
+          attackerSide: 'plants',
+          attackerName: 'Spikeweed Sector',
+          target: 'minion',
+          targetSide: 'zombies',
+          damageDealt: 2,
+          isBlocked: false,
+          isLethal: zombie.currentHealth <= 0,
+          description: `Spikeweed Sector gây 2 sát thương lên ${zombie.name}${zombie.currentHealth <= 0 ? ' (Tiêu diệt trước giao tranh!)' : ''}`,
+        })
+        if (zombie.currentHealth <= 0) {
+          deadUnits.push({ minion: zombie, laneIndex })
+          zombie = null
+        }
       }
     } else if (lane.environment.id === 'zombie_moon_base_z' && zombie) {
       // Moon Base Z: Overshoot 3 (3 damage to Plant Hero before combat)
@@ -285,8 +300,11 @@ export function resolveSingleLaneCombat(
       totalPlantAtk += plantTeamUp.currentAttack
     }
 
-    const dmgToZombie = Math.max(0, totalPlantAtk - zombieArmored)
-    const dmgToPlant = zombieCanAttack ? Math.max(0, zombie.currentAttack - plantArmored) : 0
+    const isZombieInvulnerable = Boolean(zombie.isInvulnerable || zombie.invulnerableThisTurn)
+    const isPlantInvulnerable = Boolean(plant.isInvulnerable || plant.invulnerableThisTurn)
+
+    const dmgToZombie = isZombieInvulnerable ? 0 : Math.max(0, totalPlantAtk - zombieArmored)
+    const dmgToPlant = isPlantInvulnerable ? 0 : (zombieCanAttack ? Math.max(0, zombie.currentAttack - plantArmored) : 0)
 
     const plantHasDeadly = Boolean(plant.deadly || plant.traits?.includes('deadly'))
     const zombieHasDeadly = Boolean(zombie.deadly || zombie.traits?.includes('deadly') || lane.environment?.id === 'zombie_laser_base_alpha')
@@ -299,7 +317,7 @@ export function resolveSingleLaneCombat(
     const plantHasDoubleStrike = Boolean(plant.doubleStrike || plant.traits?.includes('doubleStrike'))
 
     // Apply minion damage
-    if (dmgToZombie > 0) {
+    if (dmgToZombie > 0 && !isZombieInvulnerable) {
       zombie.currentHealth = plantHasDeadly ? 0 : Math.max(0, zombie.currentHealth - dmgToZombie)
       // Snow Pea / Freeze trait
       if (plantHasFreezeTrait && zombie.currentHealth > 0) {
@@ -361,7 +379,7 @@ export function resolveSingleLaneCombat(
       }
     }
 
-    if (dmgToPlant > 0) {
+    if (dmgToPlant > 0 && !isPlantInvulnerable) {
       plant.currentHealth = zombieHasDeadly ? 0 : Math.max(0, plant.currentHealth - dmgToPlant)
 
       // Briar Rose: When a Zombie hurts a Flower Plant, destroy that Zombie immediately
@@ -423,9 +441,13 @@ export function resolveSingleLaneCombat(
       adjIndices.forEach(adjIdx => {
         const adjLane = updatedLanes[adjIdx]
         if (adjLane.zombieMinion && adjLane.zombieMinion.currentHealth > 0) {
-          adjLane.zombieMinion = {
-            ...adjLane.zombieMinion,
-            currentHealth: Math.max(0, adjLane.zombieMinion.currentHealth - splashDmg),
+          const isAdjInv = Boolean(adjLane.zombieMinion.isInvulnerable || adjLane.zombieMinion.invulnerableThisTurn)
+          const actualSplashDmg = isAdjInv ? 0 : splashDmg
+          if (!isAdjInv) {
+            adjLane.zombieMinion = {
+              ...adjLane.zombieMinion,
+              currentHealth: Math.max(0, adjLane.zombieMinion.currentHealth - actualSplashDmg),
+            }
           }
           events.push({
             laneIndex: adjIdx,
@@ -433,10 +455,12 @@ export function resolveSingleLaneCombat(
             attackerName: `${plant.name} (Splash Damage ${splashDmg})`,
             target: 'minion',
             targetSide: 'zombies',
-            damageDealt: splashDmg,
+            damageDealt: actualSplashDmg,
             isBlocked: false,
             isLethal: adjLane.zombieMinion.currentHealth <= 0,
-            description: `💥 ${plant.name} gây ${splashDmg} Splash Damage lan sang ${adjLane.zombieMinion.name} tại làn ${adjIdx}!`,
+            description: isAdjInv
+              ? `💥 ${adjLane.zombieMinion.name} tại làn ${adjIdx} Miễn thương (Invulnerable) trước Splash Damage!`
+              : `💥 ${plant.name} gây ${splashDmg} Splash Damage lan sang ${adjLane.zombieMinion.name} tại làn ${adjIdx}!`,
           })
           if (adjLane.zombieMinion.currentHealth <= 0) {
             deadUnits.push({ minion: adjLane.zombieMinion, laneIndex: adjIdx })
@@ -452,10 +476,13 @@ export function resolveSingleLaneCombat(
       adjIndices.forEach(adjIdx => {
         const adjLane = updatedLanes[adjIdx]
         if (adjLane.zombieMinion && adjLane.zombieMinion.currentHealth > 0) {
-          const dmg = plant.currentAttack
-          adjLane.zombieMinion = {
-            ...adjLane.zombieMinion,
-            currentHealth: Math.max(0, adjLane.zombieMinion.currentHealth - dmg),
+          const isAdjInv = Boolean(adjLane.zombieMinion.isInvulnerable || adjLane.zombieMinion.invulnerableThisTurn)
+          const dmg = isAdjInv ? 0 : plant.currentAttack
+          if (!isAdjInv) {
+            adjLane.zombieMinion = {
+              ...adjLane.zombieMinion,
+              currentHealth: Math.max(0, adjLane.zombieMinion.currentHealth - dmg),
+            }
           }
           events.push({
             laneIndex: adjIdx,
@@ -466,7 +493,9 @@ export function resolveSingleLaneCombat(
             damageDealt: dmg,
             isBlocked: false,
             isLethal: adjLane.zombieMinion.currentHealth <= 0,
-            description: `🌸 ${plant.name} trên Môi trường bắn sang làn ${adjIdx} gây ${dmg} sát thương lên ${adjLane.zombieMinion.name}!`,
+            description: isAdjInv
+              ? `🌸 ${plant.name} bắn sang làn ${adjIdx} nhưng ${adjLane.zombieMinion.name} Miễn thương (Invulnerable)!`
+              : `🌸 ${plant.name} trên Môi trường bắn sang làn ${adjIdx} gây ${dmg} sát thương lên ${adjLane.zombieMinion.name}!`,
           })
           if (adjLane.zombieMinion.currentHealth <= 0) {
             deadUnits.push({ minion: adjLane.zombieMinion, laneIndex: adjIdx })
@@ -656,8 +685,9 @@ export function resolveSingleLaneCombat(
         }
       } else {
         // Zombie still alive, Double Strike attacks the zombie minion again
-        const secondDmg = Math.max(0, plant.currentAttack - zombieArmored)
-        if (secondDmg > 0) {
+        const isZombieInv = Boolean(zombie.isInvulnerable || zombie.invulnerableThisTurn)
+        const secondDmg = isZombieInv ? 0 : Math.max(0, plant.currentAttack - zombieArmored)
+        if (secondDmg > 0 && !isZombieInv) {
           zombie.currentHealth = plantHasDeadly ? 0 : Math.max(0, zombie.currentHealth - secondDmg)
           if (plantHasFreezeTrait && zombie.currentHealth > 0) {
             zombie.isFrozen = true
@@ -673,7 +703,9 @@ export function resolveSingleLaneCombat(
           isBlocked: false,
           isLethal: zombie.currentHealth <= 0,
           traitsTriggered: ['doubleStrike'],
-          description: `⚡ ${plant.name} kích hoạt Double Strike gây thêm ${secondDmg} damage lên ${zombie.name}${zombie.currentHealth <= 0 ? ' (Tiêu diệt!)' : ''}`,
+          description: isZombieInv
+            ? `⚡ ${plant.name} kích hoạt Double Strike nhưng ${zombie.name} Miễn thương (Invulnerable)!`
+            : `⚡ ${plant.name} kích hoạt Double Strike gây thêm ${secondDmg} damage lên ${zombie.name}${zombie.currentHealth <= 0 ? ' (Tiêu diệt!)' : ''}`,
         })
         if (plantHasStrikethrough) {
           const doubleStrikeRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
@@ -991,22 +1023,37 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
     // ========================================================
     if (lane.environment) {
       if (lane.environment.id === 'plant_spikeweed_sector' && zombie) {
-        // Spikeweed Sector: 2 damage to zombie before combat
-        zombie.currentHealth = Math.max(0, zombie.currentHealth - 2)
-        events.push({
-          laneIndex: i,
-          attackerSide: 'plants',
-          attackerName: 'Spikeweed Sector',
-          target: 'minion',
-          targetSide: 'zombies',
-          damageDealt: 2,
-          isBlocked: false,
-          isLethal: zombie.currentHealth <= 0,
-          description: `Spikeweed Sector gây 2 sát thương lên ${zombie.name}${zombie.currentHealth <= 0 ? ' (Tiêu diệt trước giao tranh!)' : ''}`,
-        })
-        if (zombie.currentHealth <= 0) {
-          deadUnitsThisLane.push({ minion: zombie, laneIndex: i })
-          zombie = null
+        // Spikeweed Sector: 2 damage to zombie before combat (negated if invulnerable)
+        const isZInv = Boolean(zombie.isInvulnerable || zombie.invulnerableThisTurn)
+        if (isZInv) {
+          events.push({
+            laneIndex: i,
+            attackerSide: 'plants',
+            attackerName: 'Spikeweed Sector',
+            target: 'minion',
+            targetSide: 'zombies',
+            damageDealt: 0,
+            isBlocked: false,
+            isLethal: false,
+            description: `Spikeweed Sector gây 0 sát thương lên ${zombie.name} (Miễn thương - Invulnerable)!`,
+          })
+        } else {
+          zombie.currentHealth = Math.max(0, zombie.currentHealth - 2)
+          events.push({
+            laneIndex: i,
+            attackerSide: 'plants',
+            attackerName: 'Spikeweed Sector',
+            target: 'minion',
+            targetSide: 'zombies',
+            damageDealt: 2,
+            isBlocked: false,
+            isLethal: zombie.currentHealth <= 0,
+            description: `Spikeweed Sector gây 2 sát thương lên ${zombie.name}${zombie.currentHealth <= 0 ? ' (Tiêu diệt trước giao tranh!)' : ''}`,
+          })
+          if (zombie.currentHealth <= 0) {
+            deadUnitsThisLane.push({ minion: zombie, laneIndex: i })
+            zombie = null
+          }
         }
       } else if (lane.environment.id === 'zombie_moon_base_z' && zombie) {
         // Moon Base Z: Overshoot 3 (3 damage to Plant Hero before combat)
@@ -1092,8 +1139,11 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
         totalPlantAtk += plantTeamUp.currentAttack
       }
 
-      const dmgToZombie = Math.max(0, totalPlantAtk - zombieArmored)
-      const dmgToPlant = zombieCanAttack ? Math.max(0, zombie.currentAttack - plantArmored) : 0
+      const isZombieInvulnerable = Boolean(zombie.isInvulnerable || zombie.invulnerableThisTurn)
+      const isPlantInvulnerable = Boolean(plant.isInvulnerable || plant.invulnerableThisTurn)
+
+      const dmgToZombie = isZombieInvulnerable ? 0 : Math.max(0, totalPlantAtk - zombieArmored)
+      const dmgToPlant = isPlantInvulnerable ? 0 : (zombieCanAttack ? Math.max(0, zombie.currentAttack - plantArmored) : 0)
 
       const plantHasDeadly = Boolean(plant.deadly || plant.traits?.includes('deadly'))
       const zombieHasDeadly = Boolean(zombie.deadly || zombie.traits?.includes('deadly') || lane.environment?.id === 'zombie_laser_base_alpha')
@@ -1106,7 +1156,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
       const plantHasDoubleStrike = Boolean(plant.doubleStrike || plant.traits?.includes('doubleStrike'))
 
       // Apply minion damage
-      if (dmgToZombie > 0) {
+      if (dmgToZombie > 0 && !isZombieInvulnerable) {
         zombie.currentHealth = plantHasDeadly ? 0 : Math.max(0, zombie.currentHealth - dmgToZombie)
         // Snow Pea / Freeze trait
         if (plantHasFreezeTrait && zombie.currentHealth > 0) {
@@ -1168,7 +1218,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
         }
       }
 
-      if (dmgToPlant > 0) {
+      if (dmgToPlant > 0 && !isPlantInvulnerable) {
         plant.currentHealth = zombieHasDeadly ? 0 : Math.max(0, plant.currentHealth - dmgToPlant)
 
         // Briar Rose: When a Zombie hurts a Flower Plant, destroy that Zombie immediately
@@ -1238,10 +1288,13 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
         adjIndices.forEach(adjIdx => {
           const adjLane = updatedLanes[adjIdx]
           if (adjLane.zombieMinion && adjLane.zombieMinion.currentHealth > 0) {
-            const dmg = plant.currentAttack
-            adjLane.zombieMinion = {
-              ...adjLane.zombieMinion,
-              currentHealth: Math.max(0, adjLane.zombieMinion.currentHealth - dmg),
+            const isAdjInv = Boolean(adjLane.zombieMinion.isInvulnerable || adjLane.zombieMinion.invulnerableThisTurn)
+            const dmg = isAdjInv ? 0 : plant.currentAttack
+            if (!isAdjInv) {
+              adjLane.zombieMinion = {
+                ...adjLane.zombieMinion,
+                currentHealth: Math.max(0, adjLane.zombieMinion.currentHealth - dmg),
+              }
             }
             events.push({
               laneIndex: adjIdx,
@@ -1252,7 +1305,9 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
               damageDealt: dmg,
               isBlocked: false,
               isLethal: adjLane.zombieMinion.currentHealth <= 0,
-              description: `🌸 ${plant.name} trên Môi trường bắn sang làn ${adjIdx} gây ${dmg} sát thương lên ${adjLane.zombieMinion.name}!`,
+              description: isAdjInv
+                ? `🌸 ${plant.name} bắn sang làn ${adjIdx} nhưng ${adjLane.zombieMinion.name} Miễn thương (Invulnerable)!`
+                : `🌸 ${plant.name} trên Môi trường bắn sang làn ${adjIdx} gây ${dmg} sát thương lên ${adjLane.zombieMinion.name}!`,
             })
             if (adjLane.zombieMinion.currentHealth <= 0) {
               adjLane.zombieMinion = null
@@ -1428,8 +1483,9 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
           }
         } else {
           // Zombie still alive, Double Strike attacks the zombie minion again
-          const secondDmg = Math.max(0, plant.currentAttack - zombieArmored)
-          if (secondDmg > 0) {
+          const isZombieInv = Boolean(zombie.isInvulnerable || zombie.invulnerableThisTurn)
+          const secondDmg = isZombieInv ? 0 : Math.max(0, plant.currentAttack - zombieArmored)
+          if (secondDmg > 0 && !isZombieInv) {
             zombie.currentHealth = plantHasDeadly ? 0 : Math.max(0, zombie.currentHealth - secondDmg)
             if (plantHasFreezeTrait && zombie.currentHealth > 0) {
               zombie.isFrozen = true
@@ -1445,7 +1501,9 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
             isBlocked: false,
             isLethal: zombie.currentHealth <= 0,
             traitsTriggered: ['doubleStrike'],
-            description: `⚡ ${plant.name} kích hoạt Double Strike gây thêm ${secondDmg} damage lên ${zombie.name}${zombie.currentHealth <= 0 ? ' (Tiêu diệt!)' : ''}`,
+            description: isZombieInv
+              ? `⚡ ${plant.name} kích hoạt Double Strike nhưng ${zombie.name} Miễn thương (Invulnerable)!`
+              : `⚡ ${plant.name} kích hoạt Double Strike gây thêm ${secondDmg} damage lên ${zombie.name}${zombie.currentHealth <= 0 ? ' (Tiêu diệt!)' : ''}`,
           })
           if (plantHasStrikethrough) {
             const doubleStrikeRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
@@ -1806,9 +1864,12 @@ export function triggerBonusAttack(
   if (side === 'plants') {
     const zombie = lane.zombieMinion
     if (zombie && zombie.currentHealth > 0) {
+      const isZInv = Boolean(zombie.isInvulnerable || zombie.invulnerableThisTurn)
       const zArmored = zombie.armored ?? (zombie.traits?.includes('armored') ? 1 : 0)
-      const dmg = Math.max(0, attacker.currentAttack - zArmored)
-      zombie.currentHealth = attackerHasDeadly ? 0 : Math.max(0, zombie.currentHealth - dmg)
+      const dmg = isZInv ? 0 : Math.max(0, attacker.currentAttack - zArmored)
+      if (!isZInv) {
+        zombie.currentHealth = attackerHasDeadly ? 0 : Math.max(0, zombie.currentHealth - dmg)
+      }
       const isLethal = zombie.currentHealth <= 0
 
       events.push({
@@ -1820,9 +1881,15 @@ export function triggerBonusAttack(
         damageDealt: dmg,
         isBlocked: false,
         isLethal,
-        description: `⚡ ${attacker.name} Bonus Attack gây ${dmg} sát thương lên ${zombie.name}${isLethal ? ' (Tiêu diệt!)' : ''}`,
+        description: isZInv
+          ? `⚡ ${attacker.name} Bonus Attack nhưng ${zombie.name} Miễn thương (Invulnerable)!`
+          : `⚡ ${attacker.name} Bonus Attack gây ${dmg} sát thương lên ${zombie.name}${isLethal ? ' (Tiêu diệt!)' : ''}`,
       })
-      logs.push(`⚡ ${attacker.name} Bonus Attack gây ${dmg} sát thương lên ${zombie.name}${isLethal ? ' (Tiêu diệt!)' : ''}`)
+      logs.push(
+        isZInv
+          ? `⚡ ${attacker.name} Bonus Attack nhưng ${zombie.name} Miễn thương (Invulnerable)!`
+          : `⚡ ${attacker.name} Bonus Attack gây ${dmg} sát thương lên ${zombie.name}${isLethal ? ' (Tiêu diệt!)' : ''}`
+      )
 
       if (isLethal) {
         lane.zombieMinion = null
@@ -1892,9 +1959,12 @@ export function triggerBonusAttack(
     // Zombie bonus attack
     const plant = lane.plantMinion || lane.plantTeamUpMinion
     if (plant && plant.currentHealth > 0) {
+      const isPInv = Boolean(plant.isInvulnerable || plant.invulnerableThisTurn)
       const pArmored = plant.armored ?? (plant.traits?.includes('armored') ? 1 : 0)
-      const dmg = Math.max(0, attacker.currentAttack - pArmored)
-      plant.currentHealth = attackerHasDeadly ? 0 : Math.max(0, plant.currentHealth - dmg)
+      const dmg = isPInv ? 0 : Math.max(0, attacker.currentAttack - pArmored)
+      if (!isPInv) {
+        plant.currentHealth = attackerHasDeadly ? 0 : Math.max(0, plant.currentHealth - dmg)
+      }
       const isLethal = plant.currentHealth <= 0
 
       events.push({
@@ -1906,9 +1976,15 @@ export function triggerBonusAttack(
         damageDealt: dmg,
         isBlocked: false,
         isLethal,
-        description: `⚡ ${attacker.name} Bonus Attack gây ${dmg} sát thương lên ${plant.name}${isLethal ? ' (Tiêu diệt!)' : ''}`,
+        description: isPInv
+          ? `⚡ ${attacker.name} Bonus Attack nhưng ${plant.name} Miễn thương (Invulnerable)!`
+          : `⚡ ${attacker.name} Bonus Attack gây ${dmg} sát thương lên ${plant.name}${isLethal ? ' (Tiêu diệt!)' : ''}`,
       })
-      logs.push(`⚡ ${attacker.name} Bonus Attack gây ${dmg} sát thương lên ${plant.name}${isLethal ? ' (Tiêu diệt!)' : ''}`)
+      logs.push(
+        isPInv
+          ? `⚡ ${attacker.name} Bonus Attack nhưng ${plant.name} Miễn thương (Invulnerable)!`
+          : `⚡ ${attacker.name} Bonus Attack gây ${dmg} sát thương lên ${plant.name}${isLethal ? ' (Tiêu diệt!)' : ''}`
+      )
 
       if (isLethal) {
         if (lane.plantMinion && lane.plantMinion.instanceId === plant.instanceId) {
@@ -1921,9 +1997,12 @@ export function triggerBonusAttack(
           // If plantTeamUpMinion still exists, frenzy hits it; otherwise hits Plant Hero!
           const remainingPlant = lane.plantMinion || lane.plantTeamUpMinion
           if (remainingPlant && remainingPlant.currentHealth > 0) {
+            const isRemInv = Boolean(remainingPlant.isInvulnerable || remainingPlant.invulnerableThisTurn)
             const remArmored = remainingPlant.armored ?? (remainingPlant.traits?.includes('armored') ? 1 : 0)
-            const remDmg = Math.max(0, attacker.currentAttack - remArmored)
-            remainingPlant.currentHealth = attackerHasDeadly ? 0 : Math.max(0, remainingPlant.currentHealth - remDmg)
+            const remDmg = isRemInv ? 0 : Math.max(0, attacker.currentAttack - remArmored)
+            if (!isRemInv) {
+              remainingPlant.currentHealth = attackerHasDeadly ? 0 : Math.max(0, remainingPlant.currentHealth - remDmg)
+            }
             const remLethal = remainingPlant.currentHealth <= 0
             if (remLethal) {
               if (lane.plantMinion?.instanceId === remainingPlant.instanceId) lane.plantMinion = null
@@ -2011,3 +2090,5 @@ export function triggerBonusAttack(
 
   return { updatedState, events, logs }
 }
+
+export const executeBonusAttack = triggerBonusAttack

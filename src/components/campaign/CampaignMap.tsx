@@ -2,11 +2,23 @@ import React, { useState, useEffect } from 'react'
 import {
   CAMPAIGN_CHAPTERS,
   ALL_CAMPAIGN_MISSIONS,
+  ZOMBIE_CAMPAIGN_CHAPTERS,
+  ALL_ZOMBIE_CAMPAIGN_MISSIONS,
   loadCampaignProgress,
   saveCampaignProgress,
   getInitialCampaignProgress,
+  loadZombieCampaignProgress,
+  saveZombieCampaignProgress,
+  getInitialZombieCampaignProgress,
 } from '../../data/campaign'
-import type { CampaignMission, CampaignProgress } from '../../engine/types'
+import {
+  CURRENT_WEEKLY_EVENT,
+  loadEventTicketsProgress,
+  claimEventCardCopy,
+  getWeeklyEventCountdown,
+  type WeeklyEventProgress,
+} from '../../data/eventTickets'
+import type { CampaignMission, CampaignProgress, Side } from '../../engine/types'
 import { soundManager } from '../../audio/SoundManager'
 
 export interface CampaignMapProps {
@@ -15,33 +27,42 @@ export interface CampaignMapProps {
 }
 
 export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack }) => {
-  const [progress, setProgress] = useState<CampaignProgress>(loadCampaignProgress)
+  const [campaignFaction, setCampaignFaction] = useState<Side>('plants')
+  const [plantProgress, setPlantProgress] = useState<CampaignProgress>(loadCampaignProgress)
+  const [zombieProgress, setZombieProgress] = useState<CampaignProgress>(loadZombieCampaignProgress)
   const [activeChapterId, setActiveChapterId] = useState<number>(1)
   const [selectedMission, setSelectedMission] = useState<CampaignMission | null>(null)
 
+  // Weekly Event state
+  const [eventProgress, setEventProgress] = useState<WeeklyEventProgress>(loadEventTicketsProgress)
+  const [showEventModal, setShowEventModal] = useState<boolean>(false)
+  const [claimSuccessMessage, setClaimSuccessMessage] = useState<string | null>(null)
+
   useEffect(() => {
-    const loaded = loadCampaignProgress()
-    setProgress(loaded)
-    // If player has already unlocked Chapter 2 (unlocked >= 6), auto-focus Chapter 2 if active
-    if (loaded.unlockedMissionNumber >= 6 && activeChapterId === 1) {
-      // Keep on 1 or allow player to toggle
-    }
+    setPlantProgress(loadCampaignProgress())
+    setZombieProgress(loadZombieCampaignProgress())
+    setEventProgress(loadEventTicketsProgress())
   }, [])
 
-  const currentChapter =
-    CAMPAIGN_CHAPTERS.find((c) => c.id === activeChapterId) || CAMPAIGN_CHAPTERS[0]
+  const isZombie = campaignFaction === 'zombies'
+  const currentProgress = isZombie ? zombieProgress : plantProgress
+  const availableChapters = isZombie ? ZOMBIE_CAMPAIGN_CHAPTERS : CAMPAIGN_CHAPTERS
+  const allMissions = isZombie ? ALL_ZOMBIE_CAMPAIGN_MISSIONS : ALL_CAMPAIGN_MISSIONS
 
-  // Calculate total stars earned across entire campaign
-  const totalStars = Object.values(progress.completedMissions).reduce(
+  const currentChapter =
+    availableChapters.find((c) => c.id === activeChapterId) || availableChapters[0]
+
+  // Calculate total stars earned across active faction campaign
+  const totalStars = Object.values(currentProgress.completedMissions).reduce(
     (sum, m) => sum + (m.stars || 0),
     0
   )
-  const maxStars = ALL_CAMPAIGN_MISSIONS.length * 3
-  const completedCount = Object.keys(progress.completedMissions).length
+  const maxStars = allMissions.length * 3
+  const completedCount = Object.keys(currentProgress.completedMissions).length
 
   // Select a mission to view briefing
   const handleSelectMission = (mission: CampaignMission) => {
-    const isUnlocked = mission.missionNumber <= progress.unlockedMissionNumber
+    const isUnlocked = mission.missionNumber <= currentProgress.unlockedMissionNumber
     if (!isUnlocked) {
       soundManager.playCardDrop()
       return
@@ -63,19 +84,57 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
     setSelectedMission(null)
   }
 
-  // Reset progress (useful for players to replay the whole campaign)
+  // Switch faction (Plants vs Zombies)
+  const handleSwitchFaction = (faction: Side) => {
+    if (faction === campaignFaction) return
+    soundManager.playCardDrop()
+    setCampaignFaction(faction)
+    setActiveChapterId(1)
+    setSelectedMission(null)
+  }
+
+  // Reset progress (useful for players to replay the active campaign)
   const handleResetProgress = () => {
-    if (window.confirm('Bạn có chắc chắn muốn đặt lại toàn bộ tiến độ Chiến dịch (Chapters 1 & 2) không?')) {
-      const reset = getInitialCampaignProgress()
-      saveCampaignProgress(reset)
-      setProgress(reset)
+    const factionName = isZombie ? 'Chiến Dịch Thây Ma' : 'Chiến Dịch Cây Trồng'
+    if (
+      window.confirm(
+        `Bạn có chắc chắn muốn đặt lại toàn bộ tiến độ ${factionName} không?`
+      )
+    ) {
+      if (isZombie) {
+        const reset = getInitialZombieCampaignProgress()
+        saveZombieCampaignProgress(reset)
+        setZombieProgress(reset)
+      } else {
+        const reset = getInitialCampaignProgress()
+        saveCampaignProgress(reset)
+        setPlantProgress(reset)
+      }
       setSelectedMission(null)
       soundManager.playCardDrop()
     }
   }
 
+  // Handle claiming an unlocked event card copy
+  const handleClaimEventCard = () => {
+    const res = claimEventCardCopy(CURRENT_WEEKLY_EVENT)
+    if (res.success) {
+      setEventProgress(res.progress)
+      setClaimSuccessMessage(`Chúc mừng! Bạn đã nhận 1 bản sao ${CURRENT_WEEKLY_EVENT.cardName}!`)
+      soundManager.playBuff()
+      setTimeout(() => setClaimSuccessMessage(null), 4000)
+    }
+  }
+
+  const countdown = getWeeklyEventCountdown(CURRENT_WEEKLY_EVENT.endDate)
+  const canClaim = eventProgress.unlockedCopies > eventProgress.claimedCopies
+
   return (
-    <div className="campaign-map-screen-layout">
+    <div
+      className={`campaign-map-screen-layout ${
+        isZombie ? 'campaign-theme-zombies' : 'campaign-theme-plants'
+      }`}
+    >
       {/* Top Navigation & Status Bar */}
       <header className="campaign-top-bar">
         <button className="back-btn" onClick={onBack}>
@@ -83,10 +142,10 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
         </button>
 
         <div className="campaign-title-group">
-          <h1 className="campaign-main-heading">CHIẾN DỊCH (CAMPAIGN MODE)</h1>
-          <span className="campaign-sub-heading">
-            {currentChapter.title}
-          </span>
+          <h1 className="campaign-main-heading">
+            {isZombie ? '🧟 CHIẾN DỊCH THÂY MA' : '🌱 CHIẾN DỊCH CÂY TRỒNG'}
+          </h1>
+          <span className="campaign-sub-heading">{currentChapter.title}</span>
         </div>
 
         <div className="campaign-stats-pill">
@@ -99,13 +158,13 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
           <div className="stat-mission-item">
             <span className="mission-icon">🗺️</span>
             <span className="mission-count">
-              {completedCount} / {ALL_CAMPAIGN_MISSIONS.length} Màn
+              {completedCount} / {allMissions.length} Màn
             </span>
           </div>
           <button
             className="campaign-reset-btn"
             onClick={handleResetProgress}
-            title="Đặt lại toàn bộ tiến trình Chiến Dịch"
+            title="Đặt lại toàn bộ tiến trình phe này"
           >
             🔄
           </button>
@@ -114,14 +173,94 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
 
       {/* Main Campaign Canvas */}
       <main className="campaign-map-content">
+        {/* Campaign Faction Toggle & Weekly Event Banner Bar */}
+        <div className="campaign-controls-header-bar">
+          {/* Dual-Faction Toggle Switch */}
+          <div className="campaign-faction-switcher" role="tablist">
+            <button
+              className={`faction-toggle-btn faction-btn-plants ${
+                !isZombie ? 'active' : ''
+              }`}
+              onClick={() => handleSwitchFaction('plants')}
+            >
+              <span className="faction-emoji">🌿</span>
+              <span className="faction-label">Chiến Dịch Cây Trồng</span>
+              <span className="faction-star-pill">
+                ⭐{' '}
+                {Object.values(plantProgress.completedMissions).reduce(
+                  (s, m) => s + (m.stars || 0),
+                  0
+                )}
+                /30
+              </span>
+            </button>
+
+            <button
+              className={`faction-toggle-btn faction-btn-zombies ${
+                isZombie ? 'active' : ''
+              }`}
+              onClick={() => handleSwitchFaction('zombies')}
+            >
+              <span className="faction-emoji">🧟</span>
+              <span className="faction-label">Chiến Dịch Thây Ma</span>
+              <span className="faction-star-pill">
+                ⭐{' '}
+                {Object.values(zombieProgress.completedMissions).reduce(
+                  (s, m) => s + (m.stars || 0),
+                  0
+                )}
+                /15
+              </span>
+            </button>
+          </div>
+
+          {/* Weekly Event Ticket Pill */}
+          <div
+            className="weekly-event-summary-pill"
+            onClick={() => setShowEventModal(true)}
+            title="Nhấn để xem chi tiết Sự Kiện Tuần"
+          >
+            <div className="event-pill-avatar-wrap">
+              <img
+                src={CURRENT_WEEKLY_EVENT.cardAvatar}
+                alt={CURRENT_WEEKLY_EVENT.cardName}
+                className="event-pill-avatar"
+              />
+              <span className="event-tag-badge">EVENT</span>
+            </div>
+            <div className="event-pill-info">
+              <span className="event-pill-name">{CURRENT_WEEKLY_EVENT.cardName}</span>
+              <span className="event-pill-tickets">
+                🎟️ {eventProgress.tickets % CURRENT_WEEKLY_EVENT.targetTicketsPerCopy} /{' '}
+                {CURRENT_WEEKLY_EVENT.targetTicketsPerCopy} Vé
+              </span>
+            </div>
+            <div className="event-pill-copies">
+              <span className="copies-count">
+                {eventProgress.claimedCopies}/{CURRENT_WEEKLY_EVENT.maxCopies} Đã nhận
+              </span>
+              {canClaim && (
+                <span className="claim-ready-pulse">Nhận Ngay!</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Claim Success Banner Notification */}
+        {claimSuccessMessage && (
+          <div className="event-claim-banner-notif">
+            <span>🎉 {claimSuccessMessage}</span>
+          </div>
+        )}
+
         {/* Chapter Selection Tab Pills */}
         <div className="campaign-chapter-tabs-strip">
-          {CAMPAIGN_CHAPTERS.map((ch) => {
+          {availableChapters.map((ch) => {
             const isChUnlocked =
-              ch.id === 1 || progress.unlockedMissionNumber >= (ch.id - 1) * 5 + 1
+              ch.id === 1 || currentProgress.unlockedMissionNumber >= (ch.id - 1) * 5 + 1
             const isChActive = ch.id === activeChapterId
             const chStars = ch.missions.reduce(
-              (sum, m) => sum + (progress.completedMissions[m.id]?.stars || 0),
+              (sum, m) => sum + (currentProgress.completedMissions[m.id]?.stars || 0),
               0
             )
 
@@ -135,7 +274,11 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
               >
                 <span className="chapter-tab-badge">{ch.badgeText}</span>
                 <span className="chapter-tab-name">
-                  {ch.id === 1 ? 'Khủng Hoảng Ngoại Ô' : 'Đô Thị Zombie'}
+                  {isZombie
+                    ? 'Tiến Công Ngoại Ô'
+                    : ch.id === 1
+                      ? 'Khủng Hoảng Ngoại Ô'
+                      : 'Đô Thị Zombie'}
                 </span>
                 <span className="chapter-tab-stars">⭐ {chStars}/15</span>
                 {!isChUnlocked && <span className="chapter-tab-lock">🔒</span>}
@@ -154,8 +297,8 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
         {/* Roadmap Nodes Sequence */}
         <div className="campaign-nodes-timeline">
           {currentChapter.missions.map((mission, index) => {
-            const isUnlocked = mission.missionNumber <= progress.unlockedMissionNumber
-            const missionRecord = progress.completedMissions[mission.id]
+            const isUnlocked = mission.missionNumber <= currentProgress.unlockedMissionNumber
+            const missionRecord = currentProgress.completedMissions[mission.id]
             const starsWon = missionRecord?.stars || 0
             const isCompleted = starsWon > 0
             const isSelected = selectedMission?.id === mission.id
@@ -167,7 +310,7 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
                 {index > 0 && (
                   <div
                     className={`node-connector-line ${
-                      mission.missionNumber <= progress.unlockedMissionNumber
+                      mission.missionNumber <= currentProgress.unlockedMissionNumber
                         ? 'connector-unlocked'
                         : 'connector-locked'
                     }`}
@@ -301,7 +444,7 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
                   <div className="stars-objectives-list">
                     {selectedMission.starObjectives.map((objText, idx) => {
                       const isAccomplished =
-                        (progress.completedMissions[selectedMission.id]?.stars || 0) >= idx + 1
+                        (currentProgress.completedMissions[selectedMission.id]?.stars || 0) >= idx + 1
 
                       return (
                         <div
@@ -351,6 +494,162 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
                 >
                   ⚔️ XUẤT TRẬN NGAY (START BATTLE)
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Weekly Event Details Modal */}
+        {showEventModal && (
+          <div
+            className="mission-briefing-drawer-backdrop"
+            onClick={() => setShowEventModal(false)}
+          >
+            <div
+              className="weekly-event-modal-dialog"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="event-modal-header">
+                <div className="event-modal-badge">SỰ KIỆN TUẦN #{CURRENT_WEEKLY_EVENT.weekNumber}</div>
+                <h3 className="event-modal-title">THẺ BÀI SỰ KIỆN: {CURRENT_WEEKLY_EVENT.cardName}</h3>
+                <span className="event-modal-countdown">
+                  ⏳ Thời gian còn lại: <strong>{countdown.formatted}</strong>
+                </span>
+                <button
+                  className="briefing-close-btn"
+                  onClick={() => setShowEventModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="event-modal-body">
+                {/* Event Card Spotlight */}
+                <div className="event-card-spotlight">
+                  <img
+                    src={CURRENT_WEEKLY_EVENT.cardAvatar}
+                    alt={CURRENT_WEEKLY_EVENT.cardName}
+                    className="event-card-large-avatar"
+                  />
+                  <div className="event-card-specs">
+                    <h4 className="card-name-title">{CURRENT_WEEKLY_EVENT.cardName}</h4>
+                    <span className="card-tribe-cost">
+                      Tribe: {CURRENT_WEEKLY_EVENT.cardTribe} | Cost: {CURRENT_WEEKLY_EVENT.cardCost}
+                    </span>
+                    <p className="card-desc-text">{CURRENT_WEEKLY_EVENT.description}</p>
+                    <span className="card-rarity-pill">Độ hiếm: EVENT</span>
+                  </div>
+                </div>
+
+                {/* Ticket Progress Meter */}
+                <div className="event-progress-meter-box">
+                  <div className="meter-label-row">
+                    <span className="meter-title">Tiến trình tích lũy vé:</span>
+                    <span className="meter-val">
+                      🎟️ {eventProgress.tickets} /{' '}
+                      {CURRENT_WEEKLY_EVENT.targetTicketsPerCopy * CURRENT_WEEKLY_EVENT.maxCopies} Tổng vé
+                    </span>
+                  </div>
+
+                  <div className="event-progress-track">
+                    <div
+                      className="event-progress-fill"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          (eventProgress.tickets /
+                            (CURRENT_WEEKLY_EVENT.targetTicketsPerCopy *
+                              CURRENT_WEEKLY_EVENT.maxCopies)) *
+                            100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+
+                  {/* 4 Milestones markers */}
+                  <div className="milestones-row">
+                    {[1, 2, 3, 4].map((copyNum) => {
+                      const reqTickets = copyNum * CURRENT_WEEKLY_EVENT.targetTicketsPerCopy
+                      const isReached = eventProgress.tickets >= reqTickets
+                      const isClaimed = copyNum <= eventProgress.claimedCopies
+
+                      return (
+                        <div
+                          key={copyNum}
+                          className={`milestone-step ${
+                            isClaimed ? 'step-claimed' : isReached ? 'step-unlocked' : 'step-locked'
+                          }`}
+                        >
+                          <span className="step-icon">
+                            {isClaimed ? '✅' : isReached ? '🎁' : '🔒'}
+                          </span>
+                          <span className="step-copy-text">Bản sao #{copyNum}</span>
+                          <span className="step-ticket-text">{reqTickets} Vé</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Boosted Heroes Row */}
+                <div className="event-boosted-heroes-section">
+                  <h4 className="boosted-section-title">
+                    ⚡ HERO TĂNG TỐC VÉ (X2 VÉ SỰ KIỆN - 200 VÉ/TRẬN THẮNG):
+                  </h4>
+                  <div className="boosted-heroes-cards-row">
+                    <div className="boosted-hero-card">
+                      <img
+                        src={CURRENT_WEEKLY_EVENT.boostedPlantHeroAvatar}
+                        alt={CURRENT_WEEKLY_EVENT.boostedPlantHeroName}
+                        className="boosted-avatar-img"
+                      />
+                      <div className="boosted-hero-info">
+                        <span className="hero-side-tag plant-tag">🌿 CÂY TRỒNG</span>
+                        <span className="hero-name-label">
+                          {CURRENT_WEEKLY_EVENT.boostedPlantHeroName}
+                        </span>
+                        <span className="boost-badge">+100 Vé Thưởng</span>
+                      </div>
+                    </div>
+
+                    <div className="boosted-hero-card">
+                      <img
+                        src={CURRENT_WEEKLY_EVENT.boostedZombieHeroAvatar}
+                        alt={CURRENT_WEEKLY_EVENT.boostedZombieHeroName}
+                        className="boosted-avatar-img"
+                      />
+                      <div className="boosted-hero-info">
+                        <span className="hero-side-tag zombie-tag">🧟 THÂY MA</span>
+                        <span className="hero-name-label">
+                          {CURRENT_WEEKLY_EVENT.boostedZombieHeroName}
+                        </span>
+                        <span className="boost-badge">+100 Vé Thưởng</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Modal Footer */}
+              <div className="event-modal-footer">
+                <button
+                  className="briefing-cancel-btn"
+                  onClick={() => setShowEventModal(false)}
+                >
+                  Đóng
+                </button>
+                {canClaim ? (
+                  <button
+                    className="event-claim-btn"
+                    onClick={handleClaimEventCard}
+                  >
+                    🎁 NHẬN BẢN SAO THẺ BÀI ({eventProgress.unlockedCopies - eventProgress.claimedCopies} Khả dụng)
+                  </button>
+                ) : (
+                  <button className="event-claim-btn disabled" disabled>
+                    Chưa Đủ Vé Mở Khóa ({eventProgress.tickets % CURRENT_WEEKLY_EVENT.targetTicketsPerCopy} / {CURRENT_WEEKLY_EVENT.targetTicketsPerCopy})
+                  </button>
+                )}
               </div>
             </div>
           </div>
