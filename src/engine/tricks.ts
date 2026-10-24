@@ -234,34 +234,100 @@ export function executeTrick(
     }
 
     case 'zombie_teleport': {
-      // Draw a card
+      // Draw a card & activate teleportActive for playing a zombie minion during ZOMBIE_TRICKS
       const { newDeck, newHand, drawnCard } = drawCard(updatedState.zombieDeck, updatedState.zombieHand)
       updatedState.zombieDeck = newDeck
       updatedState.zombieHand = newHand
-      message = `Teleport: Dịch chuyển tức thời và rút 1 lá [${drawnCard?.name || 'bài'}]!`
+      updatedState.teleportActive = true
+      message = `Teleport: Dịch chuyển tức thời và rút 1 lá [${drawnCard?.name || 'bài'}]! Cho phép chơi 1 Zombie minion trong phase Zombie Tricks!`
       break
     }
 
     case 'zombie_bad_moon_rising': {
       // Transform all Zombies into random 5+ Brain Zombies
+      const BMR_POOL: {
+        cardId: string
+        name: string
+        attack: number
+        health: number
+        armored?: number
+        frenzy?: boolean
+        amphibious?: boolean
+        image: string
+      }[] = [
+        {
+          cardId: 'zombie_zombot_1000',
+          name: 'Zombot 1000',
+          attack: 9,
+          health: 9,
+          image: '/assets/cards/zombies/Zombot 1000.png',
+        },
+        {
+          cardId: 'zombie_knight_living_dead',
+          name: 'Knight of the Living Dead',
+          attack: 5,
+          health: 5,
+          armored: 2,
+          image: '/assets/cards/zombies/Arm Wrestler.png',
+        },
+        {
+          cardId: 'zombie_football_zombie',
+          name: 'All-Star Zombie',
+          attack: 4,
+          health: 6,
+          armored: 1,
+          frenzy: true,
+          image: '/assets/cards/zombies/Disco Zombie.png',
+        },
+        {
+          cardId: 'zombie_disco_tron_3000',
+          name: 'Disco-Tron 3000',
+          attack: 4,
+          health: 4,
+          image: '/assets/cards/zombies/Disco Zombie.png',
+        },
+        {
+          cardId: 'zombie_deep_sea_gargantuar',
+          name: 'Deep Sea Gargantuar',
+          attack: 7,
+          health: 8,
+          amphibious: true,
+          image: '/assets/cards/zombies/Zombot 1000.png',
+        },
+      ]
+
       let transformedCount = 0
+      const transformedNames: string[] = []
+
       updatedLanes.forEach(l => {
         if (l.zombieMinion) {
+          const pool = l.type === 'water' ? BMR_POOL.filter(z => z.amphibious) : BMR_POOL
+          const chosen = pool[Math.floor(Math.random() * pool.length)] || BMR_POOL[0]
+
           l.zombieMinion = {
-            instanceId: `bmr_${Date.now()}_${l.index}`,
-            cardId: 'zombie_zombot_1000',
-            name: 'Zombot 1000',
+            instanceId: `bmr_${Date.now()}_${l.index}_${Math.random()}`,
+            cardId: chosen.cardId,
+            name: chosen.name,
             side: 'zombies',
-            currentAttack: 9,
-            baseAttack: 9,
-            currentHealth: 9,
-            maxHealth: 9,
-            image: '/assets/cards/zombies/Zombot 1000.png',
+            currentAttack: chosen.attack,
+            baseAttack: chosen.attack,
+            currentHealth: chosen.health,
+            maxHealth: chosen.health,
+            armored: chosen.armored,
+            frenzy: chosen.frenzy,
+            amphibious: chosen.amphibious,
+            image: chosen.image,
           }
           transformedCount++
+          transformedNames.push(`${chosen.name} tại ${l.name}`)
         }
       })
-      message = `Bad Moon Rising! Trăng máu trỗi dậy: Biến đổi ${transformedCount} Zombies thành các quái vật Zombot 1000 hùng mạnh!`
+
+      if (transformedCount > 0) {
+        message = `Bad Moon Rising! Trăng máu trỗi dậy: Biến đổi ${transformedCount} Zombie thành các quái vật Cost >= 5 (${transformedNames.join(', ')})!`
+      } else {
+        message = `Bad Moon Rising được kích hoạt nhưng không có Zombie nào trên sân để biến đổi!`
+      }
       break
     }
 

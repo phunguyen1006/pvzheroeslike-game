@@ -617,6 +617,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         phase: nextPhase,
+        teleportActive: nextPhase === 'FIGHT' ? false : state.teleportActive,
         combatLog: [phaseTitle, ...state.combatLog],
       }
     }

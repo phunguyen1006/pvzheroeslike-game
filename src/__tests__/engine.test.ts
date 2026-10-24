@@ -744,7 +744,7 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
       expect(res.updatedState.lanes[2].plantMinion).not.toBeNull()
     })
 
-    it('should execute Bad Moon Rising transforming all zombies into Zombot 1000', () => {
+    it('should execute Bad Moon Rising transforming all zombies into random 5+ brain zombies', () => {
       const state = createInitialGameState()
       state.lanes[0].zombieMinion = createMockMinion('z0', 'Imp', 'zombies', 1, 1)
       state.lanes[1].zombieMinion = createMockMinion('z1', 'Conehead', 'zombies', 2, 2)
@@ -754,9 +754,12 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
 
       const res = executeTrick(state, bmr, 'zombies')
       expect(res.success).toBe(true)
-      expect(res.updatedState.lanes[0].zombieMinion?.name).toBe('Zombot 1000')
-      expect(res.updatedState.lanes[0].zombieMinion?.currentAttack).toBe(9)
-      expect(res.updatedState.lanes[1].zombieMinion?.name).toBe('Zombot 1000')
+      expect(res.updatedState.lanes[0].zombieMinion).toBeDefined()
+      expect(res.updatedState.lanes[0].zombieMinion?.currentAttack).toBeGreaterThanOrEqual(4)
+      expect(res.updatedState.lanes[0].zombieMinion?.currentHealth).toBeGreaterThanOrEqual(4)
+      expect(res.updatedState.lanes[1].zombieMinion).toBeDefined()
+      expect(res.updatedState.lanes[1].zombieMinion?.currentAttack).toBeGreaterThanOrEqual(4)
+      expect(res.updatedState.lanes[1].zombieMinion?.currentHealth).toBeGreaterThanOrEqual(4)
     })
   })
 
