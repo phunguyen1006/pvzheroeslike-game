@@ -55,6 +55,7 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] [ĐỢT 4] Triển khai hệ thống Thẻ bài Siêu Năng Lực (Hero Superpowers & Signature Superpowers) và Thẻ Môi Trường (Environments) - 71 cards catalog
 - [x] [ĐỢT 5] Thêm Brainana (Legendary Banana) và Dark Matter Dragonfruit (Legendary Dragon)
 - [x] [ĐỢT 6] Bổ sung Dino-Roar (Bananasaurus Rex, Raiding Raptor, Aloeosaurus) & Evolution (Gatling Pea, Warlord)
+- [x] [ĐỢT 7] Hoàn thiện bộ bài Galactic Gardens & Synergy Suite: Pineclone (đồng hóa 3/3), Quickdraw Con Man (1/3 Bullseye bắn trả khi Plant rút bài), Going Viral (buff toàn thể +1/+1 Frenzy + rút bài + thêm 3 bản sao vào bộ bài), Galacta-Cactus (nổ diện rộng 1 dame), Lily of the Valley (buff +2/+2 trên Đồi Heights), Dr. Spacetime (Conjure giảm 1 Não khi đánh trúng Hero).
 
 ### 🧪 QA Bot (`feature/qa`)
 - [x] Thêm helper kiểm tra trait (`hasCardTrait`) và fixtures fallback cho thẻ bài AI
@@ -62,3 +63,15 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] [ĐỢT 3] Viết bộ test chuyên sâu `15. Legendary & Super-Rare Strategic Cards Suite` nâng tổng test lên 125/125 test cases pass 100%
 - [x] [ĐỢT 4] Mở rộng kiểm thử trí tuệ nhân tạo (AI Engine Tests) & Tích hợp Superpower / Environment Suite (155/155 tests pass)
 - [x] [ĐỢT 5 & 6] Bộ test chuyên sâu `20. Iconic Legendary & Super-Rare Powerhouses Suite` (Bananasaurus Rex Dino-Roar + Double Strike, Trickster Cost Reduction + Bonus Attack, Valkyrie Attack Scaling on-death, Dark Matter Dragonfruit Trick Surtax + Splash Damage 6, Brainana Brain-Drain, Zombot 1000 Board Wipe) nâng tổng test lên **173/173 tests pass 100%**!
+- [x] [ĐỢT 7] Hoàn thiện bộ test Campaign Mode & Deck Builder (`campaign_deck.test.ts`), Synergy Suite (`cards.test.ts`), AI Tactics (`ai_tactics.test.ts`), nâng tổng số test lên **289/289 tests pass 100%**!
+
+### 🗺️ Campaign & Deck Bot (`feature/campaign`)
+- [x] Triển khai Campaign Chapter 1 "Suburban Crisis" với 5 màn boss (Super Brainz, Impfinity, The Smash, Rustbolt, Professor Brainstorm).
+- [x] Hệ thống luật chơi đặc biệt: pre-placed minions, environments, starting sun/brains bonus.
+- [x] Hệ thống tính điểm 1-3 sao và lưu trữ tiến độ game qua LocalStorage.
+- [x] Giao diện 40-Card Deck Builder với biểu đồ phân bố cost (mana curve) và thống kê tribes.
+
+### 🧠 AI Bot (`feature/ai`)
+- [x] Hoàn thiện 3 phong cách AI: Aggro (tấn công trực diện làn trống), Control (bảo lưu Não cho Tricks removal), Tempo (kiểm soát bàn cân bằng).
+- [x] Ma trận quyết định Superpower và cây quyết định Mulligan thông minh.
+- [x] Tích hợp AI Tactics vào hệ thống chiến đấu tự động.

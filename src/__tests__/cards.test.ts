@@ -7,9 +7,11 @@ import {
   triggerWhenPlayed,
   triggerDinoRoar,
   triggerWhenTrickPlayed,
+  triggerWhenDestroyed,
 } from '../engine/abilities'
 import { gameReducer, canPlayCardToLane, createInitialGameState } from '../engine/reducer'
 import { resolveCombat } from '../engine/combat'
+import { executeTrick } from '../engine/tricks'
 import type { Card, Minion } from '../engine/types'
 
 function convertCardDataToCard(data: any, side: 'plants' | 'zombies'): Card {
@@ -309,6 +311,261 @@ describe('Round 5 Card Catalog Validation Suite', () => {
       // Zombie Hero on lane 2 was struck directly by Strikethrough (3 damage)
       expect(updatedState.zombieHero.hp).toBe(20 - 3)
       expect(result.events.some((e: any) => e.description.includes('Dusk Lobber'))).toBe(true)
+    })
+  })
+
+  describe('Round 6 Synergy Suite (Pineclone, Con Man, Going Viral, Galacta-Cactus, Lily of the Valley, Dr. Spacetime)', () => {
+    describe('Plant Cards - Round 6 Synergy Additions', () => {
+      it('validates plant_pineclone metadata, tribe, and asset mapping', () => {
+        const card = getCardById('plant_pineclone')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Pineclone')
+        expect(card?.cost).toBe(4)
+        expect(card?.attack).toBe(3)
+        expect(card?.hp).toBe(3)
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.tribe).toBe('Pinecone Plant')
+        expect(card?.heroClass).toBe('Kabloom')
+        expect(ASSET_MANIFEST.cards.plants['Pineclone']).toBeDefined()
+      })
+
+      it('transforms all other friendly plants into 3/3 Pineclones when Pineclone is played', () => {
+        const state = createInitialGameState()
+        // Place Sunflower 1/1 on lane 0 and Peashooter 1/1 on lane 2
+        state.lanes[0].plantMinion = createMockMinion('sunflower1', 'Sunflower', 'plants', 1, 1, {
+          cardId: 'plant_sunflower',
+        })
+        state.lanes[2].plantMinion = createMockMinion('peashooter1', 'Peashooter', 'plants', 1, 1, {
+          cardId: 'plant_peashooter',
+        })
+        // Place an enemy zombie on lane 1 (should NOT be transformed)
+        state.lanes[1].zombieMinion = createMockMinion('z1', 'Conehead', 'zombies', 2, 2, {
+          cardId: 'zombie_conehead',
+        })
+
+        // Play Pineclone onto lane 1
+        const pinecloneMinion = createMockMinion('p_clone', 'Pineclone', 'plants', 3, 3, {
+          cardId: 'plant_pineclone',
+        })
+        const res = triggerWhenPlayed(state, pinecloneMinion, 1, 'plants')
+
+        // Sunflower and Peashooter should now both be transformed into 3/3 Pineclones
+        expect(res.updatedState.lanes[0].plantMinion?.name).toBe('Pineclone')
+        expect(res.updatedState.lanes[0].plantMinion?.currentAttack).toBe(3)
+        expect(res.updatedState.lanes[0].plantMinion?.currentHealth).toBe(3)
+
+        expect(res.updatedState.lanes[2].plantMinion?.name).toBe('Pineclone')
+        expect(res.updatedState.lanes[2].plantMinion?.currentAttack).toBe(3)
+        expect(res.updatedState.lanes[2].plantMinion?.currentHealth).toBe(3)
+
+        // Zombie on lane 1 is untouched
+        expect(res.updatedState.lanes[1].zombieMinion?.name).toBe('Conehead')
+        expect(res.updatedState.lanes[1].zombieMinion?.currentAttack).toBe(2)
+
+        expect(res.events.some(e => e.includes('Pineclone'))).toBe(true)
+      })
+
+      it('validates plant_galacta_cactus metadata, Bullseye trait, and asset mapping', () => {
+        const card = getCardById('plant_galacta_cactus')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Galacta-Cactus')
+        expect(card?.cost).toBe(1)
+        expect(card?.attack).toBe(2)
+        expect(card?.hp).toBe(2)
+        expect(card?.bullseye).toBe(true)
+        expect(card?.traits).toContain('Bullseye')
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.tribe).toBe('Cactus Plant')
+        expect(card?.heroClass).toBe('Guardian')
+        expect(ASSET_MANIFEST.cards.plants['Galacta-Cactus']).toBeDefined()
+      })
+
+      it('deals 1 damage to all minions and both heroes when Galacta-Cactus is destroyed', () => {
+        const state = createInitialGameState()
+        state.plantHero.hp = 20
+        state.zombieHero.hp = 20
+        state.lanes[0].plantMinion = createMockMinion('p0', 'Peashooter', 'plants', 1, 2)
+        state.lanes[1].zombieMinion = createMockMinion('z1', 'Conehead', 'zombies', 2, 3)
+
+        const cactusMinion = createMockMinion('gc', 'Galacta-Cactus', 'plants', 2, 2, {
+          cardId: 'plant_galacta_cactus',
+          bullseye: true,
+        })
+
+        const res = triggerWhenDestroyed(state, cactusMinion, 2, 'plants')
+
+        // All minions took 1 damage
+        expect(res.updatedState.lanes[0].plantMinion?.currentHealth).toBe(1)
+        expect(res.updatedState.lanes[1].zombieMinion?.currentHealth).toBe(2)
+        // Both Heroes took 1 damage
+        expect(res.updatedState.plantHero.hp).toBe(19)
+        expect(res.updatedState.zombieHero.hp).toBe(19)
+        expect(res.events.some((e: string) => e.includes('Galacta-Cactus'))).toBe(true)
+      })
+
+      it('validates plant_lily_of_the_valley metadata, tribe, and Heights placement buff', () => {
+        const card = getCardById('plant_lily_of_the_valley')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Lily of the Valley')
+        expect(card?.cost).toBe(2)
+        expect(card?.attack).toBe(1)
+        expect(card?.hp).toBe(3)
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.tribe).toBe('Leafy Flower Plant')
+        expect(card?.heroClass).toBe('Mega-Grow')
+        expect(ASSET_MANIFEST.cards.plants['Lily of the Valley']).toBeDefined()
+
+        // Test Lily of the Valley trigger via gameReducer PLAY_CARD on Heights (Lane 0)
+        const state = createInitialGameState()
+        state.phase = 'PLANT_PLAY'
+        state.plantHero.sun = 5
+        // Place Lily of the Valley on Lane 1
+        state.lanes[1].plantMinion = createMockMinion('lily', 'Lily of the Valley', 'plants', 1, 3, {
+          cardId: 'plant_lily_of_the_valley',
+        })
+
+        // Put a Peashooter card in hand
+        const peaCard = convertCardDataToCard(getCardById('plant_peashooter')!, 'plants')
+        state.plantHand = [peaCard]
+
+        // Play Peashooter onto Lane 0 (Heights)
+        const actionOnHeights = {
+          type: 'PLAY_CARD' as const,
+          side: 'plants' as const,
+          cardId: peaCard.id,
+          laneIndex: 0,
+        }
+        const stateAfterHeights = gameReducer(state, actionOnHeights)
+        // Peashooter base is 1/1, with Heights rule (+1/+1) and Lily buff (+2/+2) it should be 4/4
+        expect(stateAfterHeights.lanes[0].plantMinion?.currentAttack).toBe(4)
+        expect(stateAfterHeights.lanes[0].plantMinion?.currentHealth).toBe(4)
+
+        // Play another card on Lane 2 (Ground) - should NOT get +2/+2
+        const peaCard2 = { ...peaCard, id: 'peashooter_ground' }
+        stateAfterHeights.plantHand = [peaCard2]
+        stateAfterHeights.plantHero.sun = 5
+        const actionOnGround = {
+          type: 'PLAY_CARD' as const,
+          side: 'plants' as const,
+          cardId: peaCard2.id,
+          laneIndex: 2,
+        }
+        const stateAfterGround = gameReducer(stateAfterHeights, actionOnGround)
+        expect(stateAfterGround.lanes[2].plantMinion?.currentAttack).toBe(1)
+        expect(stateAfterGround.lanes[2].plantMinion?.currentHealth).toBe(1)
+      })
+    })
+
+    describe('Zombie Cards - Round 6 Synergy Additions', () => {
+      it('validates zombie_quickdraw_con_man metadata, Bullseye, and asset mapping', () => {
+        const card = getCardById('zombie_quickdraw_con_man')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Quickdraw Con Man')
+        expect(card?.cost).toBe(1)
+        expect(card?.attack).toBe(1)
+        expect(card?.hp).toBe(3)
+        expect(card?.bullseye).toBe(true)
+        expect(card?.traits).toContain('Bullseye')
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.tribe).toBe('Pirate Zombie')
+        expect(card?.heroClass).toBe('Crazy')
+        expect(card?.gravestone).toBe(false)
+        expect(ASSET_MANIFEST.cards.zombies['Quickdraw Con Man']).toBeDefined()
+      })
+
+      it('triggers Quickdraw Con Man Bullseye damage when Plant Hero draws a card', () => {
+        const state = createInitialGameState()
+        state.plantHero.hp = 20
+        // Place Quickdraw Con Man on lane 2
+        state.lanes[2].zombieMinion = createMockMinion('conman', 'Quickdraw Con Man', 'zombies', 1, 3, {
+          cardId: 'zombie_quickdraw_con_man',
+          bullseye: true,
+        })
+
+        // Plant draws a card -> triggerDinoRoar with 'plants' side
+        const res = triggerDinoRoar(state, 'plants')
+
+        // Plant Hero takes 1 Bullseye damage (20 -> 19)
+        expect(res.updatedState.plantHero.hp).toBe(19)
+        expect(res.events.some(e => e.includes('Quickdraw Con Man'))).toBe(true)
+      })
+
+      it('validates zombie_dr_spacetime metadata, Bullseye, and Conjure discount on Hero hit', () => {
+        const card = getCardById('zombie_dr_spacetime')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Dr. Spacetime')
+        expect(card?.cost).toBe(2)
+        expect(card?.attack).toBe(1)
+        expect(card?.hp).toBe(5)
+        expect(card?.bullseye).toBe(true)
+        expect(card?.traits).toContain('Bullseye')
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.tribe).toBe('Science Zombie')
+        expect(card?.heroClass).toBe('Sneaky')
+        expect(card?.gravestone).toBe(false)
+        expect(ASSET_MANIFEST.cards.zombies['Dr. Spacetime']).toBeDefined()
+
+        // Test face damage conjure in resolveCombat
+        const state = createInitialGameState()
+        state.plantHero.hp = 20
+        state.zombieHand = []
+        // Put Dr. Spacetime on lane 2 with no plant blocking
+        state.lanes[2].zombieMinion = createMockMinion('dr_st', 'Dr. Spacetime', 'zombies', 1, 5, {
+          cardId: 'zombie_dr_spacetime',
+          bullseye: true,
+        })
+
+        const { updatedState, result } = resolveCombat(state)
+        // Plant Hero took 1 damage
+        expect(updatedState.plantHero.hp).toBe(19)
+        // Zombie hand received 1 conjured card from Galactic Gardens
+        expect(updatedState.zombieHand.length).toBe(1)
+        expect(result.events.some((e: any) => e.description.includes('Dr. Spacetime'))).toBe(true)
+      })
+
+      it('validates zombie_going_viral trick execution (all +1/+1, Frenzy, draw 1, add 3 to deck)', () => {
+        const card = getCardById('zombie_going_viral')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Going Viral')
+        expect(card?.cost).toBe(3)
+        expect(card?.type).toBe('trick')
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.tribe).toBe('Gourmet Party Trick')
+        expect(card?.heroClass).toBe('Hearty')
+        expect(ASSET_MANIFEST.cards.zombies['Going Viral']).toBeDefined()
+
+        const state = createInitialGameState()
+        state.zombieHero.brains = 5
+        // Place 2 zombies on board: Lane 1 (1/3) and Lane 3 (2/2)
+        state.lanes[1].zombieMinion = createMockMinion('z1', 'Conehead', 'zombies', 2, 2)
+        state.lanes[3].zombieMinion = createMockMinion('z3', 'Swabbie', 'zombies', 1, 1)
+
+        // Seed zombie deck with 5 cards
+        state.zombieDeck = [
+          convertCardDataToCard(getCardById('zombie_swabbie')!, 'zombies'),
+          convertCardDataToCard(getCardById('zombie_conehead')!, 'zombies'),
+        ]
+        const initialDeckSize = state.zombieDeck.length
+        state.zombieHand = [convertCardDataToCard(card!, 'zombies')]
+
+        // Execute Going Viral trick
+        const viralCard = convertCardDataToCard(card!, 'zombies')
+        const trickResult = executeTrick(state, viralCard, 'zombies')
+        expect(trickResult.success).toBe(true)
+
+        // Both zombies got +1/+1 and Frenzy
+        expect(trickResult.updatedState.lanes[1].zombieMinion?.currentAttack).toBe(3)
+        expect(trickResult.updatedState.lanes[1].zombieMinion?.currentHealth).toBe(3)
+        expect(trickResult.updatedState.lanes[1].zombieMinion?.frenzy).toBe(true)
+
+        expect(trickResult.updatedState.lanes[3].zombieMinion?.currentAttack).toBe(2)
+        expect(trickResult.updatedState.lanes[3].zombieMinion?.currentHealth).toBe(2)
+        expect(trickResult.updatedState.lanes[3].zombieMinion?.frenzy).toBe(true)
+
+        // Drew 1 card, added 3 Going Viral cards -> deck size = initial - 1 + 3 = initial + 2
+        expect(trickResult.updatedState.zombieDeck.length).toBe(initialDeckSize - 1 + 3)
+        expect(trickResult.updatedState.zombieDeck.filter((c: Card) => c.name === 'Going Viral').length).toBe(3)
+      })
     })
   })
 })

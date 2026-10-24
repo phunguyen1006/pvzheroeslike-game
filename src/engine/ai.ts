@@ -11,7 +11,7 @@ export interface AIDecision {
   reason?: string
 }
 
-export type AIDifficulty = 'easy' | 'normal' | 'expert'
+export type AIDifficulty = 'easy' | 'normal' | 'hard' | 'expert'
 
 export type AIArchetype = 'aggro' | 'control' | 'tempo'
 

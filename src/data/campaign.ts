@@ -180,6 +180,7 @@ export function getInitialCampaignProgress(): CampaignProgress {
 
 export function loadCampaignProgress(): CampaignProgress {
   try {
+    if (typeof localStorage === 'undefined') return getInitialCampaignProgress()
     const raw = localStorage.getItem(CAMPAIGN_STORAGE_KEY)
     if (!raw) return getInitialCampaignProgress()
     const parsed = JSON.parse(raw)
@@ -195,6 +196,7 @@ export function loadCampaignProgress(): CampaignProgress {
 
 export function saveCampaignProgress(progress: CampaignProgress): void {
   try {
+    if (typeof localStorage === 'undefined') return
     localStorage.setItem(CAMPAIGN_STORAGE_KEY, JSON.stringify(progress))
   } catch (err) {
     console.error('Failed to save campaign progress:', err)

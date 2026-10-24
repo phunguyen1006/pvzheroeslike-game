@@ -620,7 +620,6 @@ describe('AI Opponent Engine Tactics Suite (Phase 7)', () => {
       state.zombieHand = [aggressor]
 
       const decision = getAIDecision(state, 'zombies', { difficulty: 'expert', archetype: 'aggro' })
-      console.log('DEBUG AGGRO DECISION:', decision)
       expect(decision.action).toBe('PLAY_MINION')
       // Must NOT place in Lane 1 where Peashooter blocks; must choose an open ground lane (e.g. 0, 2, 3)
       expect(decision.laneIndex).not.toBe(1)

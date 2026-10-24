@@ -105,13 +105,11 @@ export function App() {
     setSelectedHeroes({ plant: pId, zombie: zId })
 
     const diff: AIDifficulty =
-      mission.difficulty === 'boss'
+      mission.difficulty === 'boss' || mission.difficulty === 'hard'
         ? 'expert'
-        : mission.difficulty === 'hard'
-          ? 'hard'
-          : mission.difficulty === 'normal'
-            ? 'normal'
-            : 'easy'
+        : mission.difficulty === 'normal'
+          ? 'normal'
+          : 'easy'
     setAiDifficulty(diff)
 
     const missionLanes = buildMissionLanes(mission)
@@ -135,7 +133,7 @@ export function App() {
       const stars = calculateMissionStars(
         activeCampaignMission,
         gameState.winner,
-        gameState.plantHero.health,
+        gameState.plantHero.hp,
         gameState.turn
       )
       setCampaignStarsWon(stars)
@@ -158,7 +156,7 @@ export function App() {
         saveCampaignProgress(progress)
       }
     }
-  }, [gameState.winner, activeCampaignMission, gameState.plantHero.health, gameState.turn])
+  }, [gameState.winner, activeCampaignMission, gameState.plantHero.hp, gameState.turn])
 
   // Handle saving custom deck from DeckBuilder
   const handleSaveDeck = (side: 'plants' | 'zombies', deck: CardType[]) => {
@@ -872,12 +870,27 @@ export function App() {
           plantHeroAvatar={gameState.plantHero.avatar}
           zombieHeroAvatar={gameState.zombieHero.avatar}
           turnCount={gameState.turn}
+          starsWon={campaignStarsWon}
           onRematch={handleRematch}
+          onCampaignMap={
+            activeCampaignMission
+              ? () => {
+                  setActiveCampaignMission(null)
+                  setCampaignStarsWon(undefined)
+                  setCurrentScreen('campaign')
+                  handleRematch()
+                }
+              : undefined
+          }
           onMainMenu={() => {
+            setActiveCampaignMission(null)
+            setCampaignStarsWon(undefined)
             setCurrentScreen('menu')
             handleRematch()
           }}
           onHeroSelect={() => {
+            setActiveCampaignMission(null)
+            setCampaignStarsWon(undefined)
             setCurrentScreen('hero_select')
             handleRematch()
           }}
