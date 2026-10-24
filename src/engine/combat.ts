@@ -264,6 +264,7 @@ export function resolveSingleLaneCombat(
     const zombieHasStrikethrough = Boolean(zombie.strikethrough || zombie.traits?.includes('strikethrough'))
     const zombieHasFrenzy = Boolean(zombie.frenzy || zombie.traits?.includes('frenzy'))
     const plantHasFreezeTrait = Boolean(plant.freeze || plant.traits?.includes('freeze'))
+    const plantHasDoubleStrike = Boolean(plant.doubleStrike || plant.traits?.includes('doubleStrike'))
 
     // Apply minion damage
     if (dmgToZombie > 0) {
@@ -398,12 +399,95 @@ export function resolveSingleLaneCombat(
         pendingSuperBlock = getPendingSuperBlockForHero(currentPlantHero, 'plants')
       }
     }
+
+    // Double Strike handling (Plant bonus attack after combat)
+    if (plantHasDoubleStrike && plantCanAttack && plant.currentHealth > 0) {
+      if (zombie.currentHealth <= 0) {
+        // Zombie destroyed, Double Strike attacks Zombie Hero directly
+        const doubleRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+        currentZombieHero = doubleRes.updatedHero
+        events.push({
+          laneIndex,
+          attackerSide: 'plants',
+          attackerName: `${plant.name} (Double Strike)`,
+          target: 'hero',
+          targetSide: 'zombies',
+          damageDealt: doubleRes.actualDamage,
+          isBlocked: doubleRes.blocked,
+          isLethal: currentZombieHero.hp <= 0,
+          traitsTriggered: ['doubleStrike'],
+          description: `⚡ ${plant.name} kích hoạt Double Strike bắn trực tiếp vào Zombie Hero gây ${doubleRes.actualDamage} dmg${doubleRes.blocked ? ' (SUPER-BLOCK!)' : ''}`,
+        })
+        if (doubleRes.isSuperBlockTriggered && !pendingSuperBlock) {
+          pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+        }
+        if (lane.environment?.id === 'plant_planet_of_the_grapes' && doubleRes.actualDamage > 0) {
+          if (updatedPlantDeck.length > 0 && updatedPlantHand.length < 10) {
+            const [drawn, ...rest] = updatedPlantDeck
+            updatedPlantDeck = rest
+            updatedPlantHand = [...updatedPlantHand, drawn]
+            events.push({
+              laneIndex,
+              attackerSide: 'plants',
+              attackerName: 'Planet of the Grapes',
+              target: 'hero',
+              targetSide: 'plants',
+              damageDealt: 0,
+              isBlocked: false,
+              isLethal: false,
+              description: `🍇 Planet of the Grapes: Rút thêm 1 lá [${drawn.name}] từ Double Strike!`,
+            })
+          }
+        }
+      } else {
+        // Zombie still alive, Double Strike attacks the zombie minion again
+        const secondDmg = Math.max(0, plant.currentAttack - zombieArmored)
+        if (secondDmg > 0) {
+          zombie.currentHealth = plantHasDeadly ? 0 : Math.max(0, zombie.currentHealth - secondDmg)
+          if (plantHasFreezeTrait && zombie.currentHealth > 0) {
+            zombie.isFrozen = true
+          }
+        }
+        events.push({
+          laneIndex,
+          attackerSide: 'plants',
+          attackerName: `${plant.name} (Double Strike)`,
+          target: 'minion',
+          targetSide: 'zombies',
+          damageDealt: secondDmg,
+          isBlocked: false,
+          isLethal: zombie.currentHealth <= 0,
+          traitsTriggered: ['doubleStrike'],
+          description: `⚡ ${plant.name} kích hoạt Double Strike gây thêm ${secondDmg} damage lên ${zombie.name}${zombie.currentHealth <= 0 ? ' (Tiêu diệt!)' : ''}`,
+        })
+        if (plantHasStrikethrough) {
+          const doubleStrikeRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+          currentZombieHero = doubleStrikeRes.updatedHero
+          events.push({
+            laneIndex,
+            attackerSide: 'plants',
+            attackerName: `${plant.name} (Double Strike + Strikethrough)`,
+            target: 'hero',
+            targetSide: 'zombies',
+            damageDealt: doubleStrikeRes.actualDamage,
+            isBlocked: doubleStrikeRes.blocked,
+            isLethal: currentZombieHero.hp <= 0,
+            traitsTriggered: ['doubleStrike', 'strikethrough'],
+            description: `⚡ ${plant.name} Double Strike xuyên thấu gây ${doubleStrikeRes.actualDamage} dmg vào Zombie Hero${doubleStrikeRes.blocked ? ' (SUPER-BLOCK!)' : ''}`,
+          })
+          if (doubleStrikeRes.isSuperBlockTriggered && !pendingSuperBlock) {
+            pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+          }
+        }
+      }
+    }
   } else if (plant && !zombie) {
     // ========================================================
     // 4. OPEN LANE PLANT -> ATTACKS ZOMBIE HERO DIRECTLY
     // ========================================================
     if (plantCanAttack) {
       const plantHasBullseye = Boolean(plant.bullseye || plant.traits?.includes('bullseye'))
+      const plantHasDoubleStrike = Boolean(plant.doubleStrike || plant.traits?.includes('doubleStrike'))
       let totalDmg = plant.currentAttack
       if (plantTeamUp && !plantTeamUp.isFrozen) {
         totalDmg += plantTeamUp.currentAttack
@@ -442,6 +526,45 @@ export function resolveSingleLaneCombat(
             isLethal: false,
             description: `🍇 Planet of the Grapes: Rút thêm 1 lá [${drawn.name}]!`,
           })
+        }
+      }
+
+      // Double Strike bonus direct attack in open lane
+      if (plantHasDoubleStrike && plant.currentHealth > 0) {
+        const doubleRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+        currentZombieHero = doubleRes.updatedHero
+        events.push({
+          laneIndex,
+          attackerSide: 'plants',
+          attackerName: `${plant.name} (Double Strike)`,
+          target: 'hero',
+          targetSide: 'zombies',
+          damageDealt: doubleRes.actualDamage,
+          isBlocked: doubleRes.blocked,
+          isLethal: currentZombieHero.hp <= 0,
+          traitsTriggered: ['doubleStrike'],
+          description: `⚡ ${plant.name} kích hoạt Double Strike tấn công trực tiếp Zombie Hero lần 2 gây ${doubleRes.actualDamage} dmg${doubleRes.blocked ? ' (SUPER-BLOCK!)' : ''}`,
+        })
+        if (doubleRes.isSuperBlockTriggered && !pendingSuperBlock) {
+          pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+        }
+        if (lane.environment?.id === 'plant_planet_of_the_grapes' && doubleRes.actualDamage > 0) {
+          if (updatedPlantDeck.length > 0 && updatedPlantHand.length < 10) {
+            const [drawn, ...rest] = updatedPlantDeck
+            updatedPlantDeck = rest
+            updatedPlantHand = [...updatedPlantHand, drawn]
+            events.push({
+              laneIndex,
+              attackerSide: 'plants',
+              attackerName: 'Planet of the Grapes',
+              target: 'hero',
+              targetSide: 'plants',
+              damageDealt: 0,
+              isBlocked: false,
+              isLethal: false,
+              description: `🍇 Planet of the Grapes: Rút thêm 1 lá [${drawn.name}] từ Double Strike!`,
+            })
+          }
         }
       }
     }
@@ -633,6 +756,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
       const zombieHasStrikethrough = Boolean(zombie.strikethrough || zombie.traits?.includes('strikethrough'))
       const zombieHasFrenzy = Boolean(zombie.frenzy || zombie.traits?.includes('frenzy'))
       const plantHasFreezeTrait = Boolean(plant.freeze || plant.traits?.includes('freeze'))
+      const plantHasDoubleStrike = Boolean(plant.doubleStrike || plant.traits?.includes('doubleStrike'))
 
       // Apply minion damage
       if (dmgToZombie > 0) {
@@ -770,12 +894,97 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
           pendingSuperBlock = getPendingSuperBlockForHero(currentPlantHero, 'plants')
         }
       }
+
+      // Double Strike handling (Plant bonus attack after combat)
+      if (plantHasDoubleStrike && plantCanAttack && plant.currentHealth > 0) {
+        if (zombie.currentHealth <= 0) {
+          // Zombie destroyed, Double Strike attacks Zombie Hero directly
+          const doubleRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+          currentZombieHero = doubleRes.updatedHero
+          zombieHeroDamageTaken += doubleRes.actualDamage
+          events.push({
+            laneIndex: i,
+            attackerSide: 'plants',
+            attackerName: `${plant.name} (Double Strike)`,
+            target: 'hero',
+            targetSide: 'zombies',
+            damageDealt: doubleRes.actualDamage,
+            isBlocked: doubleRes.blocked,
+            isLethal: currentZombieHero.hp <= 0,
+            traitsTriggered: ['doubleStrike'],
+            description: `⚡ ${plant.name} kích hoạt Double Strike bắn trực tiếp vào Zombie Hero gây ${doubleRes.actualDamage} dmg${doubleRes.blocked ? ' (SUPER-BLOCK!)' : ''}`,
+          })
+          if (doubleRes.isSuperBlockTriggered && !pendingSuperBlock) {
+            pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+          }
+          if (lane.environment?.id === 'plant_planet_of_the_grapes' && doubleRes.actualDamage > 0) {
+            if (updatedPlantDeck.length > 0 && updatedPlantHand.length < 10) {
+              const [drawn, ...rest] = updatedPlantDeck
+              updatedPlantDeck = rest
+              updatedPlantHand = [...updatedPlantHand, drawn]
+              events.push({
+                laneIndex: i,
+                attackerSide: 'plants',
+                attackerName: 'Planet of the Grapes',
+                target: 'hero',
+                targetSide: 'plants',
+                damageDealt: 0,
+                isBlocked: false,
+                isLethal: false,
+                description: `🍇 Planet of the Grapes: Rút thêm 1 lá [${drawn.name}] từ Double Strike!`,
+              })
+            }
+          }
+        } else {
+          // Zombie still alive, Double Strike attacks the zombie minion again
+          const secondDmg = Math.max(0, plant.currentAttack - zombieArmored)
+          if (secondDmg > 0) {
+            zombie.currentHealth = plantHasDeadly ? 0 : Math.max(0, zombie.currentHealth - secondDmg)
+            if (plantHasFreezeTrait && zombie.currentHealth > 0) {
+              zombie.isFrozen = true
+            }
+          }
+          events.push({
+            laneIndex: i,
+            attackerSide: 'plants',
+            attackerName: `${plant.name} (Double Strike)`,
+            target: 'minion',
+            targetSide: 'zombies',
+            damageDealt: secondDmg,
+            isBlocked: false,
+            isLethal: zombie.currentHealth <= 0,
+            traitsTriggered: ['doubleStrike'],
+            description: `⚡ ${plant.name} kích hoạt Double Strike gây thêm ${secondDmg} damage lên ${zombie.name}${zombie.currentHealth <= 0 ? ' (Tiêu diệt!)' : ''}`,
+          })
+          if (plantHasStrikethrough) {
+            const doubleStrikeRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+            currentZombieHero = doubleStrikeRes.updatedHero
+            zombieHeroDamageTaken += doubleStrikeRes.actualDamage
+            events.push({
+              laneIndex: i,
+              attackerSide: 'plants',
+              attackerName: `${plant.name} (Double Strike + Strikethrough)`,
+              target: 'hero',
+              targetSide: 'zombies',
+              damageDealt: doubleStrikeRes.actualDamage,
+              isBlocked: doubleStrikeRes.blocked,
+              isLethal: currentZombieHero.hp <= 0,
+              traitsTriggered: ['doubleStrike', 'strikethrough'],
+              description: `⚡ ${plant.name} Double Strike xuyên thấu gây ${doubleStrikeRes.actualDamage} dmg vào Zombie Hero${doubleStrikeRes.blocked ? ' (SUPER-BLOCK!)' : ''}`,
+            })
+            if (doubleStrikeRes.isSuperBlockTriggered && !pendingSuperBlock) {
+              pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+            }
+          }
+        }
+      }
     } else if (plant && !zombie) {
       // ========================================================
       // 4. OPEN LANE PLANT -> ATTACKS ZOMBIE HERO DIRECTLY
       // ========================================================
       if (plantCanAttack) {
         const plantHasBullseye = Boolean(plant.bullseye || plant.traits?.includes('bullseye'))
+        const plantHasDoubleStrike = Boolean(plant.doubleStrike || plant.traits?.includes('doubleStrike'))
         let totalDmg = plant.currentAttack
         if (plantTeamUp && !plantTeamUp.isFrozen) {
           totalDmg += plantTeamUp.currentAttack
@@ -815,6 +1024,46 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
               isLethal: false,
               description: `🍇 Planet of the Grapes: Rút thêm 1 lá [${drawn.name}]!`,
             })
+          }
+        }
+
+        // Double Strike bonus direct attack in open lane
+        if (plantHasDoubleStrike && plant.currentHealth > 0) {
+          const doubleRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+          currentZombieHero = doubleRes.updatedHero
+          zombieHeroDamageTaken += doubleRes.actualDamage
+          events.push({
+            laneIndex: i,
+            attackerSide: 'plants',
+            attackerName: `${plant.name} (Double Strike)`,
+            target: 'hero',
+            targetSide: 'zombies',
+            damageDealt: doubleRes.actualDamage,
+            isBlocked: doubleRes.blocked,
+            isLethal: currentZombieHero.hp <= 0,
+            traitsTriggered: ['doubleStrike'],
+            description: `⚡ ${plant.name} kích hoạt Double Strike tấn công trực tiếp Zombie Hero lần 2 gây ${doubleRes.actualDamage} dmg${doubleRes.blocked ? ' (SUPER-BLOCK!)' : ''}`,
+          })
+          if (doubleRes.isSuperBlockTriggered && !pendingSuperBlock) {
+            pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+          }
+          if (lane.environment?.id === 'plant_planet_of_the_grapes' && doubleRes.actualDamage > 0) {
+            if (updatedPlantDeck.length > 0 && updatedPlantHand.length < 10) {
+              const [drawn, ...rest] = updatedPlantDeck
+              updatedPlantDeck = rest
+              updatedPlantHand = [...updatedPlantHand, drawn]
+              events.push({
+                laneIndex: i,
+                attackerSide: 'plants',
+                attackerName: 'Planet of the Grapes',
+                target: 'hero',
+                targetSide: 'plants',
+                damageDealt: 0,
+                isBlocked: false,
+                isLethal: false,
+                description: `🍇 Planet of the Grapes: Rút thêm 1 lá [${drawn.name}] từ Double Strike!`,
+              })
+            }
           }
         }
       }

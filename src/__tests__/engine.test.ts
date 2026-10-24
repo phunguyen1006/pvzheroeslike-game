@@ -180,6 +180,71 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
       expect(nextState.zombieHero.hp).toBe(17)
       expect(nextState.combatEvents.length).toBeGreaterThan(0)
     })
+
+    it('should trigger Double Strike bonus attack against Zombie Hero when zombie is destroyed', () => {
+      const state = createInitialGameState()
+      state.lanes[1].plantMinion = createMockMinion('p_brex', 'Bananasaurus Rex', 'plants', 3, 3, {
+        doubleStrike: true,
+        bullseye: true,
+      })
+      state.lanes[1].zombieMinion = createMockMinion('z_swab', 'Swabbie', 'zombies', 1, 1)
+
+      const { updatedState, result } = resolveCombat(state)
+      expect(updatedState.lanes[1].zombieMinion).toBeNull()
+      expect(updatedState.lanes[1].plantMinion?.currentHealth).toBe(2)
+      expect(result.zombieHeroDamageTaken).toBe(3)
+      expect(updatedState.zombieHero.hp).toBe(17)
+      expect(result.events.some(e => e.traitsTriggered?.includes('doubleStrike'))).toBe(true)
+    })
+
+    it('should trigger Double Strike bonus attack against zombie minion when zombie survives first hit', () => {
+      const state = createInitialGameState()
+      state.lanes[1].plantMinion = createMockMinion('p_brex', 'Bananasaurus Rex', 'plants', 3, 5, {
+        doubleStrike: true,
+      })
+      state.lanes[1].zombieMinion = createMockMinion('z_tank', 'Conehead Zombie', 'zombies', 1, 5)
+
+      const { updatedState, result } = resolveCombat(state)
+      expect(updatedState.lanes[1].plantMinion?.currentHealth).toBe(4)
+      expect(updatedState.lanes[1].zombieMinion).toBeNull()
+      expect(result.events.some(e => e.traitsTriggered?.includes('doubleStrike') && e.target === 'minion')).toBe(true)
+    })
+
+    it('should trigger Double Strike bonus attack in open lane against Zombie Hero twice', () => {
+      const state = createInitialGameState()
+      state.lanes[1].plantMinion = createMockMinion('p_brex', 'Bananasaurus Rex', 'plants', 3, 3, {
+        doubleStrike: true,
+        bullseye: true,
+      })
+
+      const { updatedState, result } = resolveCombat(state)
+      expect(result.zombieHeroDamageTaken).toBe(6)
+      expect(updatedState.zombieHero.hp).toBe(14)
+    })
+
+    it('should absorb 2 damage with Armored 2 (Knight of the Living Dead)', () => {
+      const state = createInitialGameState()
+      state.lanes[1].plantMinion = createMockMinion('p_attacker', 'Peashooter', 'plants', 3, 3)
+      state.lanes[1].zombieMinion = createMockMinion('z_knight', 'Knight of the Living Dead', 'zombies', 2, 5, {
+        armored: 2,
+      })
+
+      const { updatedState } = resolveCombat(state)
+      expect(updatedState.lanes[1].zombieMinion?.currentHealth).toBe(4)
+    })
+
+    it('should bypass Super-Block meter entirely with Bullseye trait', () => {
+      const state = createInitialGameState()
+      state.zombieHero.blockMeter = 4
+      state.lanes[1].plantMinion = createMockMinion('p_bullseye', 'Sting Bean', 'plants', 2, 2, {
+        bullseye: true,
+      })
+
+      const { updatedState, result } = resolveCombat(state)
+      expect(result.zombieHeroDamageTaken).toBe(2)
+      expect(updatedState.zombieHero.hp).toBe(18)
+      expect(updatedState.zombieHero.blockMeter).toBe(4)
+    })
   })
 
   // ==========================================================

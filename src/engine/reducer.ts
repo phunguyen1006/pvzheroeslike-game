@@ -91,6 +91,9 @@ export function convertCardDataToCard(cardData: any, side: Side): Card {
     frenzy: Boolean(cardData.traits?.some((t: string) => t.toLowerCase().includes('frenzy'))),
     deadly: Boolean(cardData.traits?.some((t: string) => t.toLowerCase().includes('deadly'))),
     strikethrough: Boolean(cardData.traits?.some((t: string) => t.toLowerCase().includes('strikethrough'))),
+    armored: cardData.armored ?? (cardData.traits?.some((t: string) => t.toLowerCase().includes('armored 2')) ? 2 : cardData.traits?.some((t: string) => t.toLowerCase().includes('armored')) ? 1 : undefined),
+    antiHero: cardData.antiHero ?? (cardData.traits?.some((t: string) => t.toLowerCase().includes('antihero') || t.toLowerCase().includes('anti-hero')) ? 2 : undefined),
+    doubleStrike: Boolean(cardData.doubleStrike || cardData.traits?.some((t: string) => t.toLowerCase().includes('double strike') || t.toLowerCase().includes('doublestrike'))),
     description: cardData.description,
     heroClass: cardData.heroClass,
     laneRequirement: cardData.laneRequirement,
@@ -405,6 +408,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         strikethrough: card.strikethrough,
         armored: card.armored,
         freeze: card.freeze,
+        antiHero: card.antiHero,
+        doubleStrike: card.doubleStrike,
       }
 
       minion = applyLaneRulesOnPlay(minion, lane)

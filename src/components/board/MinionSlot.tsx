@@ -84,11 +84,19 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
     ? ASSET_MANIFEST.ui.defaultCardPlaceholder || '/assets/board/Game_Logo.png'
     : minion.image || '/assets/board/Game_Logo.png'
 
-  const isArmored = Boolean(minion.armored || minion.traits?.includes('armored'))
+  const armorValue = minion.armored ?? (minion.traits?.includes('armored') ? 1 : 0)
+  const isArmored = armorValue > 0
   const isDeadly = Boolean(minion.deadly || minion.traits?.includes('deadly'))
   const isBullseye = Boolean(minion.bullseye || minion.traits?.includes('bullseye'))
   const isStrikethrough = Boolean(minion.strikethrough || minion.traits?.includes('strikethrough'))
   const isFrenzy = Boolean(minion.frenzy || minion.traits?.includes('frenzy'))
+  const isAmphibious = Boolean(minion.amphibious || minion.traits?.includes('amphibious'))
+  const isDoubleStrike = Boolean(
+    minion.doubleStrike ||
+    minion.traits?.includes('doubleStrike') ||
+    (minion.traits as any)?.includes('Double Strike') ||
+    (minion.traits as any)?.includes('double strike')
+  )
   const isAntiHero = Boolean(
     minion.antiHero ||
     minion.traits?.includes('antiHero') ||
@@ -138,7 +146,7 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
         {/* Trait Indicators Badges Strip */}
         <div className="minion-active-traits-strip">
           {isArmored && (
-            <div className="mini-trait-chip armored" title="Armored: Giảm 1 sát thương">
+            <div className="mini-trait-chip armored" title={`Armored ${armorValue}: Giảm ${armorValue} sát thương`}>
               <img src={ASSET_MANIFEST.traits.Trait_Armored} alt="Armored" className="mini-trait-img" />
             </div>
           )}
@@ -148,18 +156,28 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
             </div>
           )}
           {isBullseye && (
-            <div className="mini-trait-chip bullseye" title="Bullseye: Không sạc Super-Block đối thủ">
+            <div className="mini-trait-chip bullseye" title="Bullseye: Bắn trúng không sạc Super-Block">
               <img src={ASSET_MANIFEST.traits.Trait_Bullseye} alt="Bullseye" className="mini-trait-img" />
             </div>
           )}
           {isStrikethrough && (
-            <div className="mini-trait-chip strikethrough" title="Strikethrough: Bắn xuyên trúng Hero">
+            <div className="mini-trait-chip strikethrough" title="Strikethrough: Bắn xuyên qua minion trúng Hero">
               <img src={ASSET_MANIFEST.traits.Trait_Strikethrough} alt="Strikethrough" className="mini-trait-img" />
             </div>
           )}
           {isFrenzy && (
-            <div className="mini-trait-chip frenzy" title="Frenzy: Tấn công thêm khi hạ gục">
+            <div className="mini-trait-chip frenzy" title="Frenzy: Tấn công thêm một đòn khi tiêu diệt minion">
               <img src={ASSET_MANIFEST.traits.Trait_Frenzy} alt="Frenzy" className="mini-trait-img" />
+            </div>
+          )}
+          {isDoubleStrike && (
+            <div className="mini-trait-chip double-strike" title="Double Strike: Tấn công thêm một đòn sau giao tranh">
+              <span className="mini-trait-glyph">⚡</span>
+            </div>
+          )}
+          {isAmphibious && (
+            <div className="mini-trait-chip amphibious" title="Amphibious: Thủy quân (đi được trên nước)">
+              <span className="mini-trait-glyph">💧</span>
             </div>
           )}
           {isAntiHero && (
@@ -170,24 +188,34 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
         </div>
       </div>
 
-      {/* Combat Stat Badges: Spiky Green Attack Burst & Glossy Red Heart */}
+      {/* Combat Stat Badges: Spiky Green Attack Burst / Bullseye Reticle & Glossy Red Heart / Armored Shield */}
       <div className="minion-foot-stats-cluster">
-        {/* Attack Starburst Badge */}
+        {/* Attack Starburst / Bullseye Target Badge */}
         <div
           className={`foot-stat-badge attack-starburst ${
+            isBullseye ? 'attack-bullseye' : ''
+          } ${
             isBuffedAttack ? 'stat-boosted' : isDebuffedAttack ? 'stat-reduced' : ''
           }`}
+          title={isBullseye ? 'Bullseye: Bỏ qua Block Meter đối phương' : undefined}
         >
           <div className="starburst-shape" />
           <span className="foot-stat-digit">{minion.currentAttack}</span>
-          <span className="starburst-mini-star">★</span>
+          {isBullseye ? (
+            <span className="bullseye-reticle-ring">◎</span>
+          ) : (
+            <span className="starburst-mini-star">★</span>
+          )}
         </div>
 
-        {/* Health Heart Badge (Overlaps slightly on the right) */}
+        {/* Health Heart Badge (Overlaps slightly on the right, with optional Armored Plate) */}
         <div
           className={`foot-stat-badge health-heart ${
+            isArmored ? 'health-armored' : ''
+          } ${
             isDamaged ? 'stat-damaged' : 'stat-normal'
           }`}
+          title={isArmored ? `Armored ${armorValue}: Giảm ${armorValue} sát thương` : undefined}
         >
           <img
             src={ASSET_MANIFEST.traits.Resource_Health_Heart}
@@ -196,6 +224,12 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
             onError={(e) => { e.currentTarget.style.display = 'none' }}
           />
           <span className="foot-stat-digit">{minion.currentHealth}</span>
+          {isArmored && (
+            <div className="armored-shield-overlay" title={`Giáp +${armorValue}`}>
+              <span className="armored-shield-icon">🛡️</span>
+              <span className="armored-shield-val">{armorValue}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

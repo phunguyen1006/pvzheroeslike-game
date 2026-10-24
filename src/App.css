@@ -1313,6 +1313,21 @@
   object-fit: contain;
 }
 
+.mini-trait-glyph {
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+.mini-trait-chip.double-strike {
+  border-color: #facc15;
+  background: rgba(234, 179, 8, 0.35);
+}
+
+.mini-trait-chip.amphibious {
+  border-color: #38bdf8;
+  background: rgba(14, 165, 233, 0.35);
+}
+
 /* ========================================================
    AUTHENTIC OVERLAPPING FOOT STATS BADGES (ATTACK & HEALTH)
    ======================================================== */
@@ -1344,6 +1359,35 @@
   box-shadow: 0 0 6px rgba(132, 204, 22, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.8);
   margin-right: -6px;
   z-index: 1;
+  transition: all 0.2s ease;
+}
+
+/* Authentic PvZ Heroes Bullseye Circular Reticle Badge */
+.foot-stat-badge.attack-starburst.attack-bullseye {
+  background: radial-gradient(circle, #0284c7 0%, #0369a1 70%, #082f49 100%);
+  border: 2px solid #38bdf8;
+  border-radius: 50%;
+  transform: none;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.8), inset 0 0 4px rgba(255, 255, 255, 0.6);
+}
+
+.attack-starburst.attack-bullseye .foot-stat-digit {
+  transform: none;
+  text-shadow: 1.5px 1.5px 0 #075985, -1px -1px 0 #075985, 1px -1px 0 #075985, -1px 1px 0 #075985;
+}
+
+.bullseye-reticle-ring {
+  position: absolute;
+  font-size: 1.15rem;
+  color: #38bdf8;
+  opacity: 0.85;
+  pointer-events: none;
+  animation: bullseyeSpin 8s linear infinite;
+}
+
+@keyframes bullseyeSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .attack-starburst .foot-stat-digit {
@@ -1383,6 +1427,39 @@
   align-items: center;
   justify-content: center;
   z-index: 2;
+  transition: all 0.2s ease;
+}
+
+/* Authentic PvZ Heroes Armored Steel Plating Frame */
+.foot-stat-badge.health-heart.health-armored {
+  filter: drop-shadow(0 0 6px rgba(148, 163, 184, 0.9));
+}
+
+.armored-shield-overlay {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 50%, #475569 100%);
+  border: 1px solid #ffffff;
+  border-radius: 4px;
+  padding: 0 2.5px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  z-index: 6;
+}
+
+.armored-shield-icon {
+  font-size: 0.55rem;
+}
+
+.armored-shield-val {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1;
 }
 
 .foot-heart-icon {

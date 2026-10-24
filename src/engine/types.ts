@@ -43,6 +43,7 @@ export interface Card {
   armored?: number
   freeze?: boolean
   antiHero?: number
+  doubleStrike?: boolean
   description?: string
   heroClass?: string
   laneRequirement?: 'ground' | 'heights' | 'water' | 'any'
@@ -69,6 +70,7 @@ export interface Minion {
   armored?: number
   freeze?: boolean
   antiHero?: number
+  doubleStrike?: boolean
   isFrozen?: boolean
   isAttacking?: boolean
   isHit?: boolean

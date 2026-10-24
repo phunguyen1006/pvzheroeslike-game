@@ -20,6 +20,9 @@ export interface CardData {
  hp: number
  health: number
  traits: string[]
+ armored?: number
+ antiHero?: number
+ doubleStrike?: boolean
  assetPath: string
  image: string
  description: string
@@ -83,6 +86,7 @@ export const PLANT_CARDS: CardData[] = [
  hp: 3,
  health: 3,
  traits: ['Double Strike'],
+ doubleStrike: true,
  assetPath: '/assets/cards/plants/Bananasaurus Rex.png',
  image: '/assets/cards/plants/Bananasaurus Rex.png',
  description: 'Double Strike. Dino-Roar: This gets +1/+1.',
@@ -733,6 +737,56 @@ export const ZOMBIE_CARDS: CardData[] = [
  image: '/assets/cards/zombies/Zombot 1000.png',
  description: 'When played: Destroy all Plants.',
  heroClass: 'Beastly',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'zombie_browncoat',
+ name: 'Browncoat Zombie',
+ team: 'zombies',
+ type: 'zombie',
+ cost: 1,
+ attack: 1,
+ hp: 1,
+ health: 1,
+ traits: [],
+ assetPath: '/assets/cards/zombies/Swabbie.png',
+ image: '/assets/cards/zombies/Swabbie.png',
+ description: 'Regular 1/1 zombie minion.',
+ heroClass: 'Hearty',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'zombie_knight_living_dead',
+ name: 'Knight of the Living Dead',
+ team: 'zombies',
+ type: 'zombie',
+ cost: 7,
+ attack: 5,
+ hp: 5,
+ health: 5,
+ traits: ['Armored 2'],
+ armored: 2,
+ assetPath: '/assets/cards/zombies/Arm Wrestler.png',
+ image: '/assets/cards/zombies/Arm Wrestler.png',
+ description: 'Armored 2: Reduces all incoming damage by 2.',
+ heroClass: 'Hearty',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'zombie_football_zombie',
+ name: 'All-Star Zombie',
+ team: 'zombies',
+ type: 'zombie',
+ cost: 5,
+ attack: 4,
+ hp: 6,
+ health: 6,
+ traits: ['Armored 1', 'Frenzy'],
+ armored: 1,
+ assetPath: '/assets/cards/zombies/Disco Zombie.png',
+ image: '/assets/cards/zombies/Disco Zombie.png',
+ description: 'Armored 1, Frenzy. Tough and athletic football zombie.',
+ heroClass: 'Hearty',
  laneRequirement: 'ground'
  }
 ];
