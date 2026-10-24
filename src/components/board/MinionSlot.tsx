@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import type { Minion as MinionType } from '../../engine/types'
 import { ASSET_MANIFEST } from '../../data/assetsManifest'
+import { soundManager } from '../../audio/SoundManager'
 
 export interface MinionSlotProps {
   minion: MinionType | null
@@ -27,7 +28,23 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
 }) => {
   const [imgError, setImgError] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [isShattering, setIsShattering] = useState(false)
+  const wasGravestoneRef = useRef(Boolean(minion?.isGravestone))
   const isPlant = side === 'plants'
+
+  // Trigger shatter visual & audio effect when Gravestone cracks open (revealed at Zombie Tricks)
+  useEffect(() => {
+    if (wasGravestoneRef.current && minion && !minion.isGravestone) {
+      setIsShattering(true)
+      soundManager.playGravestoneReveal()
+      const timer = setTimeout(() => {
+        setIsShattering(false)
+      }, 850)
+      wasGravestoneRef.current = false
+      return () => clearTimeout(timer)
+    }
+    wasGravestoneRef.current = Boolean(minion?.isGravestone)
+  }, [minion?.isGravestone])
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
