@@ -585,6 +585,25 @@ export function executeTrick(
       break
     }
 
+    case 'plant_grave_buster': {
+      // Destroy a Gravestone
+      if (targetLaneIndex !== undefined) {
+        const lane = updatedLanes[targetLaneIndex]
+        if (lane?.zombieMinion) {
+          if (lane.zombieMinion.isGravestone) {
+            const graveName = lane.zombieMinion.name
+            lane.zombieMinion = null
+            message = `Grave Buster phá tan bia mộ, tiêu diệt ${graveName} trước khi kịp xuất hiện!`
+          } else {
+            message = `Grave Buster chỉ có thể tiêu diệt Bia Mộ (Gravestone)!`
+          }
+        } else {
+          message = `Grave Buster không tìm thấy Bia Mộ tại làn ${targetLaneIndex}!`
+        }
+      }
+      break
+    }
+
     default:
       message = `${side === 'plants' ? 'Plant' : 'Zombie'} sử dụng ${card.name}.`
   }
