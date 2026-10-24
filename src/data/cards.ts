@@ -489,6 +489,23 @@ export const PLANT_CARDS: CardData[] = [
  heroClass: 'Guardian'
  },
  {
+ id: 'plant_grave_buster',
+ name: 'Grave Buster',
+ team: 'plants',
+ type: 'trick',
+ cost: 2,
+ attack: 0,
+ hp: 0,
+ health: 0,
+ traits: [],
+ rarity: 'Uncommon',
+ tribe: 'Root Trick',
+ assetPath: '/assets/cards/plants/Grave Buster.png',
+ image: '/assets/cards/plants/Grave Buster.png',
+ description: 'Tiêu diệt một Bia Mộ (Gravestone) của Zombie.',
+ heroClass: 'Guardian'
+ },
+ {
  id: 'plant_sunflower',
  name: 'Sunflower',
  team: 'plants',
