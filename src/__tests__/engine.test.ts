@@ -24,6 +24,7 @@ import {
   revealGravestones,
 } from '../engine/index'
 import type { Minion, Card, HeroState, GameState } from '../engine/types'
+import { getCardById, PLANT_CARDS, ZOMBIE_CARDS } from '../data/cards'
 
 describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
   const createMockMinion = (
