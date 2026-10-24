@@ -78,6 +78,12 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
       unlocksNext: true,
       title: 'Khắc Tinh Tí Hòn',
     },
+    comicDialogue: {
+      issueTitle: 'CƠN BÃO BẢN SAO TÍ HÒN!',
+      issueTagline: 'Impfinity cùng phân thân tràn ngập mọi ngõ ngách',
+      zombieHeroQuote: 'Hehehe! Nhìn xem ai đông hơn nào! Tụi ta phân thân thành hàng trăm bản sao tí hon quậy phá!',
+      plantHeroQuote: 'Càng đông thì bão đậu quét càng dễ! Bức tường Wall-Nut sẽ chặn đứng bước chân của lũ tí hon các ngươi!',
+    },
   },
   {
     id: 'mission_3',
@@ -110,6 +116,12 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
       gems: 200,
       unlocksNext: true,
       title: 'Chiến Binh Đầm Lầy',
+    },
+    comicDialogue: {
+      issueTitle: 'CƠN THỊNH NỘ CỦA ĐÔ VẬT!',
+      issueTagline: 'The Smash giậm chân rung chuyển cả bờ vực bùn lầy',
+      zombieHeroQuote: 'SMASH ĐẬP BẸP! KHÔNG CÓ THỨ CÂY CỎ NÀO CHỐNG NỔI NẮM ĐẤM ĐÁ TẢNG CỦA TA!',
+      plantHeroQuote: 'Thể hình to lớn nhưng chậm chạp! Để xem bùn lầy Bog of Sunken Hope có giữ chân nổi nắm đấm của ngươi không!',
     },
   },
   {
@@ -144,6 +156,12 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
       unlocksNext: true,
       title: 'Chuyên Gia Phá Giáp',
     },
+    comicDialogue: {
+      issueTitle: 'PHÁO ĐÀI BỌC THÉP TỐI THƯỢNG!',
+      issueTagline: 'Rustbolt thiết lập vành đai Cone Zone phòng ngự kiên cố',
+      zombieHeroQuote: 'Áo giáp khoa học viễn tưởng của ta hấp thụ mọi tổn thương! Bọn cây cỏ các ngươi chỉ là trò hề!',
+      plantHeroQuote: 'Kim loại dày đến đâu cũng sẽ bị axit quả mọng và chông gai Spikeweed bào mòn rỉ sét thôi!',
+    },
   },
   {
     id: 'mission_5',
@@ -176,6 +194,12 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
       gems: 500,
       unlocksNext: true,
       title: 'Vệ Binh Ngoại Ô (Suburban Hero)',
+    },
+    comicDialogue: {
+      issueTitle: 'THIÊN TÀI ĐIÊN CUỒNG TẬP CUỐI!',
+      issueTagline: 'Đại chiến Boss cuối Chapter 1 với Giáo Sư Não Bộ',
+      zombieHeroQuote: 'Eureka! Phát minh hủy diệt với năng lượng vô hạn sẽ quét sạch khu vườn khỏi bản đồ thế giới!',
+      plantHeroQuote: 'Khoa học phục vụ tà ác sẽ bị công lý đập tan! Toàn lực khu vườn, xông lên vì hòa bình Ngoại Ô!',
     },
   },
 ]

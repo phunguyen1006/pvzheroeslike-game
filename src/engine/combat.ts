@@ -1932,6 +1932,11 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
       pendingSuperBlock = deathRes.updatedState.pendingSuperBlock || null
       events.push(...deathRes.events)
     }
+
+    // Mid-Combat Lethal Termination: Stop further lane combat immediately if either hero is defeated
+    if (currentPlantHero.hp <= 0 || currentZombieHero.hp <= 0) {
+      break
+    }
   }
 
   // Determine game winner
