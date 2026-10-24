@@ -16,6 +16,7 @@ import {
   triggerWhenPlayed,
   triggerStartOfTurn,
   triggerDinoRoar,
+  revealGravestones,
 } from './abilities'
 import {
   playEnvironment,
@@ -389,6 +390,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         }
       }
 
+      const isGravestoneTrait = side === 'zombies' && Boolean(card.gravestone || card.traits?.includes('gravestone'))
+
       let minion: Minion = {
         instanceId: `${card.id}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         cardId: card.id,
@@ -410,6 +413,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         freeze: card.freeze,
         antiHero: card.antiHero,
         doubleStrike: card.doubleStrike,
+        gravestone: isGravestoneTrait || card.gravestone,
+        isGravestone: isGravestoneTrait,
       }
 
       minion = applyLaneRulesOnPlay(minion, lane)
@@ -434,6 +439,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       const updatedHand = hand.filter(c => c.id !== cardId)
 
+      const playLog = minion.isGravestone
+        ? `Zombie đặt một Bia Mộ bí ẩn (Gravestone) vào ${lane.name}.`
+        : `${side === 'plants' ? 'Plant' : 'Zombie'} đặt ${minion.name} (${minion.currentAttack}/${minion.currentHealth}) vào ${lane.name}.`
+
       let nextState: GameState = {
         ...state,
         lanes: updatedLanes,
@@ -441,7 +450,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         zombieHero: side === 'zombies' ? updatedHero : state.zombieHero,
         plantHand: side === 'plants' ? updatedHand : state.plantHand,
         zombieHand: side === 'zombies' ? updatedHand : state.zombieHand,
-        combatLog: [`${side === 'plants' ? 'Plant' : 'Zombie'} đặt ${minion.name} (${minion.currentAttack}/${minion.currentHealth}) vào ${lane.name}.`, ...state.combatLog],
+        combatLog: [playLog, ...state.combatLog],
       }
 
       // Trigger environment on play (e.g. Medulla Nebula +2 Brains)
@@ -452,10 +461,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       }
 
       // Trigger when played abilities (e.g. Bonk Choy, Conga Zombie, Ra Zombie, Zombot 1000, Astro-Shroom, etc.)
-      const abilityRes = triggerWhenPlayed(nextState, minion, laneIndex, side)
-      nextState = abilityRes.updatedState
-      if (abilityRes.events.length > 0) {
-        nextState.combatLog = [...abilityRes.events, ...nextState.combatLog]
+      // Note: Gravestone minions do NOT trigger their when-played abilities until revealed at the start of ZOMBIE_TRICKS!
+      if (!minion.isGravestone) {
+        const abilityRes = triggerWhenPlayed(nextState, minion, laneIndex, side)
+        nextState = abilityRes.updatedState
+        if (abilityRes.events.length > 0) {
+          nextState.combatLog = [...abilityRes.events, ...nextState.combatLog]
+        }
       }
 
       return nextState
@@ -582,6 +594,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         case 'FIGHT':
           phaseTitle = 'Giai đoạn Giao Tranh (Fight Phase) bắt đầu!'
           break
+      }
+
+      // At the start of ZOMBIE_TRICKS phase, crack open all Gravestones and trigger When Revealed abilities
+      if (nextPhase === 'ZOMBIE_TRICKS') {
+        const { updatedState: revealedState, events: revealEvents } = revealGravestones(state)
+        return {
+          ...revealedState,
+          phase: nextPhase,
+          combatEvents: [...revealedState.combatEvents, ...revealEvents],
+          combatLog: [phaseTitle, ...revealedState.combatLog],
+        }
       }
 
       return {

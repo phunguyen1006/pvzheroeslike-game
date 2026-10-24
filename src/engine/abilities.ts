@@ -3,7 +3,7 @@
  * Handles card triggers: When Played, When Hurt, Start of Turn, Dino-Roar, When Destroyed
  */
 
-import type { GameState, Side, Minion, Card } from './types'
+import type { GameState, Side, Minion, Card, CombatEvent } from './types'
 import { applyHeroDamage } from './combat'
 
 export interface AbilityTriggerResult {
@@ -443,4 +443,74 @@ export function triggerWhenDestroyed(
   }
 
   return { updatedState, events }
+}
+
+/**
+ * Reveals all Gravestones on the board at the beginning of ZOMBIE_TRICKS phase.
+ * Gravestones crack open (isGravestone: false), revealing the underlying zombie minion
+ * and triggering its "When revealed" / "When played" abilities from left to right.
+ */
+export function revealGravestones(state: GameState): {
+  updatedState: GameState
+  events: CombatEvent[]
+} {
+  let updatedState: GameState = {
+    ...state,
+    lanes: state.lanes.map(l => ({ ...l })),
+    combatLog: [...state.combatLog],
+  }
+  const events: CombatEvent[] = []
+
+  // Reveal Gravestones lane-by-lane from left to right (lane 0 to 4)
+  for (let laneIdx = 0; laneIdx < updatedState.lanes.length; laneIdx++) {
+    const lane = updatedState.lanes[laneIdx]
+    const minion = lane.zombieMinion
+    if (minion && minion.isGravestone) {
+      // Crack open gravestone
+      const revealedMinion: Minion = {
+        ...minion,
+        isGravestone: false,
+      }
+      lane.zombieMinion = revealedMinion
+
+      const revealDesc = `🪦 Bia Mộ vỡ tung tại ${lane.name}: ${revealedMinion.name} (${revealedMinion.currentAttack}/${revealedMinion.currentHealth}) xuất đầu lộ diện!`
+      events.push({
+        laneIndex: laneIdx,
+        attackerSide: 'zombies',
+        attackerName: revealedMinion.name,
+        target: 'minion',
+        targetSide: 'zombies',
+        damageDealt: 0,
+        isBlocked: false,
+        isLethal: false,
+        description: revealDesc,
+      })
+      updatedState.combatLog.unshift(revealDesc)
+
+      // Trigger "When revealed" / "When played" abilities (e.g. Conga Zombie, Ra Zombie)
+      const abilityRes = triggerWhenPlayed(updatedState, revealedMinion, laneIdx, 'zombies')
+      updatedState = abilityRes.updatedState
+      if (abilityRes.events.length > 0) {
+        for (const evtDesc of abilityRes.events) {
+          events.push({
+            laneIndex: laneIdx,
+            attackerSide: 'zombies',
+            attackerName: revealedMinion.name,
+            target: 'minion',
+            targetSide: 'plants',
+            damageDealt: 0,
+            isBlocked: false,
+            isLethal: false,
+            description: evtDesc,
+          })
+          updatedState.combatLog.unshift(evtDesc)
+        }
+      }
+    }
+  }
+
+  return {
+    updatedState,
+    events,
+  }
 }

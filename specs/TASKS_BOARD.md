@@ -18,6 +18,7 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] Đảm bảo Bullseye traits bỏ qua hoàn toàn Block Meter
 - [x] Hỗ trợ Armored 1 và Armored 2 giảm sát thương chính xác
 - [x] Hoàn thiện cơ chế cascade trigger khi minion bị tiêu diệt (`triggerOnDeath` & `triggerOnMultipleDeaths` trong `src/engine/triggers.ts` cho Valkyrie in hand, Punish-Shroom, Hothead, Pear Cub, Gas Giant, Frankentuar, Sharktronic Sub với 9 unit tests chuyên sâu)
+- [x] Triển khai cơ chế Gravestone (Bia Mộ): minion ẩn danh `isGravestone: true`, tự động nứt vỡ lúc bắt đầu `ZOMBIE_TRICKS`, kích hoạt "When Revealed" abilities và helper `revealGravestones`
 
 ### 🎨 UI Bot (`feature/ui`)
 - [x] Hiển thị huy hiệu chân Minion chân thực: Bullseye target reticle và Armored metal shield
@@ -34,6 +35,6 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 
 ### 🧪 QA Bot (`feature/qa`)
 - [x] Thêm helper kiểm tra trait (`hasCardTrait`) và fixtures fallback cho thẻ bài AI
-- [x] Nâng tổng số test lên 98/98 test suite pass 100% (thêm test Double Strike, Armored 2, Bullseye Super-Block bypass, cascade on-death triggers)
+- [x] Nâng tổng số test lên 109/109 test suite pass 100% (thêm test Double Strike, Armored 2, Bullseye Super-Block bypass, cascade on-death triggers, Gravestone reveal)
 - [ ] Chạy `npm test` liên tục và nâng coverage lên >90%
 - [ ] Tối ưu hóa thuật toán ra quyết định của AI trong `src/engine/ai.ts`

@@ -23,6 +23,7 @@ export type Trait =
   | 'freeze'
   | 'doubleStrike'
   | 'antiHero'
+  | 'gravestone'
 
 export interface Card {
   id: string
@@ -44,6 +45,7 @@ export interface Card {
   freeze?: boolean
   antiHero?: number
   doubleStrike?: boolean
+  gravestone?: boolean
   description?: string
   heroClass?: string
   laneRequirement?: 'ground' | 'heights' | 'water' | 'any'
@@ -71,6 +73,8 @@ export interface Minion {
   freeze?: boolean
   antiHero?: number
   doubleStrike?: boolean
+  gravestone?: boolean
+  isGravestone?: boolean
   isFrozen?: boolean
   isAttacking?: boolean
   isHit?: boolean

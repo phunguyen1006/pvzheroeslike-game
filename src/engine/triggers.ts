@@ -49,6 +49,7 @@ export function minionToCard(minion: Minion): Card {
     freeze: minion.freeze,
     antiHero: minion.antiHero,
     doubleStrike: minion.doubleStrike,
+    gravestone: minion.gravestone,
   }
 }
 
