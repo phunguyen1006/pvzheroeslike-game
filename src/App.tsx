@@ -40,6 +40,7 @@ import {
 } from './data/eventTickets'
 import type { CampaignMission, Minion as MinionType } from './engine/types'
 import type { Projectile, FloatingTextItem, ShockwaveItem } from './components/board/CombatVFXLayer'
+import { type CombatPopupItem, getComicActionWord } from './components/board/CombatActionPopups'
 import { soundManager } from './audio/SoundManager'
 import './App.css'
 
@@ -428,7 +429,6 @@ export function App() {
   }
 
   // Turn Rope Countdown Timer (15-second fuse for player turn)
-  const isPlayerPlantTurn = gameState.phase === 'PLANT_PLAY'
   useEffect(() => {
     if (!isPlayerPlantTurn || isCombatResolving || showComicIntro || Boolean(gameState.winner)) {
       setTurnRopeTime(15)
@@ -575,7 +575,7 @@ export function App() {
 
             // 2c. Comic Action Word & Damage Popup (POW/BAM/CRUNCH/ZAP/BLOCKED/DEADLY/STRIKE)
             if (ev.isBlocked || ev.damageDealt > 0) {
-              const attackerTraits = ev.attackerMinion?.traits || []
+              const attackerTraits = (ev.traitsTriggered || []) as string[]
               const isDeadly = Boolean(attackerTraits.includes('deadly'))
               const comicWord = getComicActionWord({
                 damage: ev.damageDealt,
@@ -844,6 +844,13 @@ export function App() {
               projectiles={projectiles}
               floatingTexts={floatingTexts}
               shockwaves={shockwaves}
+              combatPopups={combatPopups}
+              turnRope={{
+                timeLeft: turnRopeTime,
+                maxTime: 15,
+                isActive: isPlayerPlantTurn && turnRopeTime > 0 && !isCombatResolving,
+                onTimeout: handleNextPhase,
+              }}
               onSelectLane={handleSelectLane}
               onDropCardToLane={handleDropCardToLane}
               onInspectMinion={(minion) => setInspectModalData({ minion })}

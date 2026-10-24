@@ -6,7 +6,7 @@
 
 import type { CampaignMission, CampaignProgress, LaneState, Side, Minion, Card as EngineCard, SavedDeck } from '../engine/types'
 import { createInitialLanes, convertCardDataToCard } from '../engine/reducer'
-import { getCardById } from './cards'
+import { getCardById, ALL_CARDS } from './cards'
 
 export const CHAPTER_1_MISSIONS: CampaignMission[] = [
   {
@@ -912,6 +912,21 @@ export const CAMPAIGN_STAR_MILESTONES: CampaignStarMilestone[] = [
 ]
 
 /**
+ * Gets a milestone configuration by its required star count
+ */
+export function getCampaignStarMilestone(requiredStars: number): CampaignStarMilestone | undefined {
+  return CAMPAIGN_STAR_MILESTONES.find((m) => m.requiredStars === requiredStars)
+}
+
+/**
+ * Checks if a specific milestone has already been claimed
+ */
+export function hasClaimedMilestone(requiredStars: number): boolean {
+  const claimed = loadClaimedMilestones()
+  return claimed.includes(requiredStars)
+}
+
+/**
  * Loads claimed milestone star counts from localStorage
  */
 export function loadClaimedMilestones(): number[] {
@@ -940,29 +955,25 @@ export function saveClaimedMilestones(claimed: number[]): void {
 }
 
 /**
- * Claims a milestone reward and returns whether it succeeded
+ * Claims a milestone reward and returns whether it succeeded (or null if already claimed/invalid)
  */
 export function claimMilestoneReward(
   requiredStars: number,
-  currentTotalStars: number
-): { success: boolean; gemsAwarded: number; badge: string; error?: string } {
+  currentTotalStars?: number
+): { success: boolean; gemsAwarded: number; gems: number; badge: string; error?: string } | null {
   const milestone = CAMPAIGN_STAR_MILESTONES.find((m) => m.requiredStars === requiredStars)
   if (!milestone) {
-    return { success: false, gemsAwarded: 0, badge: '', error: 'Mốc phần thưởng không tồn tại.' }
+    return null
   }
 
-  if (currentTotalStars < requiredStars) {
-    return {
-      success: false,
-      gemsAwarded: 0,
-      badge: '',
-      error: `Bạn cần ${requiredStars} sao (hiện có ${currentTotalStars} sao) để nhận thưởng này.`,
-    }
+  const effectiveStars = currentTotalStars !== undefined ? currentTotalStars : getTotalCampaignStars().totalStars
+  if (effectiveStars < requiredStars) {
+    return null
   }
 
   const claimed = loadClaimedMilestones()
   if (claimed.includes(requiredStars)) {
-    return { success: false, gemsAwarded: 0, badge: '', error: 'Bạn đã nhận phần thưởng mốc này rồi.' }
+    return null
   }
 
   claimed.push(requiredStars)
@@ -981,6 +992,7 @@ export function claimMilestoneReward(
   return {
     success: true,
     gemsAwarded: milestone.gems,
+    gems: milestone.gems,
     badge: milestone.badge,
   }
 }
@@ -989,20 +1001,36 @@ export function claimMilestoneReward(
  * Calculates total stars gathered across Plant and Zombie campaigns
  */
 export function getTotalCampaignStars(
-  plantProgress?: CampaignProgress,
-  zombieProgress?: CampaignProgress
+  plantProgress?: any,
+  zombieProgress?: any
 ): { plantStars: number; zombieStars: number; totalStars: number } {
   const pProg = plantProgress || loadCampaignProgress()
   const zProg = zombieProgress || loadZombieCampaignProgress()
 
   let plantStars = 0
-  for (const missionKey of Object.keys(pProg.completedMissions)) {
-    plantStars += pProg.completedMissions[missionKey]?.stars || 0
+  if (pProg) {
+    if (pProg.missionStars && typeof pProg.missionStars === 'object') {
+      for (const val of Object.values(pProg.missionStars)) {
+        plantStars += Number(val) || 0
+      }
+    } else if (pProg.completedMissions && typeof pProg.completedMissions === 'object' && !Array.isArray(pProg.completedMissions)) {
+      for (const missionKey of Object.keys(pProg.completedMissions)) {
+        plantStars += pProg.completedMissions[missionKey]?.stars || 0
+      }
+    }
   }
 
   let zombieStars = 0
-  for (const missionKey of Object.keys(zProg.completedMissions)) {
-    zombieStars += zProg.completedMissions[missionKey]?.stars || 0
+  if (zProg) {
+    if (zProg.missionStars && typeof zProg.missionStars === 'object') {
+      for (const val of Object.values(zProg.missionStars)) {
+        zombieStars += Number(val) || 0
+      }
+    } else if (zProg.completedMissions && typeof zProg.completedMissions === 'object' && !Array.isArray(zProg.completedMissions)) {
+      for (const missionKey of Object.keys(zProg.completedMissions)) {
+        zombieStars += zProg.completedMissions[missionKey]?.stars || 0
+      }
+    }
   }
 
   return {
@@ -1011,6 +1039,8 @@ export function getTotalCampaignStars(
     totalStars: plantStars + zombieStars,
   }
 }
+
+export const calculateTotalCampaignStars = getTotalCampaignStars
 
 /**
  * Loads player saved decks filtered by faction
@@ -1039,7 +1069,25 @@ export function buildEngineDeckFromMap(
 ): EngineCard[] {
   const result: EngineCard[] = []
   for (const [cardId, count] of Object.entries(deckMap)) {
-    const cardData = getCardById(cardId)
+    let cardData = getCardById(cardId)
+    if (!cardData) {
+      if (cardId === 'browncoat_zombie') {
+        cardData = getCardById('zombie_regular')
+      } else if (cardId === 'conehead_zombie') {
+        cardData = getCardById('zombie_conehead')
+      } else {
+        const prefix = side === 'plants' ? 'plant_' : 'zombie_'
+        cardData = getCardById(`${prefix}${cardId}`)
+        if (!cardData) {
+          const normKey = cardId.toLowerCase().replace(/[\s-_]/g, '')
+          cardData = ALL_CARDS.find((c) => {
+            const cNormId = c.id.toLowerCase().replace(/^(plant_|zombie_)/, '').replace(/[\s-_]/g, '')
+            const cNormName = c.name.toLowerCase().replace(/[\s-_]/g, '')
+            return cNormId === normKey || cNormName === normKey
+          })
+        }
+      }
+    }
     if (!cardData) continue
     const engineCard = convertCardDataToCard(cardData, side)
     for (let i = 0; i < count; i++) {

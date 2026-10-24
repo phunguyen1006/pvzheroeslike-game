@@ -37,6 +37,10 @@ export const CARD_FLAVOR_TEXTS: Record<string, string> = {
   plant_banana_bomb: '"Nhỏ nhưng có võ. Một quả bom chuối thơm phức phát nổ ngay vào mặt Zombie ngơ ngác."',
   plant_blooming_heart: '"Trái tim hoa hồng càng chịu phong ba bão táp, tình yêu và sức mạnh tấn công lại càng bùng cháy mãnh liệt."',
   plant_sportacus: '"Đấu sĩ nấm giác đấu kiên cường. Đối thủ dùng mánh khóe bẩn thỉu (Tricks)? Nhận ngay một nắm đấm công lý vào mặt Zombie Hero!"',
+  plant_astrocado: '"Bay lượn giữa các vì tinh tú với tốc độ ánh sáng. Khi rơi rụng, hạt mầm của anh ấy sẽ lại vươn lên thành một huyền thoại."',
+  plant_astrocado_pit: '"Chỉ là một hạt bơ nhỏ bé nằm yên dưới đất... nhưng đừng vội cười, nó sắp nảy mầm thành chiến binh vũ trụ đấy!"',
+  plant_cob_cannon: '"Khẩu đại pháo ngô bắp hạt nhân tối thượng. Một phát bắn san phẳng chiến tuyến địch và thổi bay mọi thứ xung quanh."',
+  plant_bird_of_paradise: '"Loài chim thiên đường kiêu sa bơi lội giữa hồ nước, mỗi sớm mai lại mang đến một phép màu siêu năng lực kỳ diệu."',
 
   // Zombies
   zombie_swabbie: '"Hắn là thủy thủ cướp biển nhỏ bé nhất, nhưng sự dũng cảm khi lao ra giữa biển nước thì không ai sánh bằng."',
@@ -72,6 +76,7 @@ export const CARD_FLAVOR_TEXTS: Record<string, string> = {
   zombie_kitchen_sink: '"Hắn mang theo tất cả mọi thứ: bồn rửa bát, cờ lê, giáp sắt, súng ngắm... Không một đặc tính chiến đấu nào hắn không có."',
   zombie_trick_or_treater: '"Cho kẹo hay bị ghẹo! Mỗi trò lừa lọc (Trick) của bạn là một gói kẹo tăng lực ngọt ngào gửi tới tay bài."',
   zombie_synchronized_swimmer: '"Vũ điệu bơi nghệ thuật dưới nước hoàn hảo đến mức có thể bắt chước sức mạnh của bất kỳ ai trên bờ."',
+  zombie_space_cowboy: '"Cao bồi không gian lướt đi trên sao chổi. Cứ mỗi lần bắn trúng mặt Hero, hắn lại phi ngựa sang làn tiếp theo để bắn tiếp!"',
 }
 
 export function getCardFlavorText(cardId: string, cardName: string): string {

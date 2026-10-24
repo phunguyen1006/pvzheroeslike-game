@@ -300,7 +300,7 @@ export interface TerrainCoordinationResult {
 export interface ConjureFilter {
   tribe?: string
   set?: string
-  cardType?: 'minion' | 'trick' | 'environment'
+  cardType?: 'minion' | 'trick' | 'environment' | 'superpower'
   side?: Side
   rarity?: string
   minCost?: number

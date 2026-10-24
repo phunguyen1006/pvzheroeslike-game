@@ -114,12 +114,12 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
   const handleClaimMilestone = (requiredStars: number) => {
     const starsData = getTotalCampaignStars(plantProgress, zombieProgress)
     const res = claimMilestoneReward(requiredStars, starsData.totalStars)
-    if (res.success) {
+    if (res && res.success) {
       setClaimedMilestones(loadClaimedMilestones())
-      setMilestoneRewardMessage(`Chúc mừng! Bạn đã nhận ${res.gemsAwarded} Gems và danh hiệu "${res.badge}"!`)
+      setMilestoneRewardMessage(`Chúc mừng! Bạn đã nhận ${res.gemsAwarded || res.gems} Gems và danh hiệu "${res.badge}"!`)
       soundManager.playBuff()
       setTimeout(() => setMilestoneRewardMessage(null), 4500)
-    } else if (res.error) {
+    } else if (res && res.error) {
       setMilestoneRewardMessage(res.error)
       soundManager.playCardDrop()
       setTimeout(() => setMilestoneRewardMessage(null), 3000)

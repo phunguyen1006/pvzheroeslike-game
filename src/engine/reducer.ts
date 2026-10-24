@@ -226,6 +226,16 @@ export function canPlayCardToLane(
           return { allowed: true } // Pea Evolution allows evolving on any Pea plant!
         }
       }
+      if (card.id === 'plant_cob_cannon') {
+        const isCorn = Boolean(
+          lane.plantMinion.tribe?.toLowerCase().includes('corn') ||
+          lane.plantMinion.name.toLowerCase().includes('corn') ||
+          lane.plantMinion.cardId.toLowerCase().includes('corn')
+        )
+        if (isCorn) {
+          return { allowed: true } // Corn Evolution allows evolving on any Corn plant!
+        }
+      }
       const hasTeamUp = card.teamUp || card.traits?.includes('teamUp') || lane.plantMinion.teamUp || lane.plantMinion.traits?.includes('teamUp')
       if (hasTeamUp && !lane.plantTeamUpMinion) {
         return { allowed: true } // Team-Up allows 2 plants on the same lane!
@@ -483,6 +493,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             maxHealth: minion.maxHealth + 1,
           }
           isEvolved = true
+        }
+      } else if (side === 'plants' && card.id === 'plant_cob_cannon') {
+        const existing = lane.plantMinion
+        if (existing && (existing.tribe?.toLowerCase().includes('corn') || existing.name.toLowerCase().includes('corn') || existing.cardId.toLowerCase().includes('corn'))) {
+          isEvolved = true
+          minion = {
+            ...minion,
+            isEvolved: true,
+          } as any
         }
       } else if (side === 'zombies' && card.id === 'zombie_intergalactic_warlord') {
         if (lane.zombieMinion) {

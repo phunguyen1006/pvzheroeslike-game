@@ -26,17 +26,21 @@ export const CARD_SETS: Record<string, string[]> = {
     'plant_galacta_cactus',
     'plant_banana_split',
     'plant_solar_winds',
+    'plant_astrocado',
+    'zombie_space_cowboy',
   ],
   'Colossal Fossils': [
     'plant_dusk_lobber',
     'plant_blooming_heart',
     'plant_aloesaurus',
+    'plant_cob_cannon',
     'zombie_going_viral',
     'zombie_conga_zombie',
   ],
   'Triassic Triumph': [
     'plant_gatling_pea',
     'plant_sportacus',
+    'plant_bird_of_paradise',
     'zombie_trick_or_treater',
   ],
   'Premium': [

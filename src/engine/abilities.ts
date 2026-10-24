@@ -741,12 +741,17 @@ export function triggerStartOfTurn(state: GameState, side: Side): AbilityTrigger
     })
 
     // 3. Banana Launcher: "Start of Turn: Add a Banana Bomb to your hand"
+    const isBananaLauncher = (m: Minion) =>
+      m.cardId === 'plant_banana_launcher' ||
+      m.name.toLowerCase().includes('banana launcher') ||
+      m.cardId.toLowerCase().includes('banana_launcher')
+
     let bananaLauncherCount = 0
     updatedState.lanes.forEach(l => {
-      if (l.plantMinion && l.plantMinion.cardId === 'plant_banana_launcher') {
+      if (l.plantMinion && isBananaLauncher(l.plantMinion)) {
         bananaLauncherCount += 1
       }
-      if (l.plantTeamUpMinion && l.plantTeamUpMinion.cardId === 'plant_banana_launcher') {
+      if (l.plantTeamUpMinion && isBananaLauncher(l.plantTeamUpMinion)) {
         bananaLauncherCount += 1
       }
     })
@@ -942,12 +947,15 @@ export function triggerWhenTrickPlayed(state: GameState, _trickCard: Card, caste
     }
 
     // Interdimensional Zombie: When you play a Science card (minion or trick)
+    const cardLookup = ALL_CARDS.find(c => c.id === _trickCard.id)
     const isScienceTrick =
       Boolean(_trickCard.tribe?.toLowerCase().includes('science')) ||
+      Boolean(cardLookup?.tribe?.toLowerCase().includes('science')) ||
       _trickCard.name.toLowerCase().includes('science') ||
       _trickCard.id.toLowerCase().includes('science') ||
       _trickCard.id === 'zombie_teleport' ||
-      _trickCard.id === 'zombie_rocket_science'
+      _trickCard.id === 'zombie_rocket_science' ||
+      _trickCard.id === 'zombie_final_mission'
     if (isScienceTrick) {
       const sciRes = triggerWhenSciencePlayed(updatedState, _trickCard, 'zombies')
       updatedState = sciRes.updatedState
@@ -979,11 +987,11 @@ export function triggerWhenSciencePlayed(
   const events: string[] = []
 
   const candidate3CostZombies = ZOMBIE_CARDS.filter(
-    c => c.type === 'zombie' && c.cost === 3
+    c => (c.type === 'zombie' || (c as any).type === 'minion') && c.cost === 3
   )
   const pool = candidate3CostZombies.length > 0
     ? candidate3CostZombies
-    : ALL_CARDS.filter(c => c.team === 'zombies' && c.cost === 3)
+    : ALL_CARDS.filter(c => (c.team === 'zombies' || (c as any).side === 'zombies') && c.cost === 3 && (c.type === 'zombie' || (c as any).type === 'minion'))
 
   updatedState.lanes.forEach(l => {
     if (
