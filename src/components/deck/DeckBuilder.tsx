@@ -107,7 +107,7 @@ export function validateAndParseDeckCode(jsonStr: string): {
     }
     for (const [cardId, count] of Object.entries(parsed.cardIds)) {
       if (typeof count !== 'number' || count < 1 || count > 4) {
-        return { valid: false, error: `Thẻ bài ${cardId} có số lượng không hợp lệ (phải từ 1 đến 4).` }
+        return { valid: false, error: `Thẻ bài ${cardId} có số lượng không hợp lệ (tối đa 4 bản sao, phải từ 1 đến 4).` }
       }
     }
     const total = Object.values(parsed.cardIds as Record<string, number>).reduce((a: number, b: number) => a + b, 0)

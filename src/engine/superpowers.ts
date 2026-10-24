@@ -7,6 +7,7 @@ import type { GameState, Side, Card } from './types'
 import { applyHeroDamage } from './combat'
 import { drawCard } from './reducer'
 import { isUntrickable } from './abilities'
+import { conjureCard } from './conjure'
 import { ALL_CARDS } from '../data/cards'
 
 export interface SuperpowerResult {
@@ -591,22 +592,13 @@ export function executeSuperpower(
 
     case 'sp_eureka': {
       // 18. Professor Brainstorm: Conjure 3 random cards from the entire game
-      const randomCards = ALL_CARDS.slice().sort(() => 0.5 - Math.random()).slice(0, 3)
-      randomCards.forEach(rc => {
-        if (updatedState.zombieHand.length < 10) {
-          updatedState.zombieHand.push({
-            id: rc.id,
-            name: rc.name,
-            side: 'zombies',
-            cost: rc.cost,
-            attack: rc.attack,
-            health: rc.hp,
-            type: rc.type === 'trick' ? 'trick' : rc.type === 'environment' ? 'environment' : 'minion',
-            image: rc.image,
-          })
-        }
+      const conjureRes = conjureCard(updatedState, 'zombies', {
+        count: 3,
+        sourceName: 'Eureka',
       })
-      message = `Eureka! Thiên tài bác học Professor Brainstorm tạo ngay 3 lá bài ngẫu nhiên vào tay!`
+      updatedState = conjureRes.updatedState
+      const cardNames = conjureRes.conjuredCards.map(c => c.name).join(', ')
+      message = `Eureka! Thiên tài bác học Professor Brainstorm tạo ngay 3 lá bài ngẫu nhiên vào tay${cardNames ? ` (${cardNames})` : ''}!`
       break
     }
 

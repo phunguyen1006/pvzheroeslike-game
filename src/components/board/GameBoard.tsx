@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Lane } from './Lane'
 import { CombatVFXLayer, type Projectile, type FloatingTextItem, type ShockwaveItem } from './CombatVFXLayer'
-import type { LaneState, Card as CardType } from '../../engine/types'
+import type { LaneState, Card as CardType, Minion as MinionType } from '../../engine/types'
 import { ASSET_MANIFEST } from '../../data/assetsManifest'
 
 export interface GameBoardProps {
@@ -15,6 +15,8 @@ export interface GameBoardProps {
   shockwaves?: ShockwaveItem[]
   onSelectLane: (laneIndex: number) => void
   onDropCardToLane?: (laneIndex: number, cardId: string) => void
+  onInspectMinion?: (minion: MinionType) => void
+  onInspectEnvironment?: (cardId: string) => void
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({
@@ -28,6 +30,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   shockwaves = [],
   onSelectLane,
   onDropCardToLane,
+  onInspectMinion,
+  onInspectEnvironment,
 }) => {
   const [boardImgSrc, setBoardImgSrc] = useState<string>(
     ASSET_MANIFEST.board.Board_Combat_Field || '/assets/board/Board_Combat_Field.png'
@@ -62,6 +66,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             isCombatLane={activeCombatLaneIndex === lane.index}
             onSelectLane={onSelectLane}
             onDropCardToLane={onDropCardToLane}
+            onInspectMinion={onInspectMinion}
+            onInspectEnvironment={onInspectEnvironment}
           />
         ))}
       </div>

@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   CHAPTER_1_MISSIONS,
+  CHAPTER_2_MISSIONS,
+  ALL_CAMPAIGN_MISSIONS,
+  CAMPAIGN_CHAPTERS,
   buildMissionLanes,
   calculateMissionStars,
   loadCampaignProgress,
@@ -8,6 +11,10 @@ import {
 } from '../data/campaign'
 import { createInitialGameState, gameReducer } from '../engine/reducer'
 import { ALL_CARDS, PLANT_CARDS, ZOMBIE_CARDS } from '../data/cards'
+import {
+  exportDeckCode,
+  validateAndParseDeckCode,
+} from '../components/deck/DeckBuilder'
 
 describe('Campaign Mode - Chapter 1: Suburban Crisis Specifications', () => {
   let store: Record<string, string> = {}
@@ -245,5 +252,234 @@ describe('Deck Builder - Catalog & Standard Constraints', () => {
     expect(curve[6]).toBe(1)
     expect(curve[8]).toBe(1)
     expect(curve[0]).toBe(0)
+  })
+})
+
+describe('Campaign Mode - Chapter 2: Zombie Metropolis Specifications', () => {
+  it('contains exactly 5 progressive missions in Chapter 2 (Missions 6 to 10)', () => {
+    expect(CHAPTER_2_MISSIONS).toHaveLength(5)
+    expect(CHAPTER_2_MISSIONS.map((m) => m.missionNumber)).toEqual([6, 7, 8, 9, 10])
+    expect(CHAPTER_2_MISSIONS.every((m) => m.chapter === 2)).toBe(true)
+  })
+
+  it('aggregates all 10 missions across CAMPAIGN_CHAPTERS and ALL_CAMPAIGN_MISSIONS', () => {
+    expect(ALL_CAMPAIGN_MISSIONS).toHaveLength(10)
+    expect(CAMPAIGN_CHAPTERS).toHaveLength(2)
+    expect(CAMPAIGN_CHAPTERS[0].missions).toHaveLength(5)
+    expect(CAMPAIGN_CHAPTERS[1].missions).toHaveLength(5)
+  })
+
+  it('Mission 6 matches Z-Mech boss with Laser Base Alpha and Spikeweed Sector', () => {
+    const m6 = CHAPTER_2_MISSIONS[0]
+    expect(m6.id).toBe('mission_6')
+    expect(m6.bossHeroId).toBe('hero_z_mech')
+    expect(m6.rule.initialEnvironments).toHaveLength(2)
+
+    const laserBase = m6.rule.initialEnvironments?.find(
+      (e) => e.environmentCardId === 'zombie_laser_base_alpha'
+    )
+    expect(laserBase).toBeDefined()
+    expect(laserBase?.laneIndex).toBe(1)
+
+    const spikeweed = m6.rule.initialEnvironments?.find(
+      (e) => e.environmentCardId === 'plant_spikeweed_sector'
+    )
+    expect(spikeweed).toBeDefined()
+    expect(spikeweed?.laneIndex).toBe(0)
+  })
+
+  it('Mission 7 matches Immorticia with Total Eclipse, Dr. Spacetime, and +1 Sun', () => {
+    const m7 = CHAPTER_2_MISSIONS[1]
+    expect(m7.bossHeroId).toBe('hero_immorticia')
+    expect(m7.rule.startingSunBonus).toBe(1)
+
+    const eclipse = m7.rule.initialEnvironments?.find(
+      (e) => e.environmentCardId === 'zombie_total_eclipse'
+    )
+    expect(eclipse).toBeDefined()
+    expect(eclipse?.laneIndex).toBe(2)
+
+    const spacetime = m7.rule.initialMinions?.find(
+      (m) => m.cardId === 'zombie_dr_spacetime'
+    )
+    expect(spacetime).toBeDefined()
+    expect(spacetime?.laneIndex).toBe(2)
+    expect(spacetime?.side).toBe('zombies')
+  })
+
+  it('Mission 8 matches Brain Freeze with Area 22 and Snow Pea', () => {
+    const m8 = CHAPTER_2_MISSIONS[2]
+    expect(m8.bossHeroId).toBe('hero_brain_freeze')
+    expect(m8.difficulty).toBe('hard')
+
+    const area22 = m8.rule.initialEnvironments?.find(
+      (e) => e.environmentCardId === 'zombie_area_22'
+    )
+    expect(area22).toBeDefined()
+    expect(area22?.laneIndex).toBe(3)
+
+    const snowPea = m8.rule.initialMinions?.find(
+      (m) => m.cardId === 'plant_snow_pea'
+    )
+    expect(snowPea).toBeDefined()
+    expect(snowPea?.laneIndex).toBe(3)
+    expect(snowPea?.side).toBe('plants')
+  })
+
+  it('Mission 9 matches Electric Boogaloo with Moon Base Z and +2 Sun', () => {
+    const m9 = CHAPTER_2_MISSIONS[3]
+    expect(m9.bossHeroId).toBe('hero_electric_boogaloo')
+    expect(m9.rule.startingSunBonus).toBe(2)
+
+    const moonBase = m9.rule.initialEnvironments?.find(
+      (e) => e.environmentCardId === 'zombie_moon_base_z'
+    )
+    expect(moonBase).toBeDefined()
+    expect(moonBase?.laneIndex).toBe(2)
+  })
+
+  it('Mission 10 matches Rustbolt Rematch Boss Finale with dual environments and +2 energy', () => {
+    const m10 = CHAPTER_2_MISSIONS[4]
+    expect(m10.bossHeroId).toBe('hero_rustbolt')
+    expect(m10.difficulty).toBe('boss')
+    expect(m10.rule.startingSunBonus).toBe(2)
+    expect(m10.rule.startingBrainsBonus).toBe(2)
+    expect(m10.rewards.gems).toBe(600)
+
+    const medulla = m10.rule.initialEnvironments?.find(
+      (e) => e.environmentCardId === 'zombie_medulla_nebula'
+    )
+    expect(medulla).toBeDefined()
+    expect(medulla?.laneIndex).toBe(1)
+
+    const grapes = m10.rule.initialEnvironments?.find(
+      (e) => e.environmentCardId === 'plant_planet_of_the_grapes'
+    )
+    expect(grapes).toBeDefined()
+    expect(grapes?.laneIndex).toBe(2)
+  })
+
+  it('buildMissionLanes places both environment and minion in Lane 3 for Mission 7', () => {
+    const m7 = CHAPTER_2_MISSIONS[1]
+    const lanes = buildMissionLanes(m7)
+
+    expect(lanes[2].environment?.id).toBe('zombie_total_eclipse')
+    expect(lanes[2].zombieMinion?.cardId).toBe('zombie_dr_spacetime')
+    expect(lanes[2].zombieMinion?.side).toBe('zombies')
+  })
+
+  it('calculateMissionStars accurately scores Chapter 2 objectives', () => {
+    const m6 = CHAPTER_2_MISSIONS[0]
+    expect(calculateMissionStars(m6, 'zombies', 15, 6)).toBe(0) // Defeat
+    expect(calculateMissionStars(m6, 'plants', 8, 12)).toBe(1) // Win, low hp, slow turns
+    expect(calculateMissionStars(m6, 'plants', 14, 12)).toBe(2) // Win, hp >= 12
+    expect(calculateMissionStars(m6, 'plants', 8, 7)).toBe(2) // Win, turns <= 9
+    expect(calculateMissionStars(m6, 'plants', 16, 6)).toBe(3) // 3 stars
+  })
+})
+
+describe('Deck Builder - Cost Range Filters & JSON Deck Code Export/Import', () => {
+  it('correctly filters cards by Cost Range buckets: 1-2, 3-4, 5+', () => {
+    const range12 = PLANT_CARDS.filter((c) => c.cost >= 1 && c.cost <= 2)
+    const range34 = PLANT_CARDS.filter((c) => c.cost >= 3 && c.cost <= 4)
+    const range5Plus = PLANT_CARDS.filter((c) => c.cost >= 5)
+
+    expect(range12.length).toBeGreaterThan(0)
+    expect(range34.length).toBeGreaterThan(0)
+    expect(range5Plus.length).toBeGreaterThan(0)
+
+    for (const card of range12) {
+      expect(card.cost).toBeGreaterThanOrEqual(1)
+      expect(card.cost).toBeLessThanOrEqual(2)
+    }
+
+    for (const card of range34) {
+      expect(card.cost).toBeGreaterThanOrEqual(3)
+      expect(card.cost).toBeLessThanOrEqual(4)
+    }
+
+    for (const card of range5Plus) {
+      expect(card.cost).toBeGreaterThanOrEqual(5)
+    }
+  })
+
+  it('exportDeckCode serializes deck into valid pvz_heroes_deck_v1 JSON', () => {
+    const deckMap = {
+      plant_peashooter: 4,
+      plant_wall_nut: 4,
+      plant_repeater: 4,
+    }
+
+    const jsonStr = exportDeckCode('Bộ Bài Thử Nghiệm', 'plants', deckMap)
+    expect(typeof jsonStr).toBe('string')
+
+    const parsed = JSON.parse(jsonStr)
+    expect(parsed.format).toBe('pvz_heroes_deck_v1')
+    expect(parsed.name).toBe('Bộ Bài Thử Nghiệm')
+    expect(parsed.side).toBe('plants')
+    expect(parsed.totalCards).toBe(12)
+    expect(parsed.cardIds.plant_peashooter).toBe(4)
+  })
+
+  it('validateAndParseDeckCode parses valid deck code successfully', () => {
+    const deckMap = {
+      plant_peashooter: 4,
+      plant_sunflower: 4,
+    }
+    const jsonStr = exportDeckCode('Pea & Sun', 'plants', deckMap)
+    const result = validateAndParseDeckCode(jsonStr)
+
+    expect(result.valid).toBe(true)
+    expect(result.deck).toBeDefined()
+    expect(result.deck?.name).toBe('Pea & Sun')
+    expect(result.deck?.side).toBe('plants')
+    expect(result.deck?.cardIds.plant_sunflower).toBe(4)
+  })
+
+  it('validateAndParseDeckCode rejects invalid JSON or incompatible format', () => {
+    const invalidJson = validateAndParseDeckCode('not a json string')
+    expect(invalidJson.valid).toBe(false)
+    expect(invalidJson.error).toContain('Lỗi phân tích JSON')
+
+    const wrongFormat = validateAndParseDeckCode(
+      JSON.stringify({ format: 'other_format', side: 'plants', cardIds: {} })
+    )
+    expect(wrongFormat.valid).toBe(false)
+    expect(wrongFormat.error).toContain('format: pvz_heroes_deck_v1')
+
+    const wrongSide = validateAndParseDeckCode(
+      JSON.stringify({ format: 'pvz_heroes_deck_v1', side: 'aliens', cardIds: {} })
+    )
+    expect(wrongSide.valid).toBe(false)
+    expect(wrongSide.error).toContain('phải là plants hoặc zombies')
+  })
+
+  it('validateAndParseDeckCode enforces copy limit (max 4) and deck cap (max 40)', () => {
+    const tooManyCopies = validateAndParseDeckCode(
+      JSON.stringify({
+        format: 'pvz_heroes_deck_v1',
+        name: 'Cheating Deck',
+        side: 'plants',
+        cardIds: { plant_peashooter: 8 },
+      })
+    )
+    expect(tooManyCopies.valid).toBe(false)
+    expect(tooManyCopies.error).toContain('tối đa 4')
+
+    const tooManyCards: Record<string, number> = {}
+    for (let i = 1; i <= 15; i++) {
+      tooManyCards[`card_${i}`] = 4 // 15 * 4 = 60 cards
+    }
+
+    const exceedsCap = validateAndParseDeckCode(
+      JSON.stringify({
+        format: 'pvz_heroes_deck_v1',
+        name: 'Huge Deck',
+        side: 'zombies',
+        cardIds: tooManyCards,
+      })
+    )
+    expect(exceedsCap.valid).toBe(false)
+    expect(exceedsCap.error).toContain('vượt quá giới hạn tối đa 40 lá')
   })
 })

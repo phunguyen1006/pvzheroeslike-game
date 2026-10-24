@@ -13,6 +13,7 @@ export interface MinionSlotProps {
   isLanding?: boolean
   onClick?: () => void
   onDropCard?: (cardId: string) => void
+  onInspect?: (minion: MinionType) => void
 }
 
 export const MinionSlot: React.FC<MinionSlotProps> = ({
@@ -25,11 +26,14 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
   isLanding = false,
   onClick,
   onDropCard,
+  onInspect,
 }) => {
   const [imgError, setImgError] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
   const [isShattering, setIsShattering] = useState(false)
   const wasGravestoneRef = useRef(Boolean(minion?.isGravestone))
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isLongPressRef = useRef(false)
   const isPlant = side === 'plants'
 
   // Trigger shatter visual & audio effect when Gravestone cracks open (revealed at Zombie Tricks)
@@ -129,6 +133,52 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
     (minion.traits as any)?.includes('antihero')
   )
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (minion) {
+      onInspect?.(minion)
+    }
+  }
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.button === 2) return
+    isLongPressRef.current = false
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+    }
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressRef.current = true
+      if (minion) {
+        onInspect?.(minion)
+      }
+    }, 450)
+  }
+
+  const handlePointerUp = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
+  const handlePointerCancel = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isLongPressRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      isLongPressRef.current = false
+      return
+    }
+    onClick?.()
+  }
+
   return (
     <div
       className={`minion-board-slot occupied-minion-slot ${side}-slot ${
@@ -138,14 +188,18 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
       } ${minion.isFrozen ? 'is-frozen-slot' : ''} ${minion.isHit ? 'is-hit-pulse' : ''} ${
         minion.isAttacking ? 'is-attacking-lunge' : ''
       } ${isLanding ? 'is-minion-landing' : ''} ${isShattering ? 'gravestone-shattering' : ''}`}
-      onClick={onClick}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       title={
         isGravestone
           ? 'Bia Mộ Cổ Kính (Gravestone): Chứa 1 Zombie bí ẩn sẽ nứt vỡ xuất trận lúc Zombie Tricks!'
-          : `${minion.name} (${minion.currentAttack} Công / ${minion.currentHealth} Máu)`
+          : `${minion.name} (${minion.currentAttack} Công / ${minion.currentHealth} Máu) — Nhấp phải hoặc nhấn giữ để xem chi tiết`
       }
     >
       {/* 2A. GRAVESTONE: 3D Granite Tombstone Slab hiding minion identity */}

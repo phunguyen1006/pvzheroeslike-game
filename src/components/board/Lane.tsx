@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { MinionSlot } from './MinionSlot'
-import type { LaneState, Card as CardType } from '../../engine/types'
+import type { LaneState, Card as CardType, Minion as MinionType } from '../../engine/types'
 
 export interface LaneProps {
   lane: LaneState
@@ -10,6 +10,8 @@ export interface LaneProps {
   isCombatLane?: boolean
   onSelectLane: (laneIndex: number) => void
   onDropCardToLane?: (laneIndex: number, cardId: string) => void
+  onInspectMinion?: (minion: MinionType) => void
+  onInspectEnvironment?: (cardId: string) => void
 }
 
 export const Lane: React.FC<LaneProps> = ({
@@ -20,6 +22,8 @@ export const Lane: React.FC<LaneProps> = ({
   isCombatLane = false,
   onSelectLane,
   onDropCardToLane,
+  onInspectMinion,
+  onInspectEnvironment,
 }) => {
   const isHeights = lane.type === 'heights'
   const isWater = lane.type === 'water'
@@ -174,41 +178,52 @@ export const Lane: React.FC<LaneProps> = ({
           <div className="env-ambient-glow" />
           <div className="env-terrain-texture" />
 
-          {/* Theme 1: Spikeweed Sector - Ground thorns emerging and undulating */}
+          {/* Theme 1: Spikeweed Sector - Ground thorns tremor & spore dust motes */}
           {lane.environment.id === 'plant_spikeweed_sector' && (
             <div className="env-spikeweed-bed">
-              <span className="spikeweed-spike spike-1">▲</span>
-              <span className="spikeweed-spike spike-2">▲</span>
-              <span className="spikeweed-spike spike-3">▲</span>
-              <span className="spikeweed-spike spike-4">▲</span>
-              <span className="spikeweed-spike spike-5">▲</span>
-              <span className="spikeweed-spike spike-6">▲</span>
-              <span className="spikeweed-spike spike-7">▲</span>
-              <span className="spikeweed-spike spike-8">▲</span>
+              <div className="spikeweed-thorn-tremor">
+                <span className="spikeweed-spike spike-1">▲</span>
+                <span className="spikeweed-spike spike-2">▲</span>
+                <span className="spikeweed-spike spike-3">▲</span>
+                <span className="spikeweed-spike spike-4">▲</span>
+                <span className="spikeweed-spike spike-5">▲</span>
+                <span className="spikeweed-spike spike-6">▲</span>
+                <span className="spikeweed-spike spike-7">▲</span>
+                <span className="spikeweed-spike spike-8">▲</span>
+              </div>
+              <div className="spikeweed-spore-dust dust-1" />
+              <div className="spikeweed-spore-dust dust-2" />
+              <div className="spikeweed-spore-dust dust-3" />
             </div>
           )}
 
-          {/* Theme 2: Laser Base Alpha & Moon Base Z - High-tech sci-fi neon grid & scanning lasers */}
+          {/* Theme 2: Laser Base Alpha & Moon Base Z - High-tech scanning lasers & cyber sparks */}
           {(lane.environment.id === 'zombie_moon_base_z' ||
             lane.environment.id === 'zombie_laser_base_alpha' ||
             lane.environment.id === 'zombie_medulla_nebula') && (
             <div className="env-laser-base-grid">
               <div className="laser-grid-mesh" />
-              <div className="laser-sweep-line" />
+              <div className="laser-sweep-line laser-sweep-smooth" />
+              <div className="laser-cyber-spark spark-1" />
+              <div className="laser-cyber-spark spark-2" />
+              <div className="laser-cyber-spark spark-3" />
               <div className="laser-pulse-node node-top" />
               <div className="laser-pulse-node node-mid" />
               <div className="laser-pulse-node node-bottom" />
             </div>
           )}
 
-          {/* Theme 3: Bog of Doom & Planet of the Grapes - Mystical purple swamp fog & rising bubbles */}
+          {/* Theme 3: Bog of Sunken Hope, Bog of Doom & Planet of the Grapes - Rising effervescent bubbles & swamp mist */}
           {(lane.environment.id === 'plant_planet_of_the_grapes' ||
-            lane.environment.id === 'plant_bog_of_doom') && (
+            lane.environment.id === 'plant_bog_of_doom' ||
+            lane.environment.id === 'plant_bog_of_sunken_hope') && (
             <div className="env-swamp-bog">
-              <div className="swamp-bubble bubble-1" />
-              <div className="swamp-bubble bubble-2" />
-              <div className="swamp-bubble bubble-3" />
-              <div className="swamp-mist-cloud" />
+              <div className="swamp-bubble-rise bubble-1" />
+              <div className="swamp-bubble-rise bubble-2" />
+              <div className="swamp-bubble-rise bubble-3" />
+              <div className="swamp-bubble-rise bubble-4" />
+              <div className="swamp-mist-undulate mist-1" />
+              <div className="swamp-mist-undulate mist-2" />
             </div>
           )}
 
@@ -244,6 +259,7 @@ export const Lane: React.FC<LaneProps> = ({
           isLanding={isLandingThud && Boolean(lane.zombieMinion)}
           onClick={() => onSelectLane(lane.index)}
           onDropCard={handleDrop}
+          onInspect={onInspectMinion}
         />
       </div>
 
@@ -252,7 +268,20 @@ export const Lane: React.FC<LaneProps> = ({
         {lane.environment ? (
           <div
             className={`active-environment-token env-${lane.environment.id}`}
-            title={`${lane.environment.name}: ${lane.environment.description}`}
+            title={`${lane.environment.name}: ${lane.environment.description} (Nhấp để xem chi tiết thẻ)`}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (lane.environment) {
+                onInspectEnvironment?.(lane.environment.id)
+              }
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              if (lane.environment) {
+                onInspectEnvironment?.(lane.environment.id)
+              }
+            }}
           >
             {lane.environment.image ? (
               <img
@@ -282,6 +311,7 @@ export const Lane: React.FC<LaneProps> = ({
           isLanding={isLandingThud && Boolean(lane.plantMinion)}
           onClick={() => onSelectLane(lane.index)}
           onDropCard={handleDrop}
+          onInspect={onInspectMinion}
         />
 
         {/* Team-Up Secondary Slot */}
@@ -296,6 +326,7 @@ export const Lane: React.FC<LaneProps> = ({
               isLanding={isLandingThud && Boolean(lane.plantTeamUpMinion)}
               onClick={() => onSelectLane(lane.index)}
               onDropCard={handleDrop}
+              onInspect={onInspectMinion}
             />
           </div>
         )}
