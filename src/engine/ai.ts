@@ -13,7 +13,7 @@ export interface AIDecision {
 
 export type AIDifficulty = 'easy' | 'normal' | 'hard' | 'expert'
 
-export type AIArchetype = 'aggro' | 'control' | 'tempo'
+export type AIArchetype = 'aggro' | 'control' | 'tempo' | 'combo'
 
 export interface AIDecisionOptions {
   difficulty?: AIDifficulty
@@ -92,6 +92,14 @@ export function getHeroDefaultArchetype(heroId?: string): AIArchetype {
   if (!heroId) return 'tempo'
   const idLower = heroId.toLowerCase()
 
+  // Combo Heroes (Complex synergy, environments, or combo finishers)
+  if (
+    idLower.includes('huge_gigantacus') ||
+    idLower.includes('beta_carrotina')
+  ) {
+    return 'combo'
+  }
+
   // Aggro Heroes
   if (
     idLower.includes('super_brainz') ||
@@ -116,7 +124,7 @@ export function getHeroDefaultArchetype(heroId?: string): AIArchetype {
     return 'control'
   }
 
-  // Tempo Heroes (The Smash, Z-Mech, Neptuna, Grass Knuckles, Chompzilla, Green Shadow, etc.)
+  // Tempo Heroes (The Smash, Z-Mech, Neptuna, Grass Knuckles, Chompzilla, Green Shadow, Brain Freeze, etc.)
   return 'tempo'
 }
 
@@ -275,6 +283,19 @@ export function evaluateBoardState(
         (hasLethal ? 500 : 0) -
         (threatensLethal ? 600 : 0) +
         environmentAdvantage * 2.0
+      break
+
+    case 'combo':
+      score =
+        cardAdvantage * 4.0 +
+        friendlyTotalHealth * 1.5 +
+        friendlyHero.hp * 1.8 -
+        enemyFaceThreat * 3.0 +
+        environmentAdvantage * 2.5 +
+        (hasLethal ? 600 : 0) -
+        (threatensLethal ? 550 : 0) +
+        friendlyTotalAttack * 1.8 -
+        enemyTotalAttack * 2.0
       break
 
     case 'tempo':

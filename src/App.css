@@ -5613,28 +5613,46 @@
   transition: all 0.4s ease;
 }
 
-/* 1. Spikeweed Sector (Thảm gai sắc nhọn Plant) */
+/* 1. Spikeweed Sector (Thảm gai sắc nhọn Plant & Bụi bào tử hữu cơ) */
 .env-overlay-plant_spikeweed_sector {
-  background: radial-gradient(circle at 50% 50%, rgba(132, 204, 22, 0.22) 0%, rgba(63, 98, 18, 0.35) 100%);
+  background: radial-gradient(circle at 50% 50%, rgba(132, 204, 22, 0.24) 0%, rgba(63, 98, 18, 0.4) 100%);
   border: 1.5px solid #84cc16;
-  box-shadow: inset 0 0 20px rgba(132, 204, 22, 0.35);
+  box-shadow: inset 0 0 24px rgba(132, 204, 22, 0.45);
 }
 
 .env-spikeweed-bed {
   position: absolute;
   inset: 0;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.spikeweed-thorn-tremor {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-around;
+  width: 100%;
+  height: 100%;
   padding: 12px 6px;
+  animation: thornTremorShudder 3.5s ease-in-out infinite;
+}
+
+@keyframes thornTremorShudder {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-1.5px) rotate(0.4deg); }
+  50% { transform: translateY(1px) rotate(-0.3deg); }
+  75% { transform: translateY(-0.8px) rotate(0.2deg); }
 }
 
 .spikeweed-spike {
   font-size: 1.15rem;
   color: #84cc16;
-  text-shadow: 0 0 8px #65a30d, 0 0 14px #4d7c0f;
-  animation: spikeweedSurge 2s ease-in-out infinite alternate;
+  text-shadow: 0 0 8px #65a30d, 0 0 16px #4d7c0f;
+  animation: spikeweedSurge 2.2s ease-in-out infinite alternate;
+  user-select: none;
 }
 
 .spikeweed-spike.spike-1 { animation-delay: 0s; }
@@ -5652,41 +5670,127 @@
   100% { transform: translateY(0px) scale(1); opacity: 0.75; }
 }
 
+/* Floating Spore Dust Motes */
+.spikeweed-spore-dust {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: #bef264;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #a3e635, 0 0 14px #65a30d;
+  pointer-events: none;
+}
+
+.spikeweed-spore-dust.dust-1 {
+  left: 25%;
+  bottom: 20%;
+  animation: sporeDustFloat 3.8s ease-in-out infinite;
+}
+
+.spikeweed-spore-dust.dust-2 {
+  left: 68%;
+  bottom: 35%;
+  width: 4px;
+  height: 4px;
+  animation: sporeDustFloat 4.4s ease-in-out infinite 1.2s;
+}
+
+.spikeweed-spore-dust.dust-3 {
+  left: 45%;
+  bottom: 12%;
+  width: 6px;
+  height: 6px;
+  animation: sporeDustFloat 3.2s ease-in-out infinite 2.1s;
+}
+
+@keyframes sporeDustFloat {
+  0% { transform: translateY(0) translateX(0) scale(0.6); opacity: 0; }
+  25% { opacity: 0.9; transform: translateY(-30px) translateX(6px) scale(1.1); }
+  60% { opacity: 0.75; transform: translateY(-65px) translateX(-4px) scale(0.9); }
+  100% { transform: translateY(-110px) translateX(8px) scale(0.4); opacity: 0; }
+}
+
 /* 2. Laser Base Alpha & Moon Base Z (Căn cứ Laser Sci-Fi Neon) */
 .env-overlay-zombie_laser_base_alpha,
 .env-overlay-zombie_moon_base_z,
 .env-overlay-zombie_medulla_nebula {
-  background: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.2) 0%, rgba(15, 23, 42, 0.45) 100%);
+  background: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.22) 0%, rgba(15, 23, 42, 0.5) 100%);
   border: 1.5px solid #06b6d4;
   box-shadow:
-    inset 0 0 25px rgba(6, 182, 212, 0.45),
-    0 0 15px rgba(14, 165, 233, 0.3);
+    inset 0 0 28px rgba(6, 182, 212, 0.5),
+    0 0 16px rgba(14, 165, 233, 0.35);
 }
 
 .env-laser-base-grid {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.laser-grid-mesh {
   position: absolute;
   inset: 0;
   background-image:
     linear-gradient(rgba(6, 182, 212, 0.2) 1px, transparent 1px),
     linear-gradient(90deg, rgba(6, 182, 212, 0.2) 1px, transparent 1px);
   background-size: 16px 16px;
+  opacity: 0.85;
 }
 
-.laser-sweep-line {
+.laser-sweep-line.laser-sweep-smooth {
   position: absolute;
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, transparent, #38bdf8, #ffffff, #38bdf8, transparent);
-  box-shadow: 0 0 12px #06b6d4, 0 0 22px #0284c7;
-  animation: laserScanLine 2.8s linear infinite;
+  background: linear-gradient(90deg, transparent, #38bdf8 20%, #ffffff 50%, #38bdf8 80%, transparent);
+  box-shadow: 0 0 14px #06b6d4, 0 0 28px #0284c7;
+  animation: laserSweepSmooth 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-@keyframes laserScanLine {
+@keyframes laserSweepSmooth {
   0% { top: 0%; opacity: 0; }
   15% { opacity: 1; }
   85% { opacity: 1; }
   100% { top: 100%; opacity: 0; }
+}
+
+/* Cyber Sparks */
+.laser-cyber-spark {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #38bdf8, 0 0 16px #06b6d4;
+}
+
+.laser-cyber-spark.spark-1 {
+  left: 20%;
+  top: 35%;
+  animation: cyberSparkJitter 1.8s steps(3, end) infinite;
+}
+
+.laser-cyber-spark.spark-2 {
+  left: 75%;
+  top: 60%;
+  width: 3px;
+  height: 3px;
+  animation: cyberSparkJitter 2.2s steps(4, end) infinite 0.7s;
+}
+
+.laser-cyber-spark.spark-3 {
+  left: 50%;
+  top: 80%;
+  width: 5px;
+  height: 5px;
+  animation: cyberSparkJitter 1.5s steps(3, end) infinite 1.1s;
+}
+
+@keyframes cyberSparkJitter {
+  0%, 100% { transform: scale(0.4); opacity: 0; }
+  35% { transform: scale(1.4); opacity: 1; }
+  55% { transform: scale(0.8) translate(3px, -2px); opacity: 0.85; }
+  75% { transform: scale(1.2) translate(-2px, 3px); opacity: 0.9; }
 }
 
 .laser-pulse-node {
@@ -5697,7 +5801,7 @@
   height: 8px;
   background: #38bdf8;
   border-radius: 50%;
-  box-shadow: 0 0 10px #06b6d4, 0 0 18px #0284c7;
+  box-shadow: 0 0 12px #06b6d4, 0 0 20px #0284c7;
   animation: nodePulse 1.5s ease-in-out infinite alternate;
 }
 
@@ -5710,67 +5814,91 @@
   100% { transform: translateX(-50%) scale(1.4); opacity: 1; }
 }
 
-/* 3. Bog of Doom & Planet of the Grapes (Đầm lầy bí ẩn tím mộng mơ) */
+/* 3. Bog of Doom, Planet of the Grapes & Bog of Sunken Hope (Đầm lầy bí ẩn tím mộng mơ) */
 .env-overlay-plant_bog_of_doom,
-.env-overlay-plant_planet_of_the_grapes {
-  background: radial-gradient(circle at 50% 50%, rgba(147, 51, 234, 0.28) 0%, rgba(88, 28, 135, 0.4) 100%);
+.env-overlay-plant_planet_of_the_grapes,
+.env-overlay-plant_bog_of_sunken_hope {
+  background: radial-gradient(circle at 50% 50%, rgba(147, 51, 234, 0.3) 0%, rgba(88, 28, 135, 0.45) 100%);
   border: 1.5px solid #a855f7;
-  box-shadow: inset 0 0 22px rgba(168, 85, 247, 0.45);
+  box-shadow: inset 0 0 25px rgba(168, 85, 247, 0.5);
 }
 
 .env-swamp-bog {
   position: absolute;
   inset: 0;
+  overflow: hidden;
 }
 
-.swamp-bubble {
+/* Effervescent Rising Bubbles */
+.swamp-bubble-rise {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #f3e8ff 0%, #c084fc 60%, #9333ea 100%);
-  box-shadow: 0 0 8px #c084fc;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #e9d5ff 25%, #c084fc 70%, #9333ea 100%);
+  box-shadow: 0 0 10px #c084fc, inset 0 0 4px rgba(255, 255, 255, 0.8);
+  pointer-events: none;
 }
 
-.swamp-bubble.bubble-1 {
-  left: 20%;
-  bottom: 15%;
+.swamp-bubble-rise.bubble-1 {
+  left: 18%;
+  bottom: 8%;
   width: 14px;
   height: 14px;
-  animation: swampBubbleRise 3.2s ease-in infinite;
+  animation: swampBubbleEffervesce 3.4s cubic-bezier(0.2, 0.8, 0.3, 1) infinite;
 }
 
-.swamp-bubble.bubble-2 {
-  right: 25%;
-  bottom: 25%;
+.swamp-bubble-rise.bubble-2 {
+  right: 22%;
+  bottom: 14%;
   width: 18px;
   height: 18px;
-  animation: swampBubbleRise 3.8s ease-in infinite 1.2s;
+  animation: swampBubbleEffervesce 4.0s cubic-bezier(0.2, 0.8, 0.3, 1) infinite 1.1s;
 }
 
-.swamp-bubble.bubble-3 {
-  left: 45%;
-  bottom: 8%;
-  width: 12px;
-  height: 12px;
-  animation: swampBubbleRise 2.9s ease-in infinite 2.1s;
+.swamp-bubble-rise.bubble-3 {
+  left: 48%;
+  bottom: 5%;
+  width: 11px;
+  height: 11px;
+  animation: swampBubbleEffervesce 2.9s cubic-bezier(0.2, 0.8, 0.3, 1) infinite 1.9s;
 }
 
-@keyframes swampBubbleRise {
-  0% { transform: translateY(0) scale(0.6); opacity: 0; }
-  20% { opacity: 0.85; }
-  80% { transform: translateY(-70px) scale(1.15); opacity: 0.85; }
-  100% { transform: translateY(-90px) scale(1.4); opacity: 0; }
+.swamp-bubble-rise.bubble-4 {
+  left: 72%;
+  bottom: 18%;
+  width: 15px;
+  height: 15px;
+  animation: swampBubbleEffervesce 3.6s cubic-bezier(0.2, 0.8, 0.3, 1) infinite 0.6s;
 }
 
-.swamp-mist-cloud {
+@keyframes swampBubbleEffervesce {
+  0% { transform: translateY(0) scale(0.5); opacity: 0; }
+  18% { opacity: 0.9; transform: translateY(-20px) scale(0.9); }
+  75% { opacity: 0.85; transform: translateY(-75px) scale(1.15); }
+  92% { opacity: 0.95; transform: translateY(-95px) scale(1.3); }
+  100% { transform: translateY(-100px) scale(1.55); opacity: 0; }
+}
+
+/* Undulating Swamp Mist */
+.swamp-mist-undulate {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% 60%, rgba(192, 132, 252, 0.2) 0%, transparent 70%);
-  animation: swampMistWiggle 4s ease-in-out infinite alternate;
+  inset: -10px;
+  pointer-events: none;
 }
 
-@keyframes swampMistWiggle {
-  0% { transform: scale(0.92) translateX(-4px); }
-  100% { transform: scale(1.08) translateX(4px); }
+.swamp-mist-undulate.mist-1 {
+  background: radial-gradient(ellipse at 50% 60%, rgba(192, 132, 252, 0.22) 0%, transparent 70%);
+  animation: swampMistUndulate 4.5s ease-in-out infinite alternate;
+}
+
+.swamp-mist-undulate.mist-2 {
+  background: radial-gradient(ellipse at 40% 40%, rgba(168, 85, 247, 0.16) 0%, transparent 65%);
+  animation: swampMistUndulate 5.5s ease-in-out infinite alternate-reverse 1s;
+}
+
+@keyframes swampMistUndulate {
+  0% { transform: scale(0.92) translateX(-6px) translateY(2px); opacity: 0.6; }
+  50% { transform: scale(1.05) translateX(3px) translateY(-3px); opacity: 0.85; }
+  100% { transform: scale(1.12) translateX(6px) translateY(1px); opacity: 0.6; }
 }
 
 /* 4. Solar Winds (Luồng gió mặt trời vàng óng) */
@@ -8848,6 +8976,550 @@
   filter: brightness(1.15);
   box-shadow: 0 6px 18px rgba(2, 132, 199, 0.7);
 }
+
+/* ========================================================
+   CARD DETAIL & MINION LORE INSPECTION MODAL
+   (Right-click & Long-press preview with 3D Rarity Gem & Flavor text)
+   ======================================================== */
+
+.card-detail-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.88) 0%, rgba(2, 6, 23, 0.96) 100%);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  animation: cardDetailFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cardDetailFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.card-detail-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 860px;
+  max-height: 90vh;
+  background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+  border: 2.5px solid #38bdf8;
+  border-radius: 24px;
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.9),
+    0 0 40px rgba(56, 189, 248, 0.35),
+    inset 0 1px 2px rgba(255, 255, 255, 0.2);
+  display: flex;
+  overflow: hidden;
+  animation: cardDetailZoomIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+.card-detail-modal-card.side-plants {
+  border-color: #22c55e;
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.9),
+    0 0 40px rgba(34, 197, 94, 0.35),
+    inset 0 1px 2px rgba(255, 255, 255, 0.2);
+}
+
+.card-detail-modal-card.side-zombies {
+  border-color: #a855f7;
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.9),
+    0 0 40px rgba(168, 85, 247, 0.35),
+    inset 0 1px 2px rgba(255, 255, 255, 0.2);
+}
+
+@keyframes cardDetailZoomIn {
+  0% { transform: scale(0.88); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.card-detail-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: #94a3b8;
+  font-size: 1.3rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 50;
+  transition: all 0.2s ease;
+}
+
+.card-detail-close-btn:hover {
+  background: #ef4444;
+  color: #fff;
+  border-color: #f87171;
+  transform: scale(1.1);
+}
+
+/* Left Column: Enlarged Card & 3D Rarity Gem */
+.card-detail-preview-col {
+  flex: 0 0 280px;
+  background: rgba(15, 23, 42, 0.65);
+  border-right: 2px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  gap: 20px;
+}
+
+.card-detail-enlarged-card {
+  filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.85));
+  transform: scale(1.35);
+  margin: 25px 0;
+  pointer-events: none;
+}
+
+/* 3D Rarity Gem System */
+.card-detail-rarity-gem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+.gem-facet-top {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  transform: rotate(45deg);
+  border-radius: 3px;
+  box-shadow: 0 0 10px currentColor;
+  transition: transform 0.2s ease;
+}
+
+.rarity-gem-common .gem-facet-top {
+  background: linear-gradient(135deg, #94a3b8 0%, #475569 100%);
+  color: #94a3b8;
+  border: 1px solid #cbd5e1;
+}
+
+.rarity-gem-uncommon .gem-facet-top {
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+  color: #38bdf8;
+  border: 1px solid #7dd3fc;
+}
+
+.rarity-gem-rare .gem-facet-top {
+  background: linear-gradient(135deg, #facc15 0%, #ca8a04 100%);
+  color: #facc15;
+  border: 1px solid #fef08a;
+}
+
+.rarity-gem-super-rare .gem-facet-top {
+  background: linear-gradient(135deg, #c084fc 0%, #7e22ce 100%);
+  color: #a855f7;
+  border: 1px solid #d8b4fe;
+  animation: gemAmethystPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes gemAmethystPulse {
+  0% { box-shadow: 0 0 6px #a855f7; }
+  100% { box-shadow: 0 0 18px #c084fc, 0 0 26px #9333ea; }
+}
+
+.rarity-gem-legendary .gem-facet-top {
+  background: linear-gradient(135deg, #f59e0b 0%, #ef4444 35%, #8b5cf6 70%, #06b6d4 100%);
+  background-size: 200% 200%;
+  color: #f59e0b;
+  border: 1.5px solid #fde047;
+  animation: gemPrismaticShimmer 2.5s ease infinite alternate;
+}
+
+@keyframes gemPrismaticShimmer {
+  0% { background-position: 0% 50%; box-shadow: 0 0 8px #f59e0b; }
+  50% { background-position: 100% 50%; box-shadow: 0 0 16px #ec4899; }
+  100% { background-position: 0% 50%; box-shadow: 0 0 20px #38bdf8; }
+}
+
+.rarity-gem-event .gem-facet-top {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  color: #06b6d4;
+  border: 1px solid #67e8f9;
+}
+
+.card-detail-rarity-text {
+  font-family: var(--font-display);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #e2e8f0;
+  text-transform: uppercase;
+}
+
+/* Right Column: Full Rules, Traits, and Flavor Lore */
+.card-detail-content-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 32px 28px 24px;
+  overflow-y: auto;
+  gap: 16px;
+}
+
+.card-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 12px;
+}
+
+.card-detail-title {
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.card-detail-cost-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+
+.card-detail-cost-pill.cost-sun {
+  background: linear-gradient(135deg, #facc15 0%, #ca8a04 100%);
+  color: #451a03;
+  border: 1.5px solid #fef08a;
+}
+
+.card-detail-cost-pill.cost-brain {
+  background: linear-gradient(135deg, #a855f7 0%, #6b21a8 100%);
+  color: #ffffff;
+  border: 1.5px solid #d8b4fe;
+}
+
+.cost-pill-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.cost-pill-icon {
+  font-size: 1.1rem;
+}
+
+/* Tribes & Class Metatags */
+.card-detail-tribes-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.card-detail-tribe-tag {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  text-transform: capitalize;
+}
+
+.card-detail-class-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f1f5f9;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.detail-class-badge {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.card-detail-type-tag {
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 3px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.card-detail-type-tag.type-trick {
+  background: rgba(234, 179, 8, 0.2);
+  color: #facc15;
+  border: 1px solid #ca8a04;
+}
+
+.card-detail-type-tag.type-environment {
+  background: rgba(56, 189, 248, 0.2);
+  color: #7dd3fc;
+  border: 1px solid #0284c7;
+}
+
+.card-detail-type-tag.type-superpower {
+  background: rgba(168, 85, 247, 0.2);
+  color: #d8b4fe;
+  border: 1px solid #9333ea;
+}
+
+.card-detail-type-tag.type-minion {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+  border: 1px solid #16a34a;
+}
+
+/* Combat Stats Bubbles */
+.card-detail-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.card-detail-stat-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.card-detail-stat-bubble.stat-attack {
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  border: 1.5px solid #22c55e;
+  color: #ffffff;
+}
+
+.card-detail-stat-bubble.stat-health {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  border: 1.5px solid #ef4444;
+  color: #ffffff;
+}
+
+.card-detail-stat-bubble.stat-armor {
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  border: 1.5px solid #94a3b8;
+  color: #e2e8f0;
+}
+
+.stat-bubble-icon {
+  font-size: 1.15rem;
+}
+
+.stat-bubble-heart {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.stat-bubble-val {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.stat-bubble-label {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.9;
+}
+
+/* Gameplay Rules Description Box */
+.card-detail-rules-box {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rules-header-title {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.rules-text {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+/* Active Traits Cards Grid */
+.card-detail-traits-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.traits-section-title {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #facc15;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.traits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.card-detail-trait-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 8px 12px;
+  transition: all 0.15s ease;
+}
+
+.card-detail-trait-card:hover {
+  background: rgba(51, 65, 85, 0.85);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.trait-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.trait-card-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.trait-card-emoji {
+  font-size: 1.2rem;
+}
+
+.trait-card-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.trait-card-name {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.trait-card-desc {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  line-height: 1.25;
+}
+
+/* Authentic Flavor Lore Box */
+.card-detail-flavor-box {
+  position: relative;
+  background: rgba(0, 0, 0, 0.35);
+  border-left: 3.5px solid #facc15;
+  border-radius: 4px 12px 12px 4px;
+  padding: 12px 16px 12px 32px;
+  margin-top: 4px;
+}
+
+.flavor-quote-mark {
+  position: absolute;
+  top: 2px;
+  left: 8px;
+  font-size: 2.2rem;
+  color: rgba(250, 204, 21, 0.35);
+  font-family: serif;
+  line-height: 1;
+}
+
+.card-detail-flavor-quote {
+  font-size: 0.82rem;
+  font-style: italic;
+  color: #e2e8f0;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.card-detail-id-stamp {
+  font-family: monospace;
+  font-size: 0.65rem;
+  color: #475569;
+  text-align: right;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .card-detail-modal-card {
+    flex-direction: column;
+    max-height: 94vh;
+  }
+  .card-detail-preview-col {
+    flex: 0 0 auto;
+    border-right: none;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+    padding: 20px;
+  }
+  .card-detail-enlarged-card {
+    transform: scale(1.1);
+    margin: 10px 0;
+  }
+  .card-detail-content-col {
+    padding: 16px 20px;
+  }
+}
+
 
 
 
