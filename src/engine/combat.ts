@@ -287,6 +287,44 @@ export function resolveSingleLaneCombat(
       // Snow Pea / Freeze trait
       if (plantHasFreezeTrait && zombie.currentHealth > 0) {
         zombie.isFrozen = true
+        // Freeze triggers: Snowdrop buff and Winter Squash destruction
+        updatedLanes.forEach(l => {
+          if (l.plantMinion && (l.plantMinion.cardId === 'plant_snowdrop' || l.plantMinion.name.toLowerCase().includes('snowdrop'))) {
+            l.plantMinion.currentAttack += 2
+            l.plantMinion.baseAttack += 2
+            l.plantMinion.currentHealth += 2
+            l.plantMinion.maxHealth += 2
+            events.push({
+              laneIndex,
+              attackerSide: 'plants',
+              attackerName: 'Snowdrop',
+              target: 'minion',
+              targetSide: 'plants',
+              damageDealt: 0,
+              isBlocked: false,
+              isLethal: false,
+              description: `🌸 Snowdrop nhận +2/+2 từ hiệu ứng Đóng băng (${l.plantMinion.currentAttack}/${l.plantMinion.currentHealth})!`,
+            })
+          }
+        })
+        const hasWinterSquash = updatedLanes.some(
+          l => (l.plantMinion && (l.plantMinion.cardId === 'plant_winter_squash' || l.plantMinion.name.toLowerCase().includes('winter squash'))) ||
+               (l.plantTeamUpMinion && (l.plantTeamUpMinion.cardId === 'plant_winter_squash' || l.plantTeamUpMinion.name.toLowerCase().includes('winter squash')))
+        )
+        if (hasWinterSquash) {
+          zombie.currentHealth = 0
+          events.push({
+            laneIndex,
+            attackerSide: 'plants',
+            attackerName: 'Winter Squash',
+            target: 'minion',
+            targetSide: 'zombies',
+            damageDealt: 0,
+            isBlocked: false,
+            isLethal: true,
+            description: `🎃 Winter Squash tiêu diệt tức thì Zombie bị đóng băng (${zombie.name})!`,
+          })
+        }
       }
       // Newspaper Zombie hurt trigger
       if (zombie.cardId === 'zombie_newspaper_zombie' && zombie.currentHealth > 0) {
@@ -896,6 +934,44 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
         // Snow Pea / Freeze trait
         if (plantHasFreezeTrait && zombie.currentHealth > 0) {
           zombie.isFrozen = true
+          // Freeze triggers: Snowdrop buff and Winter Squash destruction
+          updatedLanes.forEach(l => {
+            if (l.plantMinion && (l.plantMinion.cardId === 'plant_snowdrop' || l.plantMinion.name.toLowerCase().includes('snowdrop'))) {
+              l.plantMinion.currentAttack += 2
+              l.plantMinion.baseAttack += 2
+              l.plantMinion.currentHealth += 2
+              l.plantMinion.maxHealth += 2
+              events.push({
+                laneIndex: i,
+                attackerSide: 'plants',
+                attackerName: 'Snowdrop',
+                target: 'minion',
+                targetSide: 'plants',
+                damageDealt: 0,
+                isBlocked: false,
+                isLethal: false,
+                description: `🌸 Snowdrop nhận +2/+2 từ hiệu ứng Đóng băng (${l.plantMinion.currentAttack}/${l.plantMinion.currentHealth})!`,
+              })
+            }
+          })
+          const hasWinterSquash = updatedLanes.some(
+            l => (l.plantMinion && (l.plantMinion.cardId === 'plant_winter_squash' || l.plantMinion.name.toLowerCase().includes('winter squash'))) ||
+                 (l.plantTeamUpMinion && (l.plantTeamUpMinion.cardId === 'plant_winter_squash' || l.plantTeamUpMinion.name.toLowerCase().includes('winter squash')))
+          )
+          if (hasWinterSquash) {
+            zombie.currentHealth = 0
+            events.push({
+              laneIndex: i,
+              attackerSide: 'plants',
+              attackerName: 'Winter Squash',
+              target: 'minion',
+              targetSide: 'zombies',
+              damageDealt: 0,
+              isBlocked: false,
+              isLethal: true,
+              description: `🎃 Winter Squash tiêu diệt tức thì Zombie bị đóng băng (${zombie.name})!`,
+            })
+          }
         }
         // Newspaper Zombie hurt trigger
         if (zombie.cardId === 'zombie_newspaper_zombie' && zombie.currentHealth > 0) {

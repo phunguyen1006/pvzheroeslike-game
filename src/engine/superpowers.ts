@@ -415,9 +415,9 @@ export function executeSuperpower(
     case 'zombie_slammin_smash':
     case 'sp_slammin_smash':
     case 'sp_slammin_pumpkin': {
-      // 13. The Smash: Destroy a Plant with 4 Attack or less
+      // 13. The Smash: Destroy a Plant with 4 Attack or less (skips untrickable)
       let destroyed = false
-      if (targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.plantMinion && updatedLanes[targetLaneIndex].plantMinion!.currentAttack <= 4) {
+      if (targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.plantMinion && updatedLanes[targetLaneIndex].plantMinion!.currentAttack <= 4 && !isUntrickable(updatedLanes[targetLaneIndex].plantMinion)) {
         const victim = updatedLanes[targetLaneIndex].plantMinion!
         message = `Slammin' Smash giáng đòn nghiền nát ${victim.name} (${victim.currentAttack} ATK ≤ 4)!`
         updatedLanes[targetLaneIndex].plantMinion = null
@@ -425,7 +425,7 @@ export function executeSuperpower(
       } else {
         for (let i = 0; i < updatedLanes.length; i++) {
           const l = updatedLanes[i]
-          if (l.plantMinion && l.plantMinion.currentAttack <= 4) {
+          if (l.plantMinion && l.plantMinion.currentAttack <= 4 && !isUntrickable(l.plantMinion)) {
             message = `Slammin' Smash giáng đòn nghiền nát ${l.plantMinion.name} (${l.plantMinion.currentAttack} ATK ≤ 4)!`
             l.plantMinion = null
             destroyed = true
@@ -433,7 +433,7 @@ export function executeSuperpower(
           }
         }
       }
-      if (!destroyed) message = `Slammin' Smash: Không có Plant nào có Attack ≤ 4!`
+      if (!destroyed) message = `Slammin' Smash: Không có Plant nào có Attack ≤ 4 (hoặc có Untrickable)!`
       break
     }
 
@@ -483,9 +483,9 @@ export function executeSuperpower(
 
     case 'zombie_cut_down_to_size':
     case 'sp_cut_down_to_size': {
-      // Cut Down to Size: Destroy a Plant with 5 Attack or more
+      // Cut Down to Size: Destroy a Plant with 5 Attack or more (skips untrickable)
       let destroyed = false
-      if (targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.plantMinion && updatedLanes[targetLaneIndex].plantMinion!.currentAttack >= 5) {
+      if (targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.plantMinion && updatedLanes[targetLaneIndex].plantMinion!.currentAttack >= 5 && !isUntrickable(updatedLanes[targetLaneIndex].plantMinion)) {
         const victim = updatedLanes[targetLaneIndex].plantMinion!
         message = `Cut Down to Size đốn ngã cây khổng lồ: Tiêu diệt ${victim.name} (${victim.currentAttack} ATK ≥ 5)!`
         updatedLanes[targetLaneIndex].plantMinion = null
@@ -493,7 +493,7 @@ export function executeSuperpower(
       } else {
         for (let i = 0; i < updatedLanes.length; i++) {
           const l = updatedLanes[i]
-          if (l.plantMinion && l.plantMinion.currentAttack >= 5) {
+          if (l.plantMinion && l.plantMinion.currentAttack >= 5 && !isUntrickable(l.plantMinion)) {
             message = `Cut Down to Size đốn ngã cây khổng lồ: Tiêu diệt ${l.plantMinion.name} (${l.plantMinion.currentAttack} ATK ≥ 5)!`
             l.plantMinion = null
             destroyed = true
@@ -501,7 +501,7 @@ export function executeSuperpower(
           }
         }
       }
-      if (!destroyed) message = `Cut Down to Size: Không có Plant nào có Attack ≥ 5!`
+      if (!destroyed) message = `Cut Down to Size: Không có Plant nào có Attack ≥ 5 (hoặc có Untrickable)!`
       break
     }
 
@@ -531,11 +531,11 @@ export function executeSuperpower(
 
     case 'zombie_shrink_ray':
     case 'sp_shrink_ray': {
-      // 15. Rustbolt: A Plant gets -3 Attack. Draw a card
+      // 15. Rustbolt: A Plant gets -3 Attack. Draw a card (skips untrickable)
       let shrunk = false
-      const targetIdx = targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.plantMinion
+      const targetIdx = targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.plantMinion && !isUntrickable(updatedLanes[targetLaneIndex].plantMinion)
         ? targetLaneIndex
-        : updatedLanes.findIndex(l => l.plantMinion)
+        : updatedLanes.findIndex(l => l.plantMinion && !isUntrickable(l.plantMinion))
       if (targetIdx >= 0 && updatedLanes[targetIdx]?.plantMinion) {
         const p = updatedLanes[targetIdx].plantMinion!
         p.currentAttack = Math.max(0, p.currentAttack - 3)
@@ -545,7 +545,7 @@ export function executeSuperpower(
       const { newDeck, newHand, drawnCard } = drawCard(updatedState.zombieDeck, updatedState.zombieHand)
       updatedState.zombieDeck = newDeck
       updatedState.zombieHand = newHand
-      if (!shrunk) message = `Shrink Ray: Không có Plant nào, Zombie rút 1 lá [${drawnCard?.name || 'bài'}]!`
+      if (!shrunk) message = `Shrink Ray: Không có Plant nào (hoặc có Untrickable), Zombie rút 1 lá [${drawnCard?.name || 'bài'}]!`
       else message += ` và Zombie rút thêm 1 lá!`
       break
     }

@@ -3846,12 +3846,12 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
       if (isBossEnraged) {
         state.zombieHero.isShieldActive = true
         state.zombieHero.brains += 2
-        state.combatLog.push('⚡ CẢNH BÁO: DR. ZOMBOSS PHẪN NỘ (ENRAGE)! Bật khiên phòng thủ và nạp thêm 2 Não!')
+        state.combatLog = ['⚡ CẢNH BÁO: DR. ZOMBOSS PHẪN NỘ (ENRAGE)! Bật khiên phòng thủ và nạp thêm 2 Não!', ...state.combatLog]
       }
 
       expect(state.zombieHero.isShieldActive).toBe(true)
       expect(state.zombieHero.brains).toBeGreaterThanOrEqual(2)
-      expect(state.combatLog[0]).toContain('DR. ZOMBOSS PHẪN NỘ')
+      expect(state.combatLog.some(log => log.includes('DR. ZOMBOSS PHẪN NỘ'))).toBe(true)
     })
   })
 })

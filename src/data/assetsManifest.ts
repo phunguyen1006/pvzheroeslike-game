@@ -102,7 +102,10 @@ export const ASSET_MANIFEST = {
       "Uncrackable": "/assets/heroes/plants/Wall-Knight.png",
       "Embiggen": "/assets/heroes/plants/Captain Combustible.png",
       "Whirlwind": "/assets/heroes/plants/Rose.png",
-      "Geyser": "/assets/heroes/plants/Chompzilla.png"
+      "Geyser": "/assets/heroes/plants/Chompzilla.png",
+      "Gatling Pea": "/assets/cards/plants/Peashooter.png",
+      "Aloesaurus": "/assets/cards/plants/Bananasaurus Rex.png",
+      "Dusk Lobber": "/assets/cards/plants/Dark Matter Dragonfruit.png"
     },
     "zombies": {
       "Area 22": "/assets/cards/zombies/Area 22.png",
@@ -138,7 +141,9 @@ export const ASSET_MANIFEST = {
       "Shrink Ray": "/assets/heroes/zombies/Rustbolt.png",
       "Brute Strength": "/assets/heroes/zombies/Z-Mech.png",
       "Dance Off": "/assets/heroes/zombies/Electric Boogaloo.png",
-      "Cut Down to Size": "/assets/heroes/zombies/Professor Brainstorm.png"
+      "Cut Down to Size": "/assets/heroes/zombies/Professor Brainstorm.png",
+      "Intergalactic Warlord": "/assets/cards/zombies/Dr. Spacetime.png",
+      "Raiding Raptor": "/assets/heroes/zombies/Brain Freeze.png"
     }
   },
   "traits": {

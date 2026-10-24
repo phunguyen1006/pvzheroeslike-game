@@ -15,6 +15,7 @@ import { CombatLogDrawer } from './components/ui/CombatLogDrawer'
 import { GameOverModal } from './components/ui/GameOverModal'
 import { SuperBlockModal } from './components/ui/SuperBlockModal'
 import { MulliganModal } from './components/ui/MulliganModal'
+import { ComicIntro } from './components/modals/ComicIntro'
 import { PhaseBanner } from './components/ui/PhaseBanner'
 import { MainMenu } from './components/screens/MainMenu'
 import { HeroSelect } from './components/screens/HeroSelect'
@@ -29,6 +30,7 @@ export function App() {
     plant: 'hero_green_shadow',
     zombie: 'hero_super_brainz',
   })
+  const [showComicIntro, setShowComicIntro] = useState(false)
   const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('normal')
   const [customPlantDeck, setCustomPlantDeck] = useState<CardType[] | undefined>(undefined)
   const [customZombieDeck, setCustomZombieDeck] = useState<CardType[] | undefined>(undefined)
@@ -78,6 +80,7 @@ export function App() {
       plantDeck: customPlantDeck,
       zombieDeck: customZombieDeck,
     })
+    setShowComicIntro(true)
     setCurrentScreen('battle')
   }
 
@@ -95,6 +98,7 @@ export function App() {
       plantDeck: side === 'plants' ? deck : customPlantDeck,
       zombieDeck: side === 'zombies' ? deck : customZombieDeck,
     })
+    setShowComicIntro(true)
     setCurrentScreen('battle')
   }
 
@@ -428,6 +432,7 @@ export function App() {
     setIsCombatResolving(false)
     setActiveCombatLaneIndex(undefined)
     nextLaneToExecuteRef.current = null
+    setShowComicIntro(false)
     dispatch({
       type: 'START_MATCH',
       plantHeroId: selectedHeroes.plant,
@@ -492,7 +497,10 @@ export function App() {
   if (currentScreen === 'menu') {
     return (
       <MainMenu
-        onStartGame={() => setCurrentScreen('battle')}
+        onStartGame={() => {
+          setShowComicIntro(true)
+          setCurrentScreen('battle')
+        }}
         onOpenHeroSelect={() => setCurrentScreen('hero_select')}
         onOpenDeckBuilder={() => setCurrentScreen('deck_builder')}
       />
@@ -720,8 +728,20 @@ export function App() {
         />
       </div>
 
+      {/* Pre-Battle Comic Storyline Intro */}
+      {showComicIntro && (
+        <ComicIntro
+          plantHeroName={gameState.plantHero.name}
+          zombieHeroName={gameState.zombieHero.name}
+          plantHeroAvatar={gameState.plantHero.avatar}
+          zombieHeroAvatar={gameState.zombieHero.avatar}
+          onStartBattle={() => setShowComicIntro(false)}
+          onSkip={() => setShowComicIntro(false)}
+        />
+      )}
+
       {/* Mulligan Opening Hand Modal */}
-      {gameState.phase === 'MULLIGAN' && (
+      {!showComicIntro && gameState.phase === 'MULLIGAN' && (
         <MulliganModal
           cards={gameState.plantHand}
           superpower={startingSuperpower}

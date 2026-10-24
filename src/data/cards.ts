@@ -1080,7 +1080,8 @@ export const ZOMBIE_CARDS: CardData[] = [
  tribe: 'Party Moustache Zombie',
  assetPath: '/assets/cards/zombies/Trickster.png',
  image: '/assets/cards/zombies/Trickster.png',
- description: 'Khi ở trên tay: Giảm 1 Não (Brain) mỗi khi bạn sử dụng một Zombie Trick. Khi xuất trận: Lập tức thực hiện 1 đòn Đánh thêm (Bonus Attack).',
+ gravestone: false,
+ description: 'Mỗi khi bạn dùng 1 lá Trick trong trận đấu, giảm 1 Brains giá thẻ này. Khi xuất trận: Tung ngay 1 đòn tấn công phụ (Bonus Attack)!',
  heroClass: 'Brainy',
  laneRequirement: 'ground'
  },
@@ -1410,6 +1411,45 @@ export const ZOMBIE_CARDS: CardData[] = [
  image: '/assets/heroes/zombies/Professor Brainstorm.png',
  description: 'Đốn hạ khổng lồ: Tiêu diệt ngay lập tức một Plant có chỉ số Tấn công từ 5 trở lên (≥ 5 ATK).',
  heroClass: 'Brainy'
+ },
+ {
+ id: 'zombie_intergalactic_warlord',
+ name: 'Intergalactic Warlord',
+ team: 'zombies',
+ type: 'zombie',
+ cost: 5,
+ attack: 3,
+ hp: 5,
+ health: 5,
+ traits: [],
+ rarity: 'Legendary',
+ tribe: 'Professional Zombie',
+ assetPath: '/assets/cards/zombies/Dr. Spacetime.png',
+ image: '/assets/cards/zombies/Dr. Spacetime.png',
+ gravestone: false,
+ description: 'Zombie Evolution: Khi xuất trận, tất cả Zombie trên sân và rút về sau nhận vĩnh viễn +1/+1!',
+ heroClass: 'Hearty',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'zombie_raiding_raptor',
+ name: 'Raiding Raptor',
+ team: 'zombies',
+ type: 'zombie',
+ cost: 2,
+ attack: 2,
+ hp: 4,
+ health: 4,
+ traits: ['Amphibious', 'Dino-Roar'],
+ amphibious: true,
+ rarity: 'Super-Rare',
+ tribe: 'Pet Dinosaur Zombie',
+ assetPath: '/assets/heroes/zombies/Brain Freeze.png',
+ image: '/assets/heroes/zombies/Brain Freeze.png',
+ gravestone: false,
+ description: 'Amphibious. Dino-Roar: Mỗi khi rút bài, nhận +2 ATK!',
+ heroClass: 'Beastly',
+ laneRequirement: 'any'
  }
 ];
 

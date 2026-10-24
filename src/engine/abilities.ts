@@ -468,6 +468,41 @@ export function triggerDinoRoar(state: GameState, side: Side): AbilityTriggerRes
         }
         events.push(`🦖 Bananasaurus Rex Team-Up gầm vang (Dino-Roar): Nhận +1/+1 (hiện là ${l.plantTeamUpMinion.currentAttack}/${l.plantTeamUpMinion.currentHealth})!`)
       }
+      // Aloesaurus: Dino-Roar: Heal all Plants and the Plant Hero for 2!
+      const hasAloe = (l.plantMinion && l.plantMinion.cardId === 'plant_aloeosaurus') || (l.plantTeamUpMinion && l.plantTeamUpMinion.cardId === 'plant_aloeosaurus')
+      if (hasAloe) {
+        updatedState.lanes.forEach(lane => {
+          if (lane.plantMinion) {
+            lane.plantMinion = {
+              ...lane.plantMinion,
+              currentHealth: Math.min(lane.plantMinion.maxHealth, lane.plantMinion.currentHealth + 2),
+            }
+          }
+          if (lane.plantTeamUpMinion) {
+            lane.plantTeamUpMinion = {
+              ...lane.plantTeamUpMinion,
+              currentHealth: Math.min(lane.plantTeamUpMinion.maxHealth, lane.plantTeamUpMinion.currentHealth + 2),
+            }
+          }
+        })
+        updatedState.plantHero = {
+          ...updatedState.plantHero,
+          hp: Math.min(updatedState.plantHero.maxHp, updatedState.plantHero.hp + 2),
+        }
+        events.push(`🦕 Aloesaurus gầm vang (Dino-Roar): Hồi 2 Máu cho toàn bộ Plants và Plant Hero!`)
+      }
+    })
+  } else if (side === 'zombies') {
+    // Raiding Raptor: Dino-Roar: Gets +2 Attack!
+    updatedState.lanes.forEach(l => {
+      if (l.zombieMinion && l.zombieMinion.cardId === 'zombie_raiding_raptor') {
+        l.zombieMinion = {
+          ...l.zombieMinion,
+          currentAttack: l.zombieMinion.currentAttack + 2,
+          baseAttack: l.zombieMinion.baseAttack + 2,
+        }
+        events.push(`🦖 Raiding Raptor gầm vang (Dino-Roar): Nhận +2 Tấn công (+2 ATK, hiện là ${l.zombieMinion.currentAttack})!`)
+      }
     })
   }
 
