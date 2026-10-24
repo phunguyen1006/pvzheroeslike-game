@@ -81,6 +81,8 @@ export function App() {
   const [projectiles, setProjectiles] = useState<Projectile[]>([])
   const [floatingTexts, setFloatingTexts] = useState<FloatingTextItem[]>([])
   const [shockwaves, setShockwaves] = useState<ShockwaveItem[]>([])
+  const [combatPopups, setCombatPopups] = useState<CombatPopupItem[]>([])
+  const [turnRopeTime, setTurnRopeTime] = useState<number>(15)
   const [isScreenShaking, setIsScreenShaking] = useState(false)
   const [plantHeroHurt, setPlantHeroHurt] = useState(false)
   const [zombieHeroHurt, setZombieHeroHurt] = useState(false)
@@ -425,6 +427,29 @@ export function App() {
     dispatch({ type: 'NEXT_PHASE' })
   }
 
+  // Turn Rope Countdown Timer (15-second fuse for player turn)
+  const isPlayerPlantTurn = gameState.phase === 'PLANT_PLAY'
+  useEffect(() => {
+    if (!isPlayerPlantTurn || isCombatResolving || showComicIntro || Boolean(gameState.winner)) {
+      setTurnRopeTime(15)
+      return
+    }
+
+    setTurnRopeTime(15)
+    const ropeInterval = setInterval(() => {
+      setTurnRopeTime((prev) => {
+        if (prev <= 1) {
+          clearInterval(ropeInterval)
+          handleNextPhase()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(ropeInterval)
+  }, [gameState.phase, gameState.turn, isCombatResolving, showComicIntro, gameState.winner])
+
   // ========================================================
   // SEQUENTIAL 5-LANE COMBAT SWEEP WITH PROJECTILES & VFX
   // ========================================================
@@ -547,6 +572,38 @@ export function App() {
             setTimeout(() => {
               setShockwaves((prev) => prev.filter((s) => s.id !== swId))
             }, 750)
+
+            // 2c. Comic Action Word & Damage Popup (POW/BAM/CRUNCH/ZAP/BLOCKED/DEADLY/STRIKE)
+            if (ev.isBlocked || ev.damageDealt > 0) {
+              const attackerTraits = ev.attackerMinion?.traits || []
+              const isDeadly = Boolean(attackerTraits.includes('deadly'))
+              const comicWord = getComicActionWord({
+                damage: ev.damageDealt,
+                isBlocked: ev.isBlocked,
+                isDeadly,
+                traits: attackerTraits,
+              })
+              const popupId = `popup-${idx}-${Date.now()}-${evIdx}`
+              setCombatPopups((prev) => [
+                ...prev,
+                {
+                  id: popupId,
+                  laneIndex: idx,
+                  target: targetType,
+                  word: comicWord,
+                  damage: ev.damageDealt,
+                  targetSide: ev.targetSide,
+                  isBlocked: ev.isBlocked,
+                  isDeadly,
+                  rotation: (Math.random() * 16) - 8,
+                },
+              ])
+              setTimeout(() => {
+                setCombatPopups((prev) => prev.filter((p) => p.id !== popupId))
+              }, 1200)
+
+              soundManager.playComicImpact(comicWord)
+            }
 
             // 3. Audio & Hero / Minion Hit Feedback
             if (ev.isBlocked) {
