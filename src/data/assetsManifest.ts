@@ -94,7 +94,14 @@ export const ASSET_MANIFEST = {
       "Repeater": "/assets/cards/plants/Peashooter.png",
       "Snowdrop": "/assets/cards/plants/Snow Pea.png",
       "Briar Rose": "/assets/heroes/plants/Rose.png",
-      "Cornucopia": "/assets/cards/plants/Kernel Corn.png"
+      "Cornucopia": "/assets/cards/plants/Kernel Corn.png",
+      "Bog of Sunken Hope": "/assets/cards/plants/Planet of the Grapes.png",
+      "Precision Blast": "/assets/heroes/plants/Green Shadow.png",
+      "Sunburn": "/assets/heroes/plants/Solar Flare.png",
+      "Uncrackable": "/assets/heroes/plants/Wall-Knight.png",
+      "Embiggen": "/assets/heroes/plants/Captain Combustible.png",
+      "Whirlwind": "/assets/heroes/plants/Rose.png",
+      "Geyser": "/assets/heroes/plants/Chompzilla.png"
     },
     "zombies": {
       "Area 22": "/assets/cards/zombies/Area 22.png",
@@ -122,7 +129,15 @@ export const ASSET_MANIFEST = {
       "Conehead Zombie": "/assets/cards/zombies/Arm Wrestler.png",
       "Buckethead Zombie": "/assets/cards/zombies/Arm Wrestler.png",
       "Stealthy Imp": "/assets/cards/zombies/Swabbie.png",
-      "Disco-Tron 3000": "/assets/cards/zombies/Disco Zombie.png"
+      "Disco-Tron 3000": "/assets/cards/zombies/Disco Zombie.png",
+      "Laser Base Alpha": "/assets/cards/zombies/Moon Base Z.png",
+      "Cone Zone": "/assets/cards/zombies/Area 22.png",
+      "Carried Away": "/assets/heroes/zombies/Super Brainz.png",
+      "Slammin' Smash": "/assets/heroes/zombies/The Smash.png",
+      "Shrink Ray": "/assets/heroes/zombies/Rustbolt.png",
+      "Brute Strength": "/assets/heroes/zombies/Z-Mech.png",
+      "Dance Off": "/assets/heroes/zombies/Electric Boogaloo.png",
+      "Cut Down to Size": "/assets/heroes/zombies/Professor Brainstorm.png"
     }
   },
   "traits": {

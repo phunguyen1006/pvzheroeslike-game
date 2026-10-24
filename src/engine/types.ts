@@ -85,6 +85,7 @@ export interface EnvironmentState {
   id: string
   name: string
   side: Side
+  cost?: number
   description: string
   image: string
 }
@@ -112,6 +113,7 @@ export interface HeroState {
   maxBrains: number
   blockMeter: number // 0 to 8 segments
   isShieldActive: boolean
+  invulnerable?: boolean
   blockCount: number // max 3 blocks per game
   avatar: string
   classes: string[]

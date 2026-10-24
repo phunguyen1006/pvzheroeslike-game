@@ -30,9 +30,10 @@ export function executeSuperpower(
 
   switch (superpowerId) {
     // ========================================================
-    // PLANT HEROES SIGNATURE SUPERPOWERS (11)
+    // PLANT HEROES SIGNATURE SUPERPOWERS (11) + COMMON (3)
     // ========================================================
 
+    case 'plant_precision_blast':
     case 'sp_precision_blast': {
       // 1. Green Shadow: 5 damage in the middle lane (Lane 3, index 2)
       const middleLane = updatedLanes[2]
@@ -54,6 +55,7 @@ export function executeSuperpower(
       break
     }
 
+    case 'plant_sunburn':
     case 'sp_sunburn': {
       // 2. Solar Flare: 2 damage to enemy + 1 permanent Sun max
       const res = applyHeroDamage(updatedState.zombieHero, 2, false)
@@ -67,6 +69,7 @@ export function executeSuperpower(
       break
     }
 
+    case 'plant_uncrackable':
     case 'sp_uncrackable': {
       // 3. Wall-Knight: Plant Hero cannot be hurt this turn + draw a card
       updatedState.plantHero = {
@@ -77,6 +80,74 @@ export function executeSuperpower(
       updatedState.plantDeck = newDeck
       updatedState.plantHand = newHand
       message = `Uncrackable: Plant Hero dựng khiên bất tử lượt này và rút 1 lá [${drawnCard?.name || 'bài'}]!`
+      break
+    }
+
+    case 'plant_embiggen': {
+      // Embiggen: A Plant gets +2/+2
+      const targetIdx = targetLaneIndex ?? updatedLanes.findIndex(l => l.plantMinion)
+      if (targetIdx >= 0 && updatedLanes[targetIdx]?.plantMinion) {
+        const p = updatedLanes[targetIdx].plantMinion!
+        updatedLanes[targetIdx].plantMinion = {
+          ...p,
+          currentAttack: p.currentAttack + 2,
+          currentHealth: p.currentHealth + 2,
+          maxHealth: p.maxHealth + 2,
+        }
+        message = `Embiggen phóng đại tế bào: ${p.name} nhận +2/+2 (${p.currentAttack + 2}/${p.currentHealth + 2})!`
+      } else {
+        message = `Embiggen: Không có Plant nào trên sân để tăng chỉ số!`
+      }
+      break
+    }
+
+    case 'plant_whirlwind': {
+      // Whirlwind: Bounce a random Zombie
+      const zombieLanes = updatedLanes
+        .map((l, idx) => ({ lane: l, idx }))
+        .filter(item => Boolean(item.lane.zombieMinion))
+      if (zombieLanes.length > 0) {
+        const chosen = targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.zombieMinion
+          ? { lane: updatedLanes[targetLaneIndex], idx: targetLaneIndex }
+          : zombieLanes[Math.floor(Math.random() * zombieLanes.length)]
+        const z = chosen.lane.zombieMinion!
+        chosen.lane.zombieMinion = null
+        if (updatedState.zombieHand.length < 10) {
+          updatedState.zombieHand.push({
+            id: z.cardId,
+            name: z.name,
+            side: 'zombies',
+            cost: 1,
+            attack: z.baseAttack,
+            health: z.maxHealth,
+            type: 'minion',
+            image: z.image,
+          })
+        }
+        message = `Whirlwind lốc xoáy thổi bay ${z.name} quay trở về tay của Zombie!`
+      } else {
+        message = `Whirlwind: Không có Zombie nào trên sân để đẩy lùi!`
+      }
+      break
+    }
+
+    case 'plant_geyser': {
+      // Geyser: Heal 4 to Plant Hero and all Plants
+      updatedState.plantHero = {
+        ...updatedState.plantHero,
+        hp: Math.min(updatedState.plantHero.maxHp, updatedState.plantHero.hp + 4),
+      }
+      let healCount = 0
+      updatedLanes.forEach(l => {
+        if (l.plantMinion) {
+          l.plantMinion = {
+            ...l.plantMinion,
+            currentHealth: Math.min(l.plantMinion.maxHealth, l.plantMinion.currentHealth + 4),
+          }
+          healCount++
+        }
+      })
+      message = `Geyser mạch nước nóng phun trào: Hồi 4 HP cho Plant Hero và ${healCount} Plants trên sân!`
       break
     }
 
@@ -254,9 +325,10 @@ export function executeSuperpower(
     }
 
     // ========================================================
-    // ZOMBIE HEROES SIGNATURE SUPERPOWERS (11)
+    // ZOMBIE HEROES SIGNATURE SUPERPOWERS (11) + COMMON (3)
     // ========================================================
 
+    case 'zombie_carried_away':
     case 'sp_carried_away': {
       // 12. Super Brainz: Move a Zombie. It does a Bonus Attack
       const targetIdx = targetLaneIndex ?? updatedLanes.findIndex(l => l.zombieMinion)
@@ -271,19 +343,75 @@ export function executeSuperpower(
       break
     }
 
+    case 'zombie_slammin_smash':
+    case 'sp_slammin_smash':
     case 'sp_slammin_pumpkin': {
       // 13. The Smash: Destroy a Plant with 4 Attack or less
       let destroyed = false
       for (let i = 0; i < updatedLanes.length; i++) {
         const l = updatedLanes[i]
         if (l.plantMinion && l.plantMinion.currentAttack <= 4) {
-          message = `Slammin' Pumpkin giáng đòn nghiền nát ${l.plantMinion.name} (≤ 4 ATK)!`
+          message = `Slammin' Smash giáng đòn nghiền nát ${l.plantMinion.name} (≤ 4 ATK)!`
           l.plantMinion = null
           destroyed = true
           break
         }
       }
-      if (!destroyed) message = `Slammin' Pumpkin: Không có Plant nào có Attack ≤ 4!`
+      if (!destroyed) message = `Slammin' Smash: Không có Plant nào có Attack ≤ 4!`
+      break
+    }
+
+    case 'zombie_brute_strength': {
+      // Brute Strength: A Zombie gets +3 Attack
+      const targetIdx = targetLaneIndex ?? updatedLanes.findIndex(l => l.zombieMinion)
+      if (targetIdx >= 0 && updatedLanes[targetIdx]?.zombieMinion) {
+        const z = updatedLanes[targetIdx].zombieMinion!
+        updatedLanes[targetIdx].zombieMinion = {
+          ...z,
+          currentAttack: z.currentAttack + 3,
+        }
+        message = `Brute Strength cơ bắp cuồn cuộn: ${z.name} nhận thêm +3 Tấn công (${z.currentAttack + 3} ATK)!`
+      } else {
+        message = `Brute Strength: Không có Zombie nào trên sân để tăng công!`
+      }
+      break
+    }
+
+    case 'zombie_dance_off': {
+      // Dance Off: Summon two 1/1 Backup Dancers in random lanes
+      const openLanes = updatedLanes.filter(l => !l.zombieMinion)
+      let spawned = 0
+      openLanes.slice(0, 2).forEach(l => {
+        l.zombieMinion = {
+          instanceId: `backup_dancer_${Date.now()}_${l.index}`,
+          cardId: 'zombie_backup_dancer',
+          name: 'Backup Dancer',
+          side: 'zombies',
+          currentAttack: 1,
+          baseAttack: 1,
+          currentHealth: 1,
+          maxHealth: 1,
+          image: '/assets/cards/zombies/Backup Dancer.png',
+        }
+        spawned++
+      })
+      message = `Dance Off vũ điệu disco: Triệu hồi ${spawned} Backup Dancer 1/1 vào sân!`
+      break
+    }
+
+    case 'zombie_cut_down_to_size': {
+      // Cut Down to Size: Destroy a Plant with 5 Attack or more
+      let destroyed = false
+      for (let i = 0; i < updatedLanes.length; i++) {
+        const l = updatedLanes[i]
+        if (l.plantMinion && l.plantMinion.currentAttack >= 5) {
+          message = `Cut Down to Size đốn ngã cây khổng lồ: Tiêu diệt ${l.plantMinion.name} (≥ 5 ATK)!`
+          l.plantMinion = null
+          destroyed = true
+          break
+        }
+      }
+      if (!destroyed) message = `Cut Down to Size: Không có Plant nào có Attack ≥ 5!`
       break
     }
 
@@ -311,6 +439,7 @@ export function executeSuperpower(
       break
     }
 
+    case 'zombie_shrink_ray':
     case 'sp_shrink_ray': {
       // 15. Rustbolt: A Plant gets -3 Attack. Draw a card
       let shrunk = false

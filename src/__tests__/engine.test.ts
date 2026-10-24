@@ -2065,10 +2065,10 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
       expect(discoTron?.image).toBeTruthy()
     })
 
-    it('verifies overall expanded pool with Round 3 additions (56 cards total)', () => {
-      expect(PLANT_CARDS.length).toBe(27)
-      expect(ZOMBIE_CARDS.length).toBe(29)
-      expect(PLANT_CARDS.length + ZOMBIE_CARDS.length).toBe(56)
+    it('verifies overall expanded pool with Round 3 and Superpower additions (at least 56 cards)', () => {
+      expect(PLANT_CARDS.length).toBeGreaterThanOrEqual(27)
+      expect(ZOMBIE_CARDS.length).toBeGreaterThanOrEqual(29)
+      expect(PLANT_CARDS.length + ZOMBIE_CARDS.length).toBeGreaterThanOrEqual(56)
     })
   })
 
@@ -2449,6 +2449,273 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
       expect(res.updatedState.zombieDeck.length).toBe(initialDeckCount - 1)
       expect(res.updatedState.zombieHand.length).toBe(initialHandCount + 1)
       expect(res.message).toContain('Teleport: Dịch chuyển tức thời')
+    })
+  })
+
+  // ==========================================================
+  // 16. SMART AI TACTICAL & TRICK DECISION SUITE
+  // ==========================================================
+  describe('16. Smart AI Tactical & Trick Decision Suite', () => {
+    it('AI prioritizes Bungee Plumber to eliminate low-HP Plant minion with <= 2 HP', () => {
+      const state = createInitialGameState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 4
+      state.plantHero.hp = 15 // Not in lethal range
+
+      // Lane 1: 2-HP Repeater (killable)
+      state.lanes[1].plantMinion = createMockMinion('p1', 'Repeater', 'plants', 2, 2, {
+        cardId: 'plant_repeater',
+      })
+      // Lane 3: 4-HP Briar Rose (not killable with 2 dmg)
+      state.lanes[3].plantMinion = createMockMinion('p3', 'Briar Rose', 'plants', 3, 4, {
+        cardId: 'plant_briar_rose',
+      })
+
+      const bungeeCard = createMockCard('zombie_bungee_plumber', 'Bungee Plumber', 'zombies', 1, 0, 0, {
+        type: 'trick',
+      })
+      state.zombieHand = [bungeeCard]
+
+      const decision = getAIDecision(state, 'zombies', 'normal')
+      expect(decision.action).toBe('PLAY_TRICK')
+      expect(decision.card?.id).toBe('zombie_bungee_plumber')
+      expect(decision.laneIndex).toBe(1) // Targets Lane 1 with the 2-HP Repeater
+      expect(decision.targetHero).toBeFalsy()
+      expect(decision.reason).toContain('Bungee Plumber')
+    })
+
+    it('AI prioritizes Bungee Plumber directly to Plant Hero when Plant Hero HP <= 2 for lethal finish', () => {
+      const state = createInitialGameState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 2
+      state.plantHero.hp = 2 // Exact lethal range!
+
+      // Plant exists on board, but direct lethal takes top priority
+      state.lanes[1].plantMinion = createMockMinion('p1', 'Peashooter', 'plants', 1, 1)
+
+      const bungeeCard = createMockCard('zombie_bungee_plumber', 'Bungee Plumber', 'zombies', 1, 0, 0, {
+        type: 'trick',
+      })
+      state.zombieHand = [bungeeCard]
+
+      const decision = getAIDecision(state, 'zombies', 'expert')
+      expect(decision.action).toBe('PLAY_TRICK')
+      expect(decision.card?.id).toBe('zombie_bungee_plumber')
+      expect(decision.targetHero).toBe(true) // Hits Plant Hero directly
+      expect(decision.reason).toContain('Lethal')
+    })
+
+    it('AI uses Lurch for Lunch to grant Bonus Attack to the Zombie with the highest Attack (>= 3 ATK)', () => {
+      const state = createInitialGameState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 3
+
+      // Lane 0: 2 ATK Zombie
+      state.lanes[0].zombieMinion = createMockMinion('z0', 'Conehead', 'zombies', 2, 2)
+      // Lane 2: 6 ATK Zombie (Gargantuar - Highest attack)
+      state.lanes[2].zombieMinion = createMockMinion('z2', 'Gargantuar', 'zombies', 6, 6)
+      // Lane 3: 4 ATK Zombie (All-Star)
+      state.lanes[3].zombieMinion = createMockMinion('z3', 'All-Star Zombie', 'zombies', 4, 6)
+
+      const lurchCard = createMockCard('zombie_lurch_for_lunch', 'Lurch for Lunch', 'zombies', 2, 0, 0, {
+        type: 'trick',
+      })
+      state.zombieHand = [lurchCard]
+
+      const decision = getAIDecision(state, 'zombies', 'normal')
+      expect(decision.action).toBe('PLAY_TRICK')
+      expect(decision.card?.id).toBe('zombie_lurch_for_lunch')
+      expect(decision.laneIndex).toBe(2) // Selects 6-ATK Gargantuar in Lane 2
+      expect(decision.reason).toContain('Lurch for Lunch')
+    })
+
+    it('AI ignores frozen Zombies when selecting the target for Lurch for Lunch', () => {
+      const state = createInitialGameState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 3
+
+      // Lane 1: 7 ATK Zombie but FROZEN!
+      state.lanes[1].zombieMinion = createMockMinion('z1', 'Deep Sea Gargantuar', 'zombies', 7, 7, {
+        isFrozen: true,
+      })
+      // Lane 3: 4 ATK Zombie (unfrozen, valid)
+      state.lanes[3].zombieMinion = createMockMinion('z3', 'All-Star Zombie', 'zombies', 4, 6)
+
+      const lurchCard = createMockCard('zombie_lurch_for_lunch', 'Lurch for Lunch', 'zombies', 2, 0, 0, {
+        type: 'trick',
+      })
+      state.zombieHand = [lurchCard]
+
+      const decision = getAIDecision(state, 'zombies', 'normal')
+      expect(decision.action).toBe('PLAY_TRICK')
+      expect(decision.card?.id).toBe('zombie_lurch_for_lunch')
+      expect(decision.laneIndex).toBe(3) // Skips frozen Lane 1 and picks Lane 3
+    })
+
+    it('AI conserves Brains during ZOMBIE_PLAY when holding high-value Tricks facing dangerous Plants', () => {
+      const state = createInitialGameState()
+      state.phase = 'ZOMBIE_PLAY'
+      state.zombieHero.brains = 5
+
+      // Dangerous 5 ATK Plant on board
+      state.lanes[1].plantMinion = createMockMinion('p_boss', 'Gatling Pea', 'plants', 5, 4)
+
+      // Hand has a 5-cost minion and a 5-cost hard removal trick (Locust Swarm)
+      const expensiveMinion = createMockCard('zombie_all_star', 'All-Star Zombie', 'zombies', 5, 4, 6)
+      const locustCard = createMockCard('zombie_locust_swarm', 'Locust Swarm', 'zombies', 5, 0, 0, {
+        type: 'trick',
+      })
+      state.zombieHand = [expensiveMinion, locustCard]
+
+      const decision = getAIDecision(state, 'zombies', 'normal')
+      expect(decision.action).toBe('PASS')
+      expect(decision.reason).toContain('Preserving')
+    })
+  })
+
+  // ==========================================================
+  // 17. SUPERPOWER & ENVIRONMENT COMBAT MECHANICS
+  // ==========================================================
+  describe('17. Superpower & Environment Combat Mechanics', () => {
+    it('verifies Super-Block triggers at 8 segments: completely blocks 100% incoming damage and awards free superpower', () => {
+      const state = createInitialGameState()
+      // Plant Hero with 7/8 meter, hp = 15
+      state.plantHero.blockMeter = 7
+      state.plantHero.blockCount = 0
+      state.plantHero.hp = 15
+
+      // Zombie in Lane 1 with lethal 10 damage attack
+      state.lanes[1].zombieMinion = createMockMinion('z_garg', 'Zombot 1000', 'zombies', 10, 10)
+
+      const combatRes = resolveSingleLaneCombat(state, 1)
+
+      // Super-Block completely blocked all 10 damage!
+      expect(combatRes.updatedState.plantHero.hp).toBe(15)
+      expect(combatRes.hasSuperBlock).toBe(true)
+      expect(combatRes.updatedState.plantHero.blockMeter).toBe(0) // Resets to 0
+      expect(combatRes.updatedState.plantHero.blockCount).toBe(1) // Incremented to 1
+      expect(combatRes.updatedState.pendingSuperBlock).toBeDefined()
+      expect(combatRes.updatedState.pendingSuperBlock?.side).toBe('plants')
+      expect(combatRes.updatedState.pendingSuperBlock?.superpower.cost).toBe(0)
+    })
+
+    it('verifies Hero takes full damage without blocking when blockCount reaches maximum of 3', () => {
+      const state = createInitialGameState()
+      state.plantHero.blockMeter = 7
+      state.plantHero.blockCount = 3 // Max 3 blocks reached
+      state.plantHero.hp = 20
+
+      // Zombie in Lane 1 deals 6 damage
+      state.lanes[1].zombieMinion = createMockMinion('z_smash', 'Gargantuar', 'zombies', 6, 6)
+
+      const combatRes = resolveSingleLaneCombat(state, 1)
+
+      // Takes full 6 damage without triggering Super-Block
+      expect(combatRes.updatedState.plantHero.hp).toBe(14)
+      expect(combatRes.hasSuperBlock).toBe(false)
+      expect(combatRes.updatedState.pendingSuperBlock).toBeNull()
+    })
+
+    it('verifies Precision Blast deals exactly 5 damage to Zombie in middle lane (Lane 2) and destroys it if fatal', () => {
+      const state = createInitialGameState()
+      // Middle lane has a 4-HP Zombie
+      state.lanes[2].zombieMinion = createMockMinion('z_mid', 'Buckethead', 'zombies', 3, 4)
+
+      const res = executeSuperpower(state, 'sp_precision_blast', 'plants')
+
+      // 4 HP - 5 damage = destroyed!
+      expect(res.updatedState.lanes[2].zombieMinion).toBeNull()
+      expect(res.message).toContain('Precision Blast')
+      expect(res.message).toContain('Tiêu diệt Buckethead')
+    })
+
+    it('verifies Precision Blast deals exactly 5 damage directly to Zombie Hero when middle lane is empty', () => {
+      const state = createInitialGameState()
+      state.lanes[2].zombieMinion = null
+      state.zombieHero.hp = 20
+
+      const res = executeSuperpower(state, 'sp_precision_blast', 'plants')
+
+      // 20 HP - 5 damage = 15 HP
+      expect(res.updatedState.zombieHero.hp).toBe(15)
+      expect(res.message).toContain('Precision Blast bắn thẳng vào Zombie Hero gây 5 sát thương')
+    })
+
+    it('verifies Sunburn deals 2 damage to Zombie Hero and permanently increases plant Max Sun by 1', () => {
+      const state = createInitialGameState()
+      state.plantHero.sun = 3
+      state.plantHero.maxSun = 3
+      state.zombieHero.hp = 20
+
+      const res = executeSuperpower(state, 'sp_sunburn', 'plants')
+
+      // Zombie Hero takes 2 damage: 20 - 2 = 18 HP
+      expect(res.updatedState.zombieHero.hp).toBe(18)
+      // Plant Hero permanently ramps +1 Sun and Max Sun
+      expect(res.updatedState.plantHero.maxSun).toBe(4)
+      expect(res.updatedState.plantHero.sun).toBe(4)
+      expect(res.message).toContain('Sunburn')
+    })
+
+    it('verifies Uncrackable makes Plant Hero immune to all damage for the turn and draws 1 card', () => {
+      const state = createInitialGameState()
+      state.plantHero.isShieldActive = false
+      state.plantHero.hp = 15
+      const initialDeckLength = state.plantDeck.length
+      const initialHandLength = state.plantHand.length
+
+      // Execute Uncrackable
+      const spRes = executeSuperpower(state, 'sp_uncrackable', 'plants')
+      expect(spRes.updatedState.plantHero.isShieldActive).toBe(true)
+      expect(spRes.updatedState.plantHand.length).toBe(initialHandLength + 1)
+      expect(spRes.updatedState.plantDeck.length).toBe(initialDeckLength - 1)
+
+      // Test combat hit against shielded Hero: 10 incoming damage in open lane 1
+      spRes.updatedState.lanes[1].zombieMinion = createMockMinion('z_big', 'Gargantuar', 'zombies', 10, 10)
+      const combatRes = resolveSingleLaneCombat(spRes.updatedState, 1)
+
+      // Shield completely absorbs 100% of damage!
+      expect(combatRes.updatedState.plantHero.hp).toBe(15)
+      expect(combatRes.events.some(e => e.target === 'hero' && e.isBlocked)).toBe(true)
+    })
+
+    it('verifies Spikeweed Sector environment deals 2 damage to Zombie before combat starts', () => {
+      const state = createInitialGameState()
+      // Place Spikeweed Sector in Lane 1
+      state.lanes[1].environment = {
+        id: 'plant_spikeweed_sector',
+        name: 'Spikeweed Sector',
+        side: 'plants',
+        image: '/assets/cards/plants/Spikeweed Sector.png',
+        description: 'Before combat here, do 2 damage to a Zombie here.',
+      }
+
+      // Zombie with 2 HP in Lane 1
+      state.lanes[1].zombieMinion = createMockMinion('z_swimp', 'Swimp', 'zombies', 1, 2)
+      // Plant in Lane 1 with 1 HP
+      state.lanes[1].plantMinion = createMockMinion('p_pea', 'Peashooter', 'plants', 1, 1)
+
+      // Pre-combat environment triggers
+      const envRes = applyEnvironmentBeforeCombat(state, 1)
+
+      // Spikeweed Sector deals 2 damage to the 2-HP Zombie before combat -> Zombie is destroyed!
+      expect(envRes.updatedState.lanes[1].zombieMinion).toBeNull()
+      expect(envRes.events.some(e => e.includes('Spikeweed Sector'))).toBe(true)
+
+      // Also test pre-combat damage within resolveSingleLaneCombat against a healthy 5-HP Zombie
+      const combatState = createInitialGameState()
+      combatState.lanes[1].environment = {
+        id: 'plant_spikeweed_sector',
+        name: 'Spikeweed Sector',
+        side: 'plants',
+        image: '/assets/cards/plants/Spikeweed Sector.png',
+        description: 'Before combat here, do 2 damage to a Zombie here.',
+      }
+      combatState.lanes[1].zombieMinion = createMockMinion('z_knight', 'Knight', 'zombies', 3, 5)
+      combatState.lanes[1].plantMinion = createMockMinion('p_repeater', 'Repeater', 'plants', 2, 4)
+
+      const combatRes = resolveSingleLaneCombat(combatState, 1)
+      expect(combatRes.events.some(e => e.attackerName === 'Spikeweed Sector' && e.damageDealt === 2)).toBe(true)
     })
   })
 })

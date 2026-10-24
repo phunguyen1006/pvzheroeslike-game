@@ -116,6 +116,8 @@ export const Lane: React.FC<LaneProps> = ({
   return (
     <div
       className={`pvz-lane lane-${lane.type} lane-idx-${lane.index} ${
+        lane.environment ? `has-environment env-${lane.environment.id}` : ''
+      } ${
         isHighlighted ? 'is-lane-highlighted' : ''
       } ${isCombatLane ? 'is-combat-active-lane' : ''} ${
         isEligible ? 'is-eligible-lane' : ''
@@ -165,6 +167,71 @@ export const Lane: React.FC<LaneProps> = ({
           <span className="lane-type-chip water-chip">🌊 WATER</span>
         ) : null}
       </div>
+
+      {/* 3. Active Environment Lane Surface VFX */}
+      {lane.environment && (
+        <div className={`lane-environment-overlay env-overlay-${lane.environment.id}`} aria-hidden="true">
+          <div className="env-ambient-glow" />
+          <div className="env-terrain-texture" />
+
+          {/* Theme 1: Spikeweed Sector - Ground thorns emerging and undulating */}
+          {lane.environment.id === 'plant_spikeweed_sector' && (
+            <div className="env-spikeweed-bed">
+              <span className="spikeweed-spike spike-1">▲</span>
+              <span className="spikeweed-spike spike-2">▲</span>
+              <span className="spikeweed-spike spike-3">▲</span>
+              <span className="spikeweed-spike spike-4">▲</span>
+              <span className="spikeweed-spike spike-5">▲</span>
+              <span className="spikeweed-spike spike-6">▲</span>
+              <span className="spikeweed-spike spike-7">▲</span>
+              <span className="spikeweed-spike spike-8">▲</span>
+            </div>
+          )}
+
+          {/* Theme 2: Laser Base Alpha & Moon Base Z - High-tech sci-fi neon grid & scanning lasers */}
+          {(lane.environment.id === 'zombie_moon_base_z' ||
+            lane.environment.id === 'zombie_laser_base_alpha' ||
+            lane.environment.id === 'zombie_medulla_nebula') && (
+            <div className="env-laser-base-grid">
+              <div className="laser-grid-mesh" />
+              <div className="laser-sweep-line" />
+              <div className="laser-pulse-node node-top" />
+              <div className="laser-pulse-node node-mid" />
+              <div className="laser-pulse-node node-bottom" />
+            </div>
+          )}
+
+          {/* Theme 3: Bog of Doom & Planet of the Grapes - Mystical purple swamp fog & rising bubbles */}
+          {(lane.environment.id === 'plant_planet_of_the_grapes' ||
+            lane.environment.id === 'plant_bog_of_doom') && (
+            <div className="env-swamp-bog">
+              <div className="swamp-bubble bubble-1" />
+              <div className="swamp-bubble bubble-2" />
+              <div className="swamp-bubble bubble-3" />
+              <div className="swamp-mist-cloud" />
+            </div>
+          )}
+
+          {/* Theme 4: Solar Winds - Radiant golden sunbeams flowing upwards */}
+          {lane.environment.id === 'plant_solar_winds' && (
+            <div className="env-solar-winds-flow">
+              <div className="solar-sunbeam beam-1" />
+              <div className="solar-sunbeam beam-2" />
+              <div className="solar-sparkle-dot spark-1" />
+              <div className="solar-sparkle-dot spark-2" />
+            </div>
+          )}
+
+          {/* Theme 5: Total Eclipse & Area 22 - Dark lunar shadow & biohazard energy */}
+          {(lane.environment.id === 'zombie_total_eclipse' ||
+            lane.environment.id === 'zombie_area_22') && (
+            <div className="env-eclipse-overlay">
+              <div className="eclipse-dark-shadow" />
+              <div className="area22-radiation-aura" />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Zombie Minion Slot (Top Half) */}
       <div className="lane-slot-wrapper zombie-slot-wrapper">

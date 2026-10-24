@@ -71,6 +71,39 @@ export function playEnvironment(
         targetLane.plantMinion = null
       }
     }
+  } else if (card.id === 'plant_bog_of_sunken_hope') {
+    if (targetLane.plantMinion) {
+      targetLane.plantMinion = {
+        ...targetLane.plantMinion,
+        amphibious: true,
+      }
+      events.push(`Đầm lầy Bog of Sunken Hope: ${targetLane.plantMinion.name} nhận thuộc tính Thủy quân (Amphibious)!`)
+    }
+    if (targetLane.zombieMinion && !targetLane.zombieMinion.amphibious) {
+      targetLane.zombieMinion = {
+        ...targetLane.zombieMinion,
+        currentAttack: Math.max(0, targetLane.zombieMinion.currentAttack - 2),
+      }
+      events.push(`Đầm lầy Bog of Sunken Hope làm sa lầy: ${targetLane.zombieMinion.name} bị giảm 2 Tấn công (-2 ATK)!`)
+    }
+  } else if (card.id === 'zombie_laser_base_alpha') {
+    if (targetLane.zombieMinion) {
+      targetLane.zombieMinion = {
+        ...targetLane.zombieMinion,
+        deadly: true,
+        strikethrough: true,
+      }
+      events.push(`Laser Base Alpha kích hoạt: ${targetLane.zombieMinion.name} nhận Deadly và Strikethrough!`)
+    }
+  } else if (card.id === 'zombie_cone_zone') {
+    if (targetLane.zombieMinion) {
+      targetLane.zombieMinion = {
+        ...targetLane.zombieMinion,
+        currentHealth: targetLane.zombieMinion.currentHealth + 3,
+        maxHealth: targetLane.zombieMinion.maxHealth + 3,
+      }
+      events.push(`Cone Zone trang bị nón bảo hộ: ${targetLane.zombieMinion.name} nhận thêm +3 Máu (+3 HP)!`)
+    }
   }
 
   return { updatedState, events }
@@ -144,6 +177,31 @@ export function applyEnvironmentOnPlay(
       brains: updatedState.zombieHero.brains + 2,
     }
     events.push(`Tinh vân não Medulla Nebula nạp năng lượng: Cung cấp thêm +2 Brains (${updatedState.zombieHero.brains} Brains)!`)
+  } else if (lane.environment.id === 'plant_bog_of_sunken_hope') {
+    if (side === 'plants' && lane.plantMinion) {
+      lane.plantMinion = { ...lane.plantMinion, amphibious: true }
+      events.push(`Bog of Sunken Hope: ${lane.plantMinion.name} nhận thuộc tính Thủy quân (Amphibious)!`)
+    } else if (side === 'zombies' && lane.zombieMinion && !lane.zombieMinion.amphibious) {
+      lane.zombieMinion = {
+        ...lane.zombieMinion,
+        currentAttack: Math.max(0, lane.zombieMinion.currentAttack - 2),
+      }
+      events.push(`Bog of Sunken Hope làm sa lầy: ${lane.zombieMinion.name} bị giảm 2 Tấn công (-2 ATK)!`)
+    }
+  } else if (lane.environment.id === 'zombie_laser_base_alpha' && side === 'zombies' && lane.zombieMinion) {
+    lane.zombieMinion = {
+      ...lane.zombieMinion,
+      deadly: true,
+      strikethrough: true,
+    }
+    events.push(`Laser Base Alpha: ${lane.zombieMinion.name} nhận Deadly và Strikethrough!`)
+  } else if (lane.environment.id === 'zombie_cone_zone' && side === 'zombies' && lane.zombieMinion) {
+    lane.zombieMinion = {
+      ...lane.zombieMinion,
+      currentHealth: lane.zombieMinion.currentHealth + 3,
+      maxHealth: lane.zombieMinion.maxHealth + 3,
+    }
+    events.push(`Cone Zone: ${lane.zombieMinion.name} nhận thêm +3 Máu (+3 HP)!`)
   }
 
   return { updatedState, events }

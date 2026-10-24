@@ -339,6 +339,45 @@ describe('Smart AI Decision Engine (Phase 5)', () => {
       expect(decision.action).toBe('PLAY_TRICK')
       expect(decision.card?.id).toBe('zombie_bad_moon_rising')
     })
+
+    it('uses Lurch for Lunch on the zombie with the highest attack (>= 3 ATK)', () => {
+      const state = setupTestState()
+      state.phase = 'ZOMBIE_TRICKS'
+      // Lane 1: 2 ATK Zombie
+      state.lanes[1].zombieMinion = createTestMinion({
+        instanceId: 'z_weak',
+        cardId: 'zombie_conehead',
+        name: 'Conehead',
+        side: 'zombies',
+        currentAttack: 2,
+        currentHealth: 2,
+      })
+      // Lane 2: 5 ATK Zombie
+      state.lanes[2].zombieMinion = createTestMinion({
+        instanceId: 'z_strong',
+        cardId: 'zombie_football_zombie',
+        name: 'All-Star Zombie',
+        side: 'zombies',
+        currentAttack: 5,
+        currentHealth: 6,
+      })
+      // Lane 3: 3 ATK Zombie
+      state.lanes[3].zombieMinion = createTestMinion({
+        instanceId: 'z_mid',
+        cardId: 'zombie_buckethead',
+        name: 'Buckethead',
+        side: 'zombies',
+        currentAttack: 3,
+        currentHealth: 4,
+      })
+      state.zombieHand = [getCard('zombie_lurch_for_lunch')]
+
+      const decision = getAIDecision(state, 'zombies', 'normal')
+      expect(decision.action).toBe('PLAY_TRICK')
+      expect(decision.card?.id).toBe('zombie_lurch_for_lunch')
+      expect(decision.laneIndex).toBe(2) // Targets Lane 2 with 5 ATK All-Star Zombie
+      expect(decision.reason).toContain('Lurch for Lunch')
+    })
   })
 
   describe('Multi-action Turn Planning (getAITurnPlan)', () => {

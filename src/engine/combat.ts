@@ -34,6 +34,17 @@ export function applyHeroDamage(
     }
   }
 
+  // Invulnerable hero completely ignores damage and cannot be hurt
+  if (hero.invulnerable) {
+    return {
+      updatedHero: hero,
+      actualDamage: 0,
+      blocked: true,
+      isSuperBlockTriggered: false,
+      meterGained: 0,
+    }
+  }
+
   // Active shield absorbs damage completely
   if (hero.isShieldActive) {
     return {

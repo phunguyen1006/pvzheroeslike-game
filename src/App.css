@@ -5088,6 +5088,775 @@
   100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
+/* ========================================================
+   SUPERPOWER MODAL (SUPER-BLOCK PROMPT) & RADIANT SUNBURST
+   ======================================================== */
+
+.superpower-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.88) 0%, rgba(2, 6, 23, 0.96) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  animation: modalBackdropFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalBackdropFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* 360-Degree Radiant Rotating Sunburst */
+.superpower-sunburst-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1200px;
+  height: 1200px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.superpower-sunburst-rays {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(250, 204, 21, 0.16) 0deg 15deg,
+    transparent 15deg 30deg
+  );
+  animation: sunburstRotate 32s linear infinite;
+  mask-image: radial-gradient(circle at center, black 15%, transparent 70%);
+  -webkit-mask-image: radial-gradient(circle at center, black 15%, transparent 70%);
+}
+
+.superpower-sunburst-rays.plant-rays {
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(250, 204, 21, 0.22) 0deg 12deg,
+    rgba(34, 197, 94, 0.18) 12deg 24deg,
+    transparent 24deg 36deg
+  );
+}
+
+.superpower-sunburst-rays.zombie-rays {
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(168, 85, 247, 0.24) 0deg 12deg,
+    rgba(244, 63, 94, 0.18) 12deg 24deg,
+    transparent 24deg 36deg
+  );
+}
+
+@keyframes sunburstRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.superpower-ambient-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 650px;
+  height: 650px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.25) 0%, rgba(234, 179, 8, 0.08) 50%, transparent 75%);
+  animation: ambientGlowPulse 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes ambientGlowPulse {
+  0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
+  100% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+}
+
+/* Modal Dialog Card */
+.superpower-dialog-card {
+  position: relative;
+  background: linear-gradient(165deg, #1e293b 0%, #0f172a 60%, #020617 100%);
+  border-radius: 28px;
+  padding: 30px 36px 36px;
+  max-width: 560px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 18px;
+  border: 3px solid #facc15;
+  box-shadow:
+    0 0 50px rgba(250, 204, 21, 0.45),
+    0 25px 60px rgba(0, 0, 0, 0.9),
+    inset 0 1px 3px rgba(255, 255, 255, 0.3);
+  z-index: 10;
+  animation: modalPopupBounce 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+@keyframes modalPopupBounce {
+  0% { transform: scale(0.65) translateY(40px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.superpower-dialog-card.plants-dialog {
+  border-color: #facc15;
+  box-shadow:
+    0 0 55px rgba(250, 204, 21, 0.45),
+    0 0 25px rgba(34, 197, 94, 0.4),
+    0 25px 60px rgba(0, 0, 0, 0.9);
+}
+
+.superpower-dialog-card.zombies-dialog {
+  border-color: #c084fc;
+  box-shadow:
+    0 0 55px rgba(192, 132, 252, 0.5),
+    0 0 25px rgba(147, 51, 234, 0.4),
+    0 25px 60px rgba(0, 0, 0, 0.9);
+}
+
+/* Header with Pulsing Shield and Energy Rings */
+.superpower-shield-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.shield-emblem-wrapper {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shield-emblem-icon {
+  font-size: 3.4rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 16px #facc15);
+  animation: shieldIconBounce 1.6s ease-in-out infinite alternate;
+  z-index: 3;
+}
+
+@keyframes shieldIconBounce {
+  0% { transform: scale(0.95) rotate(-3deg); }
+  100% { transform: scale(1.1) rotate(3deg); }
+}
+
+.shield-energy-ring {
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  border: 2px solid rgba(250, 204, 21, 0.6);
+  pointer-events: none;
+}
+
+.shield-energy-ring.ring-1 {
+  animation: energyRingPulse 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.shield-energy-ring.ring-2 {
+  animation: energyRingPulse 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite 0.9s;
+}
+
+@keyframes energyRingPulse {
+  0% { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+.shield-spark-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #fef08a;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #facc15;
+}
+
+.shield-spark-particle.spark-1 {
+  top: 4px;
+  left: 6px;
+  animation: sparkFloat 2s ease-in-out infinite alternate;
+}
+
+.shield-spark-particle.spark-2 {
+  bottom: 8px;
+  right: 6px;
+  animation: sparkFloat 2.3s ease-in-out infinite alternate 0.5s;
+}
+
+.shield-spark-particle.spark-3 {
+  top: 14px;
+  right: 2px;
+  animation: sparkFloat 1.7s ease-in-out infinite alternate 1s;
+}
+
+@keyframes sparkFloat {
+  0% { transform: translateY(0) scale(0.8); opacity: 0.3; }
+  100% { transform: translateY(-12px) scale(1.4); opacity: 1; }
+}
+
+.superpower-prompt-title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.85rem;
+  letter-spacing: 0.04em;
+  background: linear-gradient(180deg, #ffffff 0%, #fef08a 40%, #facc15 80%, #ca8a04 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.9));
+  margin: 4px 0 0;
+}
+
+.superpower-prompt-subtitle {
+  font-size: 0.92rem;
+  color: #cbd5e1;
+  margin: 0;
+  max-width: 440px;
+  line-height: 1.45;
+}
+
+.superpower-prompt-subtitle strong {
+  color: #38bdf8;
+  font-weight: 800;
+}
+
+/* Card Spotlight Stage */
+.superpower-card-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0 4px;
+}
+
+.card-stage-spotlight {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 240px;
+  height: 320px;
+  background: radial-gradient(ellipse at center, rgba(250, 204, 21, 0.45) 0%, rgba(234, 179, 8, 0.12) 50%, transparent 75%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: cardSpotlightPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes cardSpotlightPulse {
+  0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
+  100% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+}
+
+.superpower-card-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: scale(1.08);
+  filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.85));
+}
+
+.superpower-free-cost-tag {
+  position: absolute;
+  top: -14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+  border: 2px solid #fef08a;
+  border-radius: 999px;
+  padding: 3px 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), 0 0 12px rgba(250, 204, 21, 0.8);
+  animation: freeTagBounce 1.8s ease-in-out infinite alternate;
+  z-index: 20;
+}
+
+@keyframes freeTagBounce {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-4px) scale(1.06); }
+}
+
+.free-tag-icon {
+  font-size: 0.95rem;
+}
+
+.free-tag-text {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  color: #451a03;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Info Panel */
+.superpower-info-panel {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1.5px solid rgba(250, 204, 21, 0.35);
+  border-radius: 16px;
+  padding: 12px 20px;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.superpower-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.superpower-rarity-chip {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  background: #ca8a04;
+  color: #fef08a;
+  padding: 1px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.superpower-name-text {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.15rem;
+  color: #facc15;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.superpower-desc-text {
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Choice Action Buttons */
+.superpower-choice-actions {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  max-width: 480px;
+  margin-top: 6px;
+}
+
+/* Golden Radiant Play Button */
+.superpower-btn-play-free {
+  position: relative;
+  flex: 1.35;
+  background: linear-gradient(180deg, #fef08a 0%, #facc15 35%, #eab308 70%, #ca8a04 100%);
+  border: 3px solid #ffffff;
+  border-radius: 18px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow:
+    0 8px 24px rgba(202, 138, 4, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.8),
+    inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: hidden;
+}
+
+.superpower-btn-play-free:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow:
+    0 12px 30px rgba(250, 204, 21, 0.8),
+    0 6px 16px rgba(0, 0, 0, 0.9),
+    inset 0 2px 6px rgba(255, 255, 255, 0.8);
+}
+
+.superpower-btn-play-free:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.btn-shine-sweep {
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 80%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: skewX(-25deg);
+  animation: buttonShineSweep 2.4s infinite;
+  pointer-events: none;
+}
+
+@keyframes buttonShineSweep {
+  0% { left: -120%; }
+  35%, 100% { left: 160%; }
+}
+
+.superpower-btn-play-free .btn-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.btn-text-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.superpower-btn-play-free .btn-main-label {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  color: #451a03;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.superpower-btn-play-free .btn-sub-label {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #78350f;
+  margin-top: -2px;
+}
+
+/* Emerald Green / Blue Keep in Hand Button */
+.superpower-btn-keep {
+  flex: 1;
+  background: linear-gradient(180deg, #10b981 0%, #059669 60%, #047857 100%);
+  border: 2px solid #6ee7b7;
+  border-radius: 18px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow:
+    0 6px 18px rgba(5, 150, 105, 0.4),
+    0 3px 10px rgba(0, 0, 0, 0.7),
+    inset 0 1px 3px rgba(255, 255, 255, 0.35);
+  transition: all 0.18s ease;
+}
+
+.superpower-btn-keep:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow:
+    0 8px 24px rgba(16, 185, 129, 0.6),
+    0 4px 14px rgba(0, 0, 0, 0.8);
+  border-color: #a7f3d0;
+}
+
+.superpower-btn-keep:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.superpower-btn-keep .btn-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.superpower-btn-keep .btn-main-label {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.98rem;
+  letter-spacing: 0.03em;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.superpower-btn-keep .btn-sub-label {
+  font-size: 0.72rem;
+  color: #d1fae5;
+  margin-top: -2px;
+}
+
+
+/* ========================================================
+   LANE ENVIRONMENT TERRAIN OVERLAYS & ANIMATED VISUALS
+   ======================================================== */
+
+.pvz-lane.has-environment {
+  position: relative;
+  overflow: visible;
+}
+
+.lane-environment-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 14px;
+  overflow: hidden;
+  transition: all 0.4s ease;
+}
+
+/* 1. Spikeweed Sector (Thảm gai sắc nhọn Plant) */
+.env-overlay-plant_spikeweed_sector {
+  background: radial-gradient(circle at 50% 50%, rgba(132, 204, 22, 0.22) 0%, rgba(63, 98, 18, 0.35) 100%);
+  border: 1.5px solid #84cc16;
+  box-shadow: inset 0 0 20px rgba(132, 204, 22, 0.35);
+}
+
+.env-spikeweed-bed {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-around;
+  padding: 12px 6px;
+}
+
+.spikeweed-spike {
+  font-size: 1.15rem;
+  color: #84cc16;
+  text-shadow: 0 0 8px #65a30d, 0 0 14px #4d7c0f;
+  animation: spikeweedSurge 2s ease-in-out infinite alternate;
+}
+
+.spikeweed-spike.spike-1 { animation-delay: 0s; }
+.spikeweed-spike.spike-2 { animation-delay: 0.35s; font-size: 1.35rem; }
+.spikeweed-spike.spike-3 { animation-delay: 0.7s; }
+.spikeweed-spike.spike-4 { animation-delay: 1.05s; font-size: 1.25rem; }
+.spikeweed-spike.spike-5 { animation-delay: 0.2s; }
+.spikeweed-spike.spike-6 { animation-delay: 0.55s; font-size: 1.3rem; }
+.spikeweed-spike.spike-7 { animation-delay: 0.9s; }
+.spikeweed-spike.spike-8 { animation-delay: 1.25s; }
+
+@keyframes spikeweedSurge {
+  0% { transform: translateY(4px) scale(0.85); opacity: 0.5; }
+  50% { transform: translateY(-3px) scale(1.15); opacity: 0.95; color: #a3e635; }
+  100% { transform: translateY(0px) scale(1); opacity: 0.75; }
+}
+
+/* 2. Laser Base Alpha & Moon Base Z (Căn cứ Laser Sci-Fi Neon) */
+.env-overlay-zombie_laser_base_alpha,
+.env-overlay-zombie_moon_base_z,
+.env-overlay-zombie_medulla_nebula {
+  background: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.2) 0%, rgba(15, 23, 42, 0.45) 100%);
+  border: 1.5px solid #06b6d4;
+  box-shadow:
+    inset 0 0 25px rgba(6, 182, 212, 0.45),
+    0 0 15px rgba(14, 165, 233, 0.3);
+}
+
+.env-laser-base-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(6, 182, 212, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6, 182, 212, 0.2) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.laser-sweep-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #38bdf8, #ffffff, #38bdf8, transparent);
+  box-shadow: 0 0 12px #06b6d4, 0 0 22px #0284c7;
+  animation: laserScanLine 2.8s linear infinite;
+}
+
+@keyframes laserScanLine {
+  0% { top: 0%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.laser-pulse-node {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  background: #38bdf8;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #06b6d4, 0 0 18px #0284c7;
+  animation: nodePulse 1.5s ease-in-out infinite alternate;
+}
+
+.node-top { top: 18%; animation-delay: 0s; }
+.node-mid { top: 50%; animation-delay: 0.5s; }
+.node-bottom { top: 82%; animation-delay: 1s; }
+
+@keyframes nodePulse {
+  0% { transform: translateX(-50%) scale(0.7); opacity: 0.4; }
+  100% { transform: translateX(-50%) scale(1.4); opacity: 1; }
+}
+
+/* 3. Bog of Doom & Planet of the Grapes (Đầm lầy bí ẩn tím mộng mơ) */
+.env-overlay-plant_bog_of_doom,
+.env-overlay-plant_planet_of_the_grapes {
+  background: radial-gradient(circle at 50% 50%, rgba(147, 51, 234, 0.28) 0%, rgba(88, 28, 135, 0.4) 100%);
+  border: 1.5px solid #a855f7;
+  box-shadow: inset 0 0 22px rgba(168, 85, 247, 0.45);
+}
+
+.env-swamp-bog {
+  position: absolute;
+  inset: 0;
+}
+
+.swamp-bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f3e8ff 0%, #c084fc 60%, #9333ea 100%);
+  box-shadow: 0 0 8px #c084fc;
+}
+
+.swamp-bubble.bubble-1 {
+  left: 20%;
+  bottom: 15%;
+  width: 14px;
+  height: 14px;
+  animation: swampBubbleRise 3.2s ease-in infinite;
+}
+
+.swamp-bubble.bubble-2 {
+  right: 25%;
+  bottom: 25%;
+  width: 18px;
+  height: 18px;
+  animation: swampBubbleRise 3.8s ease-in infinite 1.2s;
+}
+
+.swamp-bubble.bubble-3 {
+  left: 45%;
+  bottom: 8%;
+  width: 12px;
+  height: 12px;
+  animation: swampBubbleRise 2.9s ease-in infinite 2.1s;
+}
+
+@keyframes swampBubbleRise {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  20% { opacity: 0.85; }
+  80% { transform: translateY(-70px) scale(1.15); opacity: 0.85; }
+  100% { transform: translateY(-90px) scale(1.4); opacity: 0; }
+}
+
+.swamp-mist-cloud {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 60%, rgba(192, 132, 252, 0.2) 0%, transparent 70%);
+  animation: swampMistWiggle 4s ease-in-out infinite alternate;
+}
+
+@keyframes swampMistWiggle {
+  0% { transform: scale(0.92) translateX(-4px); }
+  100% { transform: scale(1.08) translateX(4px); }
+}
+
+/* 4. Solar Winds (Luồng gió mặt trời vàng óng) */
+.env-overlay-plant_solar_winds {
+  background: radial-gradient(circle at 50% 50%, rgba(250, 204, 21, 0.22) 0%, rgba(202, 138, 4, 0.35) 100%);
+  border: 1.5px solid #eab308;
+  box-shadow: inset 0 0 25px rgba(234, 179, 8, 0.4);
+}
+
+.env-solar-winds-flow {
+  position: absolute;
+  inset: 0;
+}
+
+.solar-sunbeam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 25px;
+  background: linear-gradient(180deg, transparent, rgba(254, 240, 138, 0.35), transparent);
+}
+
+.solar-sunbeam.beam-1 {
+  animation: solarBeamAscend 3s ease-in-out infinite;
+}
+
+.solar-sunbeam.beam-2 {
+  animation: solarBeamAscend 3s ease-in-out infinite 1.5s;
+}
+
+@keyframes solarBeamAscend {
+  0% { bottom: -10%; opacity: 0; }
+  30% { opacity: 0.8; }
+  80% { opacity: 0.8; }
+  100% { bottom: 110%; opacity: 0; }
+}
+
+/* 5. Total Eclipse & Area 22 (Bóng tối u ám & Phóng xạ) */
+.env-overlay-zombie_total_eclipse,
+.env-overlay-zombie_area_22 {
+  background: radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.6) 0%, rgba(2, 6, 23, 0.85) 100%);
+  border: 1.5px solid #ef4444;
+  box-shadow:
+    inset 0 0 28px rgba(239, 68, 68, 0.4),
+    0 0 15px rgba(220, 38, 38, 0.3);
+}
+
+.eclipse-dark-shadow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.7) 0%, transparent 80%);
+  animation: eclipsePulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes eclipsePulse {
+  0% { opacity: 0.5; transform: scale(0.95); }
+  100% { opacity: 0.9; transform: scale(1.05); }
+}
+
+/* Center Belt Active Environment Token Badge */
+.active-environment-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1.5px solid #38bdf8;
+  border-radius: 999px;
+  padding: 2px 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.75), 0 0 10px rgba(56, 189, 248, 0.4);
+  z-index: 15;
+  transition: transform 0.15s ease;
+  cursor: pointer;
+}
+
+.active-environment-token:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.85), 0 0 16px rgba(56, 189, 248, 0.7);
+}
+
+.env-token-img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.env-token-fallback {
+  font-size: 0.85rem;
+}
+
+.env-token-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: #f1f5f9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
 
 
 
