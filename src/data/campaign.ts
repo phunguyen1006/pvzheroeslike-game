@@ -398,7 +398,7 @@ export const CHAPTER_2_MISSIONS: CampaignMission[] = [
     ],
     rewards: {
       gems: 600,
-      unlocksNext: false,
+      unlocksNext: true,
       title: 'Chúa Tể Đô Thị (Metropolis Hero)',
     },
     comicDialogue: {
@@ -410,9 +410,233 @@ export const CHAPTER_2_MISSIONS: CampaignMission[] = [
   },
 ]
 
+export const CHAPTER_3_MISSIONS: CampaignMission[] = [
+  {
+    id: 'mission_11',
+    chapter: 3,
+    missionNumber: 11,
+    title: 'Nhiệm Vụ 11: Đấu Trường Trọng Lực',
+    subtitle: 'Đối đầu Huge-Gigantacus - Kẻ Xâm Lăng Vũ Trụ',
+    storyIntro:
+      'Huge-Gigantacus phóng trạm không gian vũ trụ giăng bẫy Làn 2 với Laser Base Alpha! Tuy nhiên, Dave đã kịp thời kích hoạt Pair Pearadise tại Làn 1 để nhân đôi lực lượng Cây Trồng! Bạn nhận thêm +1 Sun khởi đầu!',
+    bossHeroId: 'hero_huge_gigantacus',
+    bossHeroName: 'Huge-Gigantacus',
+    bossHeroAvatar: '/assets/heroes/zombies/Huge-Gigantacus.png',
+    difficulty: 'normal',
+    rule: {
+      id: 'rule_mission_11',
+      name: 'Vành Đai Thiên Thạch & Quả Đôi Nhân Bản',
+      description:
+        'Làn 1 (Ground) có sẵn Pair Pearadise (nhân đôi Cây Trồng); Làn 2 (Ground) có sẵn Laser Base Alpha (Deadly & Strikethrough); Bạn nhận +1 Sun khởi đầu!',
+      startingSunBonus: 1,
+      startingBrainsBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 0, environmentCardId: 'plant_pair_pearadise' },
+        { laneIndex: 1, environmentCardId: 'zombie_laser_base_alpha' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đánh bại chúa tể tí hon Huge-Gigantacus',
+      '⭐⭐ Bảo toàn lượng máu của Hero từ 12 HP trở lên',
+      '⭐⭐⭐ Giành chiến thắng trong vòng 9 lượt đấu',
+    ],
+    rewards: {
+      gems: 300,
+      unlocksNext: true,
+      title: 'Kẻ Bẻ Cong Trọng Lực',
+    },
+    comicDialogue: {
+      issueTitle: 'CƠN BÃO KHÔNG GIAN HUGE-GIGANTACUS!',
+      issueTagline: 'Trọng lực đảo lộn khi Laser Base Alpha khai hỏa',
+      zombieHeroQuote:
+        'Thế giới này quá nhỏ bé cho bộ não vĩ đại của ta! Laser Base Alpha sẽ biến vườn hoa của các ngươi thành tro bụi thiên hà!',
+      plantHeroQuote:
+        'Dù ngươi có thu nhỏ kích thước nhưng dã tâm không thể giấu! Pair Pearadise sẽ nhân đôi mọi mũi gai phản công!',
+    },
+  },
+  {
+    id: 'mission_12',
+    chapter: 3,
+    missionNumber: 12,
+    title: 'Nhiệm Vụ 12: Đáy Biển Thủy Quái',
+    subtitle: 'Đối đầu Neptuna - Nữ Hoàng Thủy Cung',
+    storyIntro:
+      'Neptuna dâng sóng thần chiếm giữ Làn Nước (Lane 5) với Bog of Sunken Hope và cử quái vật bạch tuộc Swabbie án ngữ! Bạn có sẵn 1 Đậu Hải Quân Admiral Navy Bean trên Làn Nước để chống trả!',
+    bossHeroId: 'hero_neptuna',
+    bossHeroName: 'Neptuna',
+    bossHeroAvatar: '/assets/heroes/zombies/Neptuna.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'rule_mission_12',
+      name: 'Thủy Chiến Đáy Biển & Hải Quân Đậu',
+      description:
+        'Làn Nước có sẵn Bog of Sunken Hope (-2 Attack cho Zombie không lội nước); Cây trồng có sẵn 1 Admiral Navy Bean án ngữ; Thây Ma có sẵn 1 Swabbie!',
+      startingSunBonus: 0,
+      startingBrainsBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 4, environmentCardId: 'plant_bog_of_sunken_hope' },
+      ],
+      initialMinions: [
+        { laneIndex: 4, cardId: 'plant_admiral_navy_bean', side: 'plants' },
+        { laneIndex: 4, cardId: 'zombie_swabbie', side: 'zombies' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đánh chìm hạm đội đáy biển của Neptuna',
+      '⭐⭐ Bảo toàn lượng máu Hero từ 14 HP trở lên',
+      '⭐⭐⭐ Tiêu diệt đối thủ trước hoặc tại lượt 8',
+    ],
+    rewards: {
+      gems: 350,
+      unlocksNext: true,
+      title: 'Thống Soái Thủy Chiến',
+    },
+    comicDialogue: {
+      issueTitle: 'THỦY TRIỀU HỖN MANG NEPTUNA!',
+      issueTagline: 'Đại chiến giành quyền kiểm soát vùng nước sâu',
+      zombieHeroQuote:
+        'Cả đại dương tuân lệnh ta! Thủy triều và những xúc tu bạch tuộc sẽ kéo các ngươi xuống vực thẳm!',
+      plantHeroQuote:
+        'Hải quân Đậu Admiral Navy Bean đã chiếm lĩnh dòng nước! Mỗi hạt đậu nảy mầm sẽ bắn thủng vỏ sò hoàng gia của ngươi!',
+    },
+  },
+  {
+    id: 'mission_13',
+    chapter: 3,
+    missionNumber: 13,
+    title: 'Nhiệm Vụ 13: Trí Tuệ Siêu Dẫn',
+    subtitle: 'Đối đầu Professor Brainstorm - Kho Phát Minh Điên Rồ',
+    storyIntro:
+      'Giáo sư Brainstorm triển khai lò phản ứng hạt nhân Medulla Nebula tại Làn 3 để tích lũy hàng tá Brains! Dave lập tức trồng 1 Black-Eyed Pea tại Làn 3 để trừng phạt mỗi khi Brainstorm tung phép thuật (Trick)!',
+    bossHeroId: 'hero_professor_brainstorm',
+    bossHeroName: 'Professor Brainstorm',
+    bossHeroAvatar: '/assets/heroes/zombies/Professor Brainstorm.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'rule_mission_13',
+      name: 'Lò Phản Ứng Medulla & Đậu Mắt Đen Khắc Tinh',
+      description:
+        'Làn 3 có sẵn Medulla Nebula (+2 Brains cho Zombie); Cây trồng có sẵn 1 Black-Eyed Pea (+1/+1 mỗi khi Zombie cast Trick)! Bạn nhận +1 Sun, đối thủ nhận +2 Brains!',
+      startingSunBonus: 1,
+      startingBrainsBonus: 2,
+      initialEnvironments: [
+        { laneIndex: 2, environmentCardId: 'zombie_medulla_nebula' },
+      ],
+      initialMinions: [
+        { laneIndex: 2, cardId: 'plant_black_eyed_pea', side: 'plants' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Ngăn chặn cơn bão phát minh của Professor Brainstorm',
+      '⭐⭐ Kết thúc trận đấu với ít nhất 12 HP còn lại',
+      '⭐⭐⭐ Tiêu diệt Brainstorm trong vòng 8 lượt đấu',
+    ],
+    rewards: {
+      gems: 400,
+      unlocksNext: true,
+      title: 'Khắc Tinh Thiên Tài',
+    },
+    comicDialogue: {
+      issueTitle: 'PHÁT MINH ĐỘT BIẾN NÃO BỘ!',
+      issueTagline: 'Professor Brainstorm mở khóa nguồn năng lượng vô hạn',
+      zombieHeroQuote:
+        'Eureka! Hàng trăm phát minh tối tân đang tuôn trào trong đầu ta! Không một định luật vật lý nào cứu được các ngươi!',
+      plantHeroQuote:
+        'Đậu Mắt Đen Black-Eyed Pea càng mạnh mẽ hơn sau mỗi trò ảo thuật của ngươi! Hãy xem khoa học chân chính trừng trị tà đạo!',
+    },
+  },
+  {
+    id: 'mission_14',
+    chapter: 3,
+    missionNumber: 14,
+    title: 'Nhiệm Vụ 14: Lò Lửa Cơ Giáp Tối Tân',
+    subtitle: 'Đối đầu Z-Mech V2 - Cỗ Máy Chiến Tranh Siêu Hạng',
+    storyIntro:
+      'Z-Mech nâng cấp lên cỗ xe bọc thép siêu hạng và rải Hot Lava tại Làn 1 thiêu đốt mặt đất! Nhưng Dave đã bí mật trồng Red Plant-It tại Làn 4 tăng đột biến +5/+5 cho Cây Trồng!',
+    bossHeroId: 'hero_z_mech',
+    bossHeroName: 'Z-Mech',
+    bossHeroAvatar: '/assets/heroes/zombies/Z-Mech.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'rule_mission_14',
+      name: 'Dung Nham Rực Lửa & Cây Khổng Lồ Red Plant-It',
+      description:
+        'Làn 1 có Hot Lava (gây 1 sát thương cuối lượt); Làn 4 có Red Plant-It (+5/+5 cho Cây Trồng); Bạn nhận +2 Sun khởi đầu!',
+      startingSunBonus: 2,
+      startingBrainsBonus: 1,
+      initialEnvironments: [
+        { laneIndex: 0, environmentCardId: 'plant_hot_lava' },
+        { laneIndex: 3, environmentCardId: 'plant_red_plant_it' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Phá hủy siêu chiến xa Z-Mech cải tiến',
+      '⭐⭐ Bảo toàn lượng máu Hero từ 15 HP trở lên',
+      '⭐⭐⭐ Giành chiến thắng trong vòng 7 lượt đấu',
+    ],
+    rewards: {
+      gems: 500,
+      unlocksNext: true,
+      title: 'Chuyên Gia Phá Giáp Cơ Giáp',
+    },
+    comicDialogue: {
+      issueTitle: 'LÒ LỬA CƠ GIÁP NỔ TUNG!',
+      issueTagline: 'Cỗ máy bọc thép Z-Mech V2 với hỏa lực dung nham',
+      zombieHeroQuote:
+        'Hỏa tiễn cải tiến đã khóa tọa độ! Dung nham sôi sục dưới chân các ngươi! Đầu hàng đi các sinh vật diệp lục!',
+      plantHeroQuote:
+        'Red Plant-It nuôi dưỡng chiến binh thực vật khổng lồ! Nắm đấm này đủ sức nghiền nát lớp vỏ hợp kim titan của ngươi!',
+    },
+  },
+  {
+    id: 'mission_15',
+    chapter: 3,
+    missionNumber: 15,
+    title: 'Nhiệm Vụ 15: Đại Chiến Đỉnh Vũ Trụ Zomboss Tối Thượng',
+    subtitle: 'ĐẠI CHIẾN BOSS CUỐI CHAPTER 3: Super Brainz Thống Trị Vũ Trụ',
+    storyIntro:
+      'Super Brainz tích hợp toàn bộ kho vũ khí vũ trụ của Zomboss: Moon Base Z tại Làn 3 bắn tỉa Overshoot 3 trực diện! Dave trao cho bạn bảo vật tối thượng: Lá Chắn Bất Tử Force Field tại Làn 2! Trận quyết chiến định đoạt tương lai toàn cõi Đa Vũ Trụ!',
+    bossHeroId: 'hero_super_brainz',
+    bossHeroName: 'Super Brainz Tối Thượng',
+    bossHeroAvatar: '/assets/heroes/zombies/Super Brainz.png',
+    difficulty: 'boss',
+    rule: {
+      id: 'rule_mission_15',
+      name: 'Lá Chắn Bất Tử Force Field & Trạm Phóng Moon Base Z',
+      description:
+        'Làn 2 có Force Field (Cây Trồng tại đây miễn nhiễm mọi sát thương!); Làn 3 có Moon Base Z (Zombie gây 3 Overshoot trước khi giao chiến); Bạn nhận +2 Sun, đối thủ nhận +3 Brains!',
+      startingSunBonus: 2,
+      startingBrainsBonus: 3,
+      initialEnvironments: [
+        { laneIndex: 1, environmentCardId: 'plant_force_field' },
+        { laneIndex: 2, environmentCardId: 'zombie_moon_base_z' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đánh bại Super Brainz Tối Thượng bảo vệ Đa Vũ Trụ',
+      '⭐⭐ Kết thúc trận chiến với ít nhất 15 HP còn lại',
+      '⭐⭐⭐ Hoàn thành xuất sắc toàn bộ Chiến dịch Plant Chapter 3!',
+    ],
+    rewards: {
+      gems: 1200,
+      unlocksNext: false,
+      title: 'Đại Tướng Đa Vũ Trụ Thực Vật',
+    },
+    comicDialogue: {
+      issueTitle: 'QUYẾT CHIẾN ĐỈNH VŨ TRỤ!',
+      issueTagline: 'Trận chiến cuối cùng: Khiên Bất Tử vs Trạm Mặt Trăng Hủy Diệt',
+      zombieHeroQuote:
+        'Ta là hiện thân của sức mạnh Thây Ma tối cao! Moon Base Z sẽ bắn tan mọi hy vọng của hành tinh này!',
+      plantHeroQuote:
+        'Lá chắn Force Field là ý chí kiên cường không thể lay chuyển của loài cây! Vì toàn thể Vũ Trụ, trận chiến này chúng ta phải thắng!',
+    },
+  },
+]
+
 export const ALL_CAMPAIGN_MISSIONS: CampaignMission[] = [
   ...CHAPTER_1_MISSIONS,
   ...CHAPTER_2_MISSIONS,
+  ...CHAPTER_3_MISSIONS,
 ]
 
 // ==========================================

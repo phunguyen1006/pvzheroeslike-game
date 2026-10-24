@@ -59,6 +59,7 @@ export interface TriggerDeathOptions {
   // picks 'hero' or minion index among live zombies
   preferredTarget?: 'hero' | 'minion'
   targetLaneIndex?: number
+  onMinionDeath?: (minion: Minion, laneIndex: number) => void
 }
 
 /**
@@ -89,6 +90,9 @@ export function triggerOnDeath(
   if (depth > MAX_CASCADE_DEPTH) {
     return { updatedState: state, events: [], logs: [] }
   }
+
+  // Invoke optional death listener callback
+  options?.onMinionDeath?.(deadMinion, deadLaneIndex)
 
   // Immutable copy of state
   let updatedState: GameState = {
