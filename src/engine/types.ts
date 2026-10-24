@@ -220,8 +220,10 @@ export interface MissionRule {
   id: string
   name: string
   description: string
+  specialRuleDescription?: string
   startingSunBonus?: number
   startingBrainsBonus?: number
+  startingBrainBonus?: number
   initialEnvironments?: { laneIndex: number; environmentCardId: string }[]
   initialMinions?: { laneIndex: number; cardId: string; side: Side }[]
 }
@@ -239,12 +241,15 @@ export interface CampaignMission {
   missionNumber: number
   faction?: Side
   title: string
+  name?: string
   subtitle: string
   storyIntro: string
   bossHeroId: string
   bossHeroName: string
   bossHeroAvatar: string
   playerHeroId?: string
+  plantHero?: { id: string; name: string }
+  zombieHero?: { id: string; name: string }
   difficulty: 'easy' | 'normal' | 'hard' | 'boss'
   rule: MissionRule
   starObjectives: [string, string, string]
