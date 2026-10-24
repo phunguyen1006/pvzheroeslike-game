@@ -1,19 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import {
   createInitialGameState,
-  gameReducer,
   coordinateTerrainAndLaneBuffs,
   conjureCard,
   resolveCombat,
   getDrSpacetimeDiscount,
   getCardSet,
   executeSuperpower,
-  convertCardDataToCard,
-  type GameState,
   type Minion,
-  type Card,
 } from '../engine'
-import { ALL_CARDS, getCardById } from '../data/cards'
+import { ALL_CARDS } from '../data/cards'
 
 function createTestMinion(
   id: string,
@@ -391,12 +387,12 @@ describe('Round 7 - Generic Conjure Helper (conjureCard)', () => {
       'zombie_dr_spacetime'
     )
 
-    const combatResult = resolveCombat(state)
-    expect(combatResult.updatedState.zombieHand).toHaveLength(1)
-    const conjured = combatResult.updatedState.zombieHand[0]
+    const { updatedState, result } = resolveCombat(state)
+    expect(updatedState.zombieHand).toHaveLength(1)
+    const conjured = updatedState.zombieHand[0]
     expect(conjured.set).toBe('Galactic Gardens')
     expect(
-      combatResult.events.some(
+      result.events.some(
         e => e.description.includes('Dr. Spacetime Triệu hồi') && e.description.includes('Galactic Gardens')
       )
     ).toBe(true)
