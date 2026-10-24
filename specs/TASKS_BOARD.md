@@ -9,10 +9,11 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 ### 👑 Master Bot (Contract & Điều phối)
 - [x] Khởi tạo mô hình Multi-Bot Git Worktrees
 - [x] Thiết lập chuẩn `CLAUDE.md` và `specs/`
-- [ ] Review và merge các feature branch vào `main`
+- [x] Review và merge các feature branch (`feature/engine`, `feature/qa`) vào `main`
+- [x] Nghiệm thu 100% build sạch (`tsc -b && vite build`) và 64/64 tests pass
 
 ### ⚔️ Engine Bot (`feature/engine`)
-- [ ] Sửa 6 failed test trong `src/__tests__/ai.test.ts` do thiếu card mappings
+- [x] Sửa 6 failed test trong `src/__tests__/ai.test.ts` và hoàn thiện Phase 5 Smart AI Opponent Engine
 - [ ] Hoàn thiện cơ chế cascade trigger khi minion bị tiêu diệt
 - [ ] Đảm bảo Bullseye traits bỏ qua hoàn toàn Block Meter
 
@@ -26,5 +27,6 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [ ] Chuẩn hóa metadata các thẻ bài mới vào `src/data/cards.ts`
 
 ### 🧪 QA Bot (`feature/qa`)
+- [x] Thêm helper kiểm tra trait (`hasCardTrait`) và fixtures fallback cho thẻ bài AI
 - [ ] Chạy `npm test` liên tục và nâng coverage lên >90%
 - [ ] Tối ưu hóa thuật toán ra quyết định của AI trong `src/engine/ai.ts`
