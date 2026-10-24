@@ -272,11 +272,11 @@ export function resolveSingleLaneCombat(
     const dmgToPlant = zombieCanAttack ? Math.max(0, zombie.currentAttack - plantArmored) : 0
 
     const plantHasDeadly = Boolean(plant.deadly || plant.traits?.includes('deadly'))
-    const zombieHasDeadly = Boolean(zombie.deadly || zombie.traits?.includes('deadly'))
+    const zombieHasDeadly = Boolean(zombie.deadly || zombie.traits?.includes('deadly') || lane.environment?.id === 'zombie_laser_base_alpha')
     const plantHasBullseye = Boolean(plant.bullseye || plant.traits?.includes('bullseye'))
     const zombieHasBullseye = Boolean(zombie.bullseye || zombie.traits?.includes('bullseye'))
     const plantHasStrikethrough = Boolean(plant.strikethrough || plant.traits?.includes('strikethrough'))
-    const zombieHasStrikethrough = Boolean(zombie.strikethrough || zombie.traits?.includes('strikethrough'))
+    const zombieHasStrikethrough = Boolean(zombie.strikethrough || zombie.traits?.includes('strikethrough') || lane.environment?.id === 'zombie_laser_base_alpha')
     const zombieHasFrenzy = Boolean(zombie.frenzy || zombie.traits?.includes('frenzy'))
     const plantHasFreezeTrait = Boolean(plant.freeze || plant.traits?.includes('freeze'))
     const plantHasDoubleStrike = Boolean(plant.doubleStrike || plant.traits?.includes('doubleStrike'))

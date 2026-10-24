@@ -26,7 +26,7 @@ import {
   convertCardDataToCard,
 } from '../engine/index'
 import type { Minion, Card, HeroState, GameState } from '../engine/types'
-import { getCardById, PLANT_CARDS, ZOMBIE_CARDS } from '../data/cards'
+import { getCardById, getCardsByType, PLANT_CARDS, ZOMBIE_CARDS } from '../data/cards'
 
 describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
   const createMockMinion = (
@@ -2716,6 +2716,341 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
 
       const combatRes = resolveSingleLaneCombat(combatState, 1)
       expect(combatRes.events.some(e => e.attackerName === 'Spikeweed Sector' && e.damageDealt === 2)).toBe(true)
+    })
+  })
+
+  // ==========================================================
+  // 18. HERO SUPERPOWERS & SIGNATURE SUPERPOWERS SUITE (Round 4)
+  // ==========================================================
+  describe('18. Hero Superpowers & Signature Superpowers Suite (Round 4)', () => {
+    it('verifies all 6 Plant Superpowers metadata and attributes in the card database', () => {
+      // 1. Precision Blast (Green Shadow Signature)
+      const blast = getCardById('plant_precision_blast')
+      expect(blast).toBeDefined()
+      expect(blast?.name).toBe('Precision Blast')
+      expect(blast?.type).toBe('superpower')
+      expect(blast?.cost).toBe(1)
+      expect(blast?.heroClass).toBe('Mega-Grow')
+      expect(blast?.team).toBe('plants')
+
+      // 2. Sunburn (Solar Flare Signature)
+      const sunburn = getCardById('plant_sunburn')
+      expect(sunburn).toBeDefined()
+      expect(sunburn?.name).toBe('Sunburn')
+      expect(sunburn?.type).toBe('superpower')
+      expect(sunburn?.cost).toBe(1)
+      expect(sunburn?.heroClass).toBe('Solar')
+
+      // 3. Uncrackable (Wall-Knight Signature)
+      const uncrackable = getCardById('plant_uncrackable')
+      expect(uncrackable).toBeDefined()
+      expect(uncrackable?.name).toBe('Uncrackable')
+      expect(uncrackable?.type).toBe('superpower')
+      expect(uncrackable?.cost).toBe(1)
+      expect(uncrackable?.heroClass).toBe('Guardian')
+
+      // 4. Embiggen
+      const embiggen = getCardById('plant_embiggen')
+      expect(embiggen).toBeDefined()
+      expect(embiggen?.name).toBe('Embiggen')
+      expect(embiggen?.type).toBe('superpower')
+      expect(embiggen?.cost).toBe(1)
+      expect(embiggen?.heroClass).toBe('Mega-Grow')
+
+      // 5. Whirlwind
+      const whirlwind = getCardById('plant_whirlwind')
+      expect(whirlwind).toBeDefined()
+      expect(whirlwind?.name).toBe('Whirlwind')
+      expect(whirlwind?.type).toBe('superpower')
+      expect(whirlwind?.cost).toBe(1)
+      expect(whirlwind?.heroClass).toBe('Smarty')
+
+      // 6. Geyser
+      const geyser = getCardById('plant_geyser')
+      expect(geyser).toBeDefined()
+      expect(geyser?.name).toBe('Geyser')
+      expect(geyser?.type).toBe('superpower')
+      expect(geyser?.cost).toBe(1)
+      expect(geyser?.heroClass).toBe('Solar')
+    })
+
+    it('verifies all 6 Zombie Superpowers metadata and attributes in the card database', () => {
+      // 1. Carried Away (Super Brainz Signature)
+      const carriedAway = getCardById('zombie_carried_away')
+      expect(carriedAway).toBeDefined()
+      expect(carriedAway?.name).toBe('Carried Away')
+      expect(carriedAway?.type).toBe('superpower')
+      expect(carriedAway?.cost).toBe(1)
+      expect(carriedAway?.heroClass).toBe('Sneaky')
+      expect(carriedAway?.team).toBe('zombies')
+
+      // 2. Slammin' Smash (The Smash Signature)
+      const slammin = getCardById('zombie_slammin_smash')
+      expect(slammin).toBeDefined()
+      expect(slammin?.name).toBe("Slammin' Smash")
+      expect(slammin?.type).toBe('superpower')
+      expect(slammin?.cost).toBe(1)
+      expect(slammin?.heroClass).toBe('Beastly')
+
+      // 3. Shrink Ray (Rustbolt Signature)
+      const shrinkRay = getCardById('zombie_shrink_ray')
+      expect(shrinkRay).toBeDefined()
+      expect(shrinkRay?.name).toBe('Shrink Ray')
+      expect(shrinkRay?.type).toBe('superpower')
+      expect(shrinkRay?.cost).toBe(1)
+      expect(shrinkRay?.heroClass).toBe('Brainy')
+
+      // 4. Brute Strength
+      const brute = getCardById('zombie_brute_strength')
+      expect(brute).toBeDefined()
+      expect(brute?.name).toBe('Brute Strength')
+      expect(brute?.type).toBe('superpower')
+      expect(brute?.cost).toBe(1)
+      expect(brute?.heroClass).toBe('Crazy')
+
+      // 5. Dance Off
+      const danceOff = getCardById('zombie_dance_off')
+      expect(danceOff).toBeDefined()
+      expect(danceOff?.name).toBe('Dance Off')
+      expect(danceOff?.type).toBe('superpower')
+      expect(danceOff?.cost).toBe(1)
+      expect(danceOff?.heroClass).toBe('Crazy')
+
+      // 6. Cut Down to Size
+      const cutDown = getCardById('zombie_cut_down_to_size')
+      expect(cutDown).toBeDefined()
+      expect(cutDown?.name).toBe('Cut Down to Size')
+      expect(cutDown?.type).toBe('superpower')
+      expect(cutDown?.cost).toBe(1)
+      expect(cutDown?.heroClass).toBe('Brainy')
+    })
+
+    it('verifies Plant Embiggen buffs a target Plant minion by +2/+2', () => {
+      const state = createInitialGameState()
+      state.lanes[1].plantMinion = createMockMinion('p_pea', 'Peashooter', 'plants', 1, 1)
+
+      const res = executeSuperpower(state, 'plant_embiggen', 'plants', 1)
+      expect(res.updatedState.lanes[1].plantMinion?.currentAttack).toBe(3)
+      expect(res.updatedState.lanes[1].plantMinion?.currentHealth).toBe(3)
+      expect(res.message).toContain('Embiggen')
+    })
+
+    it('verifies Plant Whirlwind bounces an enemy Zombie back to hand', () => {
+      const state = createInitialGameState()
+      state.lanes[2].zombieMinion = createMockMinion('z_conga', 'Conga Zombie', 'zombies', 2, 2)
+      state.zombieHand = []
+
+      const res = executeSuperpower(state, 'plant_whirlwind', 'plants', 2)
+      expect(res.updatedState.lanes[2].zombieMinion).toBeNull()
+      expect(res.updatedState.zombieHand).toHaveLength(1)
+      expect(res.updatedState.zombieHand[0].name).toBe('Conga Zombie')
+      expect(res.message).toContain('Whirlwind')
+    })
+
+    it('verifies Plant Geyser heals Plant Hero and all damaged Plants on board by 4', () => {
+      const state = createInitialGameState()
+      state.plantHero.hp = 14
+      state.plantHero.maxHp = 20
+      // Damaged plant in Lane 1 (2/5 with maxHealth 5)
+      state.lanes[1].plantMinion = createMockMinion('p_tank', 'Wall-Nut', 'plants', 0, 2)
+      state.lanes[1].plantMinion.maxHealth = 6
+
+      const res = executeSuperpower(state, 'plant_geyser', 'plants')
+      // Hero healed from 14 + 4 = 18 HP
+      expect(res.updatedState.plantHero.hp).toBe(18)
+      // Plant healed from 2 + 4 = 6 HP (capped at maxHealth 6)
+      expect(res.updatedState.lanes[1].plantMinion?.currentHealth).toBe(6)
+      expect(res.message).toContain('Geyser')
+    })
+
+    it('verifies Zombie Slammin Smash destroys a Plant with 4 or less Attack', () => {
+      const state = createInitialGameState()
+      // Plant with 3 ATK (eligible)
+      state.lanes[1].plantMinion = createMockMinion('p_target', 'Repeater', 'plants', 3, 4)
+
+      const res = executeSuperpower(state, 'zombie_slammin_smash', 'zombies')
+      expect(res.updatedState.lanes[1].plantMinion).toBeNull()
+      expect(res.message).toContain("Slammin' Smash")
+    })
+
+    it('verifies Zombie Shrink Ray debuffs a Plant by -3 Attack and draws 1 card', () => {
+      const state = createInitialGameState()
+      state.lanes[1].plantMinion = createMockMinion('p_strong', 'Bananasaurus', 'plants', 4, 4)
+      const initialHand = state.zombieHand.length
+
+      const res = executeSuperpower(state, 'zombie_shrink_ray', 'zombies')
+      // 4 ATK - 3 = 1 ATK
+      expect(res.updatedState.lanes[1].plantMinion?.currentAttack).toBe(1)
+      expect(res.updatedState.zombieHand.length).toBe(initialHand + 1)
+      expect(res.message).toContain('Shrink Ray')
+    })
+
+    it('verifies Zombie Brute Strength grants +3 Attack to a Zombie minion', () => {
+      const state = createInitialGameState()
+      state.lanes[2].zombieMinion = createMockMinion('z_imp', 'Swabbie', 'zombies', 1, 1)
+
+      const res = executeSuperpower(state, 'zombie_brute_strength', 'zombies', 2)
+      expect(res.updatedState.lanes[2].zombieMinion?.currentAttack).toBe(4)
+      expect(res.message).toContain('Brute Strength')
+    })
+
+    it('verifies Zombie Dance Off spawns two 1/1 Backup Dancers into empty lanes', () => {
+      const state = createInitialGameState()
+      // Clear all lanes
+      state.lanes.forEach(l => { l.zombieMinion = null })
+
+      const res = executeSuperpower(state, 'zombie_dance_off', 'zombies')
+      const dancers = res.updatedState.lanes.filter(l => l.zombieMinion?.name === 'Backup Dancer')
+      expect(dancers).toHaveLength(2)
+      for (const d of dancers) {
+        expect(d.zombieMinion?.currentAttack).toBe(1)
+        expect(d.zombieMinion?.currentHealth).toBe(1)
+      }
+      expect(res.message).toContain('Dance Off')
+    })
+
+    it('verifies Zombie Cut Down to Size destroys a Plant minion with 5 or more Attack', () => {
+      const state = createInitialGameState()
+      // Plant with 6 ATK (eligible)
+      state.lanes[0].plantMinion = createMockMinion('p_giant', 'Cornucopia', 'plants', 6, 6)
+
+      const res = executeSuperpower(state, 'zombie_cut_down_to_size', 'zombies')
+      expect(res.updatedState.lanes[0].plantMinion).toBeNull()
+      expect(res.message).toContain('Cut Down to Size')
+    })
+  })
+
+  // ==========================================================
+  // 19. COMPLETE ENVIRONMENT SYSTEM SUITE (Round 4)
+  // ==========================================================
+  describe('19. Complete Environment System Suite (Round 4)', () => {
+    it('verifies all 4 Environment cards metadata and properties in cards database', () => {
+      // 1. Spikeweed Sector (Guardian Plant Environment)
+      const spikeweed = getCardById('plant_spikeweed_sector')
+      expect(spikeweed).toBeDefined()
+      expect(spikeweed?.name).toBe('Spikeweed Sector')
+      expect(spikeweed?.type).toBe('environment')
+      expect(spikeweed?.cost).toBe(2)
+      expect(spikeweed?.heroClass).toBe('Guardian')
+      expect(spikeweed?.team).toBe('plants')
+
+      // 2. Bog of Sunken Hope (Smarty Plant Environment)
+      const bog = getCardById('plant_bog_of_sunken_hope')
+      expect(bog).toBeDefined()
+      expect(bog?.name).toBe('Bog of Sunken Hope')
+      expect(bog?.type).toBe('environment')
+      expect(bog?.cost).toBe(2)
+      expect(bog?.heroClass).toBe('Smarty')
+      expect(bog?.team).toBe('plants')
+      expect(bog?.amphibious).toBe(true)
+
+      // 3. Laser Base Alpha (Sneaky Zombie Environment)
+      const laserBase = getCardById('zombie_laser_base_alpha')
+      expect(laserBase).toBeDefined()
+      expect(laserBase?.name).toBe('Laser Base Alpha')
+      expect(laserBase?.type).toBe('environment')
+      expect(laserBase?.cost).toBe(3)
+      expect(laserBase?.heroClass).toBe('Sneaky')
+      expect(laserBase?.team).toBe('zombies')
+      expect(laserBase?.deadly).toBe(true)
+      expect(laserBase?.strikethrough).toBe(true)
+
+      // 4. Cone Zone (Hearty Zombie Environment)
+      const coneZone = getCardById('zombie_cone_zone')
+      expect(coneZone).toBeDefined()
+      expect(coneZone?.name).toBe('Cone Zone')
+      expect(coneZone?.type).toBe('environment')
+      expect(coneZone?.cost).toBe(2)
+      expect(coneZone?.heroClass).toBe('Hearty')
+      expect(coneZone?.team).toBe('zombies')
+    })
+
+    it('verifies Bog of Sunken Hope grants Amphibious to Plant and debuffs non-amphibious Zombie by -2 Attack', () => {
+      const state = createInitialGameState()
+      state.lanes[1].plantMinion = createMockMinion('p1', 'Peashooter', 'plants', 1, 1, { amphibious: false })
+      state.lanes[1].zombieMinion = createMockMinion('z1', 'Conehead', 'zombies', 2, 2, { amphibious: false })
+
+      const bogCard = convertCardDataToCard(getCardById('plant_bog_of_sunken_hope')!, 'plants')
+      const res = playEnvironment(state, bogCard, 1, 'plants')
+
+      // Plant gains Amphibious!
+      expect(res.updatedState.lanes[1].plantMinion?.amphibious).toBe(true)
+      // Zombie loses 2 Attack (2 - 2 = 0 ATK)
+      expect(res.updatedState.lanes[1].zombieMinion?.currentAttack).toBe(0)
+      expect(res.events.some(e => e.includes('Bog of Sunken Hope'))).toBe(true)
+    })
+
+    it('verifies Laser Base Alpha grants Deadly and Strikethrough to Zombie in the lane', () => {
+      const state = createInitialGameState()
+      state.lanes[2].zombieMinion = createMockMinion('z2', 'All-Star Zombie', 'zombies', 4, 6)
+
+      const laserCard = convertCardDataToCard(getCardById('zombie_laser_base_alpha')!, 'zombies')
+      const res = playEnvironment(state, laserCard, 2, 'zombies')
+
+      expect(res.updatedState.lanes[2].zombieMinion?.deadly).toBe(true)
+      expect(res.updatedState.lanes[2].zombieMinion?.strikethrough).toBe(true)
+      expect(res.events.some(e => e.includes('Laser Base Alpha'))).toBe(true)
+    })
+
+    it('verifies Cone Zone increases Zombie health by +3 HP', () => {
+      const state = createInitialGameState()
+      state.lanes[1].zombieMinion = createMockMinion('z1', 'Basic Zombie', 'zombies', 1, 1)
+
+      const coneZoneCard = convertCardDataToCard(getCardById('zombie_cone_zone')!, 'zombies')
+      const res = playEnvironment(state, coneZoneCard, 1, 'zombies')
+
+      // 1 HP + 3 = 4 HP
+      expect(res.updatedState.lanes[1].zombieMinion?.currentHealth).toBe(4)
+      expect(res.events.some(e => e.includes('Cone Zone'))).toBe(true)
+    })
+
+    it('verifies applyEnvironmentOnPlay applies effects when minions are deployed into environment lanes', () => {
+      const state = createInitialGameState()
+      // Setup Lane 1 with Laser Base Alpha
+      state.lanes[1].environment = {
+        id: 'zombie_laser_base_alpha',
+        name: 'Laser Base Alpha',
+        side: 'zombies',
+        image: '/assets/cards/zombies/Moon Base Z.png',
+        description: 'Deadly and Strikethrough',
+      }
+      state.lanes[1].zombieMinion = createMockMinion('z_new', 'New Zombie', 'zombies', 3, 3)
+
+      const res = applyEnvironmentOnPlay(state, 1, 'zombies')
+      expect(res.updatedState.lanes[1].zombieMinion?.deadly).toBe(true)
+      expect(res.updatedState.lanes[1].zombieMinion?.strikethrough).toBe(true)
+    })
+
+    it('verifies playing an Environment over an existing Environment replaces it cleanly', () => {
+      const state = createInitialGameState()
+      state.lanes[2].environment = {
+        id: 'plant_bog_of_sunken_hope',
+        name: 'Bog of Sunken Hope',
+        side: 'plants',
+        description: 'Old environment',
+        image: '/assets/cards/plants/Planet of the Grapes.png',
+      }
+
+      const coneZoneCard = convertCardDataToCard(getCardById('zombie_cone_zone')!, 'zombies')
+      const res = playEnvironment(state, coneZoneCard, 2, 'zombies')
+
+      expect(res.updatedState.lanes[2].environment?.id).toBe('zombie_cone_zone')
+      expect(res.updatedState.lanes[2].environment?.name).toBe('Cone Zone')
+      expect(res.events[0]).toContain('thay thế Bog of Sunken Hope')
+    })
+
+    it('verifies card database query helpers for Superpower and Environment types', () => {
+      const envCards = getCardsByType('environment')
+      expect(envCards.length).toBeGreaterThanOrEqual(4)
+      expect(envCards.some(c => c.id === 'plant_spikeweed_sector')).toBe(true)
+      expect(envCards.some(c => c.id === 'plant_bog_of_sunken_hope')).toBe(true)
+      expect(envCards.some(c => c.id === 'zombie_laser_base_alpha')).toBe(true)
+      expect(envCards.some(c => c.id === 'zombie_cone_zone')).toBe(true)
+
+      const spCards = getCardsByType('superpower')
+      expect(spCards.length).toBeGreaterThanOrEqual(12)
+      expect(spCards.some(c => c.id === 'plant_precision_blast')).toBe(true)
+      expect(spCards.some(c => c.id === 'zombie_carried_away')).toBe(true)
     })
   })
 })

@@ -73,13 +73,30 @@ export function playEnvironment(
     }
   } else if (card.id === 'plant_bog_of_sunken_hope') {
     if (targetLane.plantMinion) {
+      const isAlreadyAmphibious = Boolean(targetLane.plantMinion.amphibious || targetLane.plantMinion.traits?.includes('amphibious'))
       targetLane.plantMinion = {
         ...targetLane.plantMinion,
         amphibious: true,
+        currentAttack: isAlreadyAmphibious ? targetLane.plantMinion.currentAttack + 2 : targetLane.plantMinion.currentAttack,
+        baseAttack: isAlreadyAmphibious ? targetLane.plantMinion.baseAttack + 2 : targetLane.plantMinion.baseAttack,
+        currentHealth: isAlreadyAmphibious ? targetLane.plantMinion.currentHealth + 2 : targetLane.plantMinion.currentHealth,
+        maxHealth: isAlreadyAmphibious ? targetLane.plantMinion.maxHealth + 2 : targetLane.plantMinion.maxHealth,
       }
-      events.push(`Đầm lầy Bog of Sunken Hope: ${targetLane.plantMinion.name} nhận thuộc tính Thủy quân (Amphibious)!`)
+      events.push(`Đầm lầy Bog of Sunken Hope: ${targetLane.plantMinion.name} nhận đặc tính Thủy quân (Amphibious)${isAlreadyAmphibious ? ' và nhận +2/+2' : ''}!`)
     }
-    if (targetLane.zombieMinion && !targetLane.zombieMinion.amphibious) {
+    if (targetLane.plantTeamUpMinion) {
+      const isAlreadyAmphibious = Boolean(targetLane.plantTeamUpMinion.amphibious || targetLane.plantTeamUpMinion.traits?.includes('amphibious'))
+      targetLane.plantTeamUpMinion = {
+        ...targetLane.plantTeamUpMinion,
+        amphibious: true,
+        currentAttack: isAlreadyAmphibious ? targetLane.plantTeamUpMinion.currentAttack + 2 : targetLane.plantTeamUpMinion.currentAttack,
+        baseAttack: isAlreadyAmphibious ? targetLane.plantTeamUpMinion.baseAttack + 2 : targetLane.plantTeamUpMinion.baseAttack,
+        currentHealth: isAlreadyAmphibious ? targetLane.plantTeamUpMinion.currentHealth + 2 : targetLane.plantTeamUpMinion.currentHealth,
+        maxHealth: isAlreadyAmphibious ? targetLane.plantTeamUpMinion.maxHealth + 2 : targetLane.plantTeamUpMinion.maxHealth,
+      }
+      events.push(`Đầm lầy Bog of Sunken Hope: Đồng đội ${targetLane.plantTeamUpMinion.name} nhận đặc tính Thủy quân (Amphibious)${isAlreadyAmphibious ? ' và nhận +2/+2' : ''}!`)
+    }
+    if (targetLane.zombieMinion && !targetLane.zombieMinion.amphibious && !targetLane.zombieMinion.traits?.includes('amphibious')) {
       targetLane.zombieMinion = {
         ...targetLane.zombieMinion,
         currentAttack: Math.max(0, targetLane.zombieMinion.currentAttack - 2),
@@ -179,9 +196,17 @@ export function applyEnvironmentOnPlay(
     events.push(`Tinh vân não Medulla Nebula nạp năng lượng: Cung cấp thêm +2 Brains (${updatedState.zombieHero.brains} Brains)!`)
   } else if (lane.environment.id === 'plant_bog_of_sunken_hope') {
     if (side === 'plants' && lane.plantMinion) {
-      lane.plantMinion = { ...lane.plantMinion, amphibious: true }
-      events.push(`Bog of Sunken Hope: ${lane.plantMinion.name} nhận thuộc tính Thủy quân (Amphibious)!`)
-    } else if (side === 'zombies' && lane.zombieMinion && !lane.zombieMinion.amphibious) {
+      if (lane.plantMinion.amphibious || lane.plantMinion.traits?.includes('amphibious')) {
+        lane.plantMinion = {
+          ...lane.plantMinion,
+          currentAttack: lane.plantMinion.currentAttack + 2,
+          baseAttack: lane.plantMinion.baseAttack + 2,
+          currentHealth: lane.plantMinion.currentHealth + 2,
+          maxHealth: lane.plantMinion.maxHealth + 2,
+        }
+        events.push(`Bog of Sunken Hope: Thủy quân ${lane.plantMinion.name} nhận +2/+2!`)
+      }
+    } else if (side === 'zombies' && lane.zombieMinion && !lane.zombieMinion.amphibious && !lane.zombieMinion.traits?.includes('amphibious')) {
       lane.zombieMinion = {
         ...lane.zombieMinion,
         currentAttack: Math.max(0, lane.zombieMinion.currentAttack - 2),
