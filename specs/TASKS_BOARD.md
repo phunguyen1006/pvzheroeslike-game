@@ -28,6 +28,12 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
   - 4 Environments (`spikeweed_sector`, `bog_of_sunken_hope`, `laser_base_alpha`, `cone_zone`)
   - Khởi tạo trait `invulnerable` trong HeroState, bảo lưu Sunburn `maxSun` vĩnh viễn, tích hợp Laser Base Alpha vào Combat Resolver
   - 155/155 tests passed 100% và build sạch sẽ (`npm run build`)
+- [x] [ĐỢT 5] Triển khai Frenzy & Bonus Attacks, Freeze Synergies, Untrickable & Transform Mechanics:
+  - **Frenzy Trait & Bonus Attacks**: Helper `triggerBonusAttack(state, laneIndex, side)` cho đòn đánh thêm out-of-sequence; Frenzy kích hoạt đòn đánh bồi lập tức vào đối phương hoặc Hero khi tiêu diệt minion và lane trống (cả trong lượt đánh thường và bonus attack); hỗ trợ Team-Up target khi Frenzy nổ.
+  - **Freeze Synergies & Thawing**: Helper `freezeMinion(state, laneIndex, side)` gán `isFrozen: true`; Snowdrop nhận +2/+2 khi Zombie bị đóng băng; Winter Squash tiêu diệt tức thì Zombie bị đóng băng; cơ chế Tan Băng (Thawing) tự động bỏ qua lượt đánh và chuyển `isFrozen` về false trong combat phase (cả minion thường và Team-Up).
+  - **Untrickable Trait**: Bổ sung `untrickable` vào `Trait`, `Card`, `Minion`, `HeroState`; helper `isUntrickable(unit)` chặn toàn bộ Tricks và Superpowers sát thương/removal của đối thủ (Squash, Berry Blast, Shamrocket, Spring Bean, Locust Swarm, Bungee Plumber, Rocket Science, Final Mission, Precision Blast, Goatify, Devour, Slammin Smash, Cut Down to Size, Shrink Ray, Stayin Alive, Frozen Tundra, Missile Madness), bảo lưu buff đồng minh và miễn nhiễm sát thương lan diện rộng (Weed Spray, Cherry Bomb).
+  - **Transform Mechanics**: Helper `transformMinion(state, laneIndex, side, newCard)` tái cấu trúc minion sạch sẽ, giữ nguyên vị trí làn, reset buffs/damage, kế thừa traits, áp dụng hiệu ứng môi trường liên tục (Laser Base Alpha, Cone Zone, Bog of Sunken Hope) và kích hoạt When Played abilities.
+  - **Test Suite**: Viết bộ test chuyên sâu `src/__tests__/frenzy_freeze_transform.test.ts` (28 test cases), nâng tổng số test lên **219/219 tests passed 100%**, build production sạch sẽ không lỗi TypeScript (`tsc -b && vite build`).
 
 ### 🎨 UI Bot (`feature/ui`)
 - [x] Hiển thị huy hiệu chân Minion chân thực: Bullseye target reticle và Armored metal shield
@@ -39,7 +45,7 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] [ĐỢT 3] Thiết kế khối Bia Mộ (Gravestone) 3D đá Granite có vết nứt, huy hiệu ẩn danh `🪦 ? / ?` và animation nứt vỡ lúc Zombie Tricks kèm SFX Web Audio `playGravestoneReveal`
 - [x] [ĐỢT 4] Superpower Choice Modal khi Super-Block nổ (Play Now vs Keep in Hand, 360° rotating radiant sunburst, golden sheen sweep & emerald button, Web Audio fanfare) và Hiệu ứng Địa hình Môi trường đa tầng trên 5 làn đấu (Lane Environment Visuals: Spikeweed undulating thorns, Laser Base Alpha sci-fi neon scanning grid, Bog of Doom swamp mist & bubbles, Solar Winds sunbeams, Total Eclipse lunar shadow)
 - [x] [ĐỢT 5] Giao diện Mulligan (MulliganScreen 4 lá khởi đầu + 1 Superpower cố định, hiệu ứng 3D Card Flip khi đổi bài, toggle dấu chéo đỏ ❌ "Đổi lá này", nút xác nhận animation sáng quét và Web Audio API soundManager.playCardPickup) & Comic Phase Banner trượt ngang màn hình (Typography 3D viền đen dày, nghiêng phong cách comic, màu sắc và hiệu ứng tia tốc độ riêng biệt cho 4 phases, tự động kích hoạt soundManager.playFightHorn khi sang phase FIGHT)
-- [x] [ĐỢT 6] Màn hình Comic Intro đối thoại kịch tính (Green Shadow vs Super Brainz) và Màn hình GameOverModal kết thúc vinh quang/thất bại với hiệu ứng pháo hoa, vương miện 3D và thống kê trận đấu
+- [x] [ĐỢT 6] Màn hình Comic Intro đối thoại kịch tính trước trận (Comic split panels, speech bubbles phong cách truyện tranh PvZ Heroes giữa Green Shadow & Super Brainz, phù hiệu VS sấm sét 3D, nút FIGHT và SKIP) & Màn hình GameOverModal chuẩn vinh quang / thất bại (Victory pháo hoa, vương miện vàng 3D, hiệu ứng confetti streamers rực rỡ; Defeat mưa u ám, bia mộ nứt vỡ; Bảng thống kê chi tiết Số hiệp đấu, Tổng sát thương, Số quân tiêu diệt; Nút Tái đấu, Đổi Hero, Về Menu Chính kèm Web Audio API soundManager). Build và 219 tests pass 100%.
 
 ### 🃏 Cards Bot (`feature/cards`)
 - [x] Bổ sung các thẻ bài thiếu: `zombie_browncoat`, `zombie_knight_living_dead`, `zombie_football_zombie`
