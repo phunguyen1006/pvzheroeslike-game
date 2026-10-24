@@ -288,7 +288,7 @@ export function triggerOnDeath(
     })
 
     // Cascade death triggers for any units destroyed by Galacta-Cactus
-    if (galactaKilledUnits.length > 0 && depth < maxDepth) {
+    if (galactaKilledUnits.length > 0 && depth < MAX_CASCADE_DEPTH) {
       const cascadeRes = triggerOnMultipleDeaths(updatedState, galactaKilledUnits, {
         ...options,
         depth: depth + 1,
