@@ -21,8 +21,10 @@ import {
   executeSuperpower,
   getAIDecision,
   triggerOnDeath,
+  revealGravestones,
 } from '../engine/index'
-import type { Minion, Card, HeroState } from '../engine/types'
+import type { Minion, Card, HeroState, GameState } from '../engine/types'
+import { getCardById } from '../data/cards'
 
 describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
   const createMockMinion = (
@@ -1373,6 +1375,509 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
       expect(result.events.some(e => e.attackerName === 'Hothead')).toBe(true)
       expect(updatedState.plantGraveyard.some(c => c.id === 'plant_hothead')).toBe(true)
       expect(updatedState.zombieGraveyard.some(c => c.name === 'Brute Zombie')).toBe(true)
+    })
+  })
+
+  // ==========================================================
+  // 11. FULL MATCH INTEGRATION SIMULATION (5 COMPLETE TURNS)
+  // ==========================================================
+  describe('11. Full Match Integration Simulation (5 Complete Turns)', () => {
+    it('simulates a full 5-turn match lifecycle from Mulligan through 5 complete turn cycles without infinite loops or errors', () => {
+      // Initialize fresh match starting at MULLIGAN phase
+      let state: GameState = {
+        ...createInitialGameState(),
+        phase: 'MULLIGAN',
+      }
+
+      expect(state.turn).toBe(1)
+      expect(state.phase).toBe('MULLIGAN')
+      expect(state.plantHero.hp).toBe(20)
+      expect(state.zombieHero.hp).toBe(20)
+
+      // --------------------------------------------------------
+      // TURN 1: Mulligan -> Zombie Play -> Plant Play -> Tricks -> Combat
+      // --------------------------------------------------------
+      // 1. Mulligan card swaps
+      state = gameReducer(state, { type: 'MULLIGAN_SWAP', side: 'plants', cardIndices: [0] })
+      state = gameReducer(state, { type: 'MULLIGAN_SWAP', side: 'zombies', cardIndices: [1] })
+      state = gameReducer(state, { type: 'FINISH_MULLIGAN', side: 'plants' })
+
+      expect(state.phase).toBe('ZOMBIE_PLAY')
+      expect(state.turn).toBe(1)
+      expect(state.zombieHero.brains).toBe(1)
+      expect(state.plantHero.sun).toBe(1)
+
+      // 2. Zombie Play: Zombie plays a 1-cost Swimp (1/1) in Lane 1
+      state.zombieHand.push(createMockCard('z_swimp', 'Swimp', 'zombies', 1, 1, 1))
+      state = gameReducer(state, { type: 'PLAY_CARD', side: 'zombies', cardId: 'z_swimp', laneIndex: 1 })
+      expect(state.lanes[1].zombieMinion?.name).toBe('Swimp')
+      expect(state.zombieHero.brains).toBe(0)
+
+      // Advance to Plant Play
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('PLANT_PLAY')
+
+      // 3. Plant Play: Plant plays a 1-cost Peashooter (1/1) in Lane 1 to confront Swimp
+      state.plantHand.push(createMockCard('p_peashooter', 'Peashooter', 'plants', 1, 1, 1))
+      state = gameReducer(state, { type: 'PLAY_CARD', side: 'plants', cardId: 'p_peashooter', laneIndex: 1 })
+      expect(state.lanes[1].plantMinion?.name).toBe('Peashooter')
+      expect(state.plantHero.sun).toBe(0)
+
+      // Advance to Zombie Tricks
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('ZOMBIE_TRICKS')
+
+      // 4. Zombie Tricks: Out of brains (0), passes to Fight
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('FIGHT')
+
+      // 5. Fight: Resolve combat -> Swimp and Peashooter trade (both destroyed)
+      state = gameReducer(state, { type: 'START_COMBAT' })
+      expect(state.lanes[1].plantMinion).toBeNull()
+      expect(state.lanes[1].zombieMinion).toBeNull()
+      expect(state.plantGraveyard.some((c) => c.name === 'Peashooter')).toBe(true)
+      expect(state.zombieGraveyard.some((c) => c.name === 'Swimp')).toBe(true)
+
+      // Advance to Turn 2
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+
+      // --------------------------------------------------------
+      // TURN 2: Armored Zombie vs Bonk Choy
+      // --------------------------------------------------------
+      expect(state.turn).toBe(2)
+      expect(state.phase).toBe('ZOMBIE_PLAY')
+      expect(state.zombieHero.brains).toBe(2)
+      expect(state.plantHero.sun).toBe(2)
+
+      // Zombie plays 2-cost Conehead (2/2, Armored 1) in Lane 2
+      state.zombieHand.push(createMockCard('z_conehead', 'Conehead Zombie', 'zombies', 2, 2, 2, { armored: 1 }))
+      state = gameReducer(state, { type: 'PLAY_CARD', side: 'zombies', cardId: 'z_conehead', laneIndex: 2 })
+      expect(state.lanes[2].zombieMinion?.name).toBe('Conehead Zombie')
+      expect(state.zombieHero.brains).toBe(0)
+
+      // Advance to Plant Play
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('PLANT_PLAY')
+
+      // Plant plays 1-cost Bonk Choy (2/1) in Lane 2 against Conehead
+      state.plantHand.push(createMockCard('p_bonk', 'Bonk Choy', 'plants', 1, 2, 1))
+      state = gameReducer(state, { type: 'PLAY_CARD', side: 'plants', cardId: 'p_bonk', laneIndex: 2 })
+      expect(state.lanes[2].plantMinion?.name).toBe('Bonk Choy')
+
+      // Advance to Zombie Tricks -> Fight
+      state = gameReducer(state, { type: 'NEXT_PHASE' }) // ZOMBIE_TRICKS
+      state = gameReducer(state, { type: 'NEXT_PHASE' }) // FIGHT
+      expect(state.phase).toBe('FIGHT')
+
+      // Combat: Bonk Choy (2 ATK) deals 2 - 1 = 1 damage to Conehead (Conehead survives with 1 HP).
+      // Conehead (2 ATK) deals 2 damage to Bonk Choy -> Bonk Choy destroyed!
+      state = gameReducer(state, { type: 'START_COMBAT' })
+      expect(state.lanes[2].plantMinion).toBeNull()
+      expect(state.lanes[2].zombieMinion?.currentHealth).toBe(1)
+
+      // Advance to Turn 3
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+
+      // --------------------------------------------------------
+      // TURN 3: Double Strike Face Damage & Deadly Minion
+      // --------------------------------------------------------
+      expect(state.turn).toBe(3)
+      expect(state.phase).toBe('ZOMBIE_PLAY')
+      expect(state.zombieHero.brains).toBe(3)
+      expect(state.plantHero.sun).toBe(3)
+
+      // Zombie plays 3-cost Smelly Zombie (2/4 Deadly) in Lane 3
+      state.zombieHand.push(createMockCard('z_smelly', 'Smelly Zombie', 'zombies', 3, 2, 4, { deadly: true }))
+      state = gameReducer(state, { type: 'PLAY_CARD', side: 'zombies', cardId: 'z_smelly', laneIndex: 3 })
+      expect(state.lanes[3].zombieMinion?.name).toBe('Smelly Zombie')
+
+      // Advance to Plant Play
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('PLANT_PLAY')
+
+      // Plant plays 3-cost Repeater (2/2 Double Strike) in Lane 1 (open ground lane)
+      state.plantHand.push(createMockCard('p_repeater', 'Repeater', 'plants', 3, 2, 2, { doubleStrike: true }))
+      state = gameReducer(state, { type: 'PLAY_CARD', side: 'plants', cardId: 'p_repeater', laneIndex: 1 })
+      expect(state.lanes[1].plantMinion?.name).toBe('Repeater')
+
+      // Advance to Zombie Tricks -> Fight
+      state = gameReducer(state, { type: 'NEXT_PHASE' }) // ZOMBIE_TRICKS
+      state = gameReducer(state, { type: 'NEXT_PHASE' }) // FIGHT
+
+      // Combat:
+      // - Lane 1: Repeater Double Strikes Zombie Hero (2 + 2 = 4 damage)
+      // - Lane 2: Conehead (2 ATK) hits Plant Hero (2 damage)
+      // - Lane 3: Smelly Zombie (2 ATK) hits Plant Hero (2 damage)
+      state = gameReducer(state, { type: 'START_COMBAT' })
+      expect(state.zombieHero.hp).toBeLessThan(20)
+      expect(state.plantHero.hp).toBeLessThan(20)
+      expect(state.plantHero.blockMeter).toBeGreaterThan(0)
+
+      // Advance to Turn 4
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+
+      // --------------------------------------------------------
+      // TURN 4: Strikethrough Minion & Zombie Bungee Plumber Trick
+      // --------------------------------------------------------
+      expect(state.turn).toBe(4)
+      expect(state.phase).toBe('ZOMBIE_PLAY')
+      expect(state.zombieHero.brains).toBe(4)
+      expect(state.plantHero.sun).toBe(4)
+
+      // Zombie plays 3-cost Beam Zombie (2/3 Strikethrough) in Lane 0 (Heights), saving 1 Brain for tricks
+      state.zombieHand.push(createMockCard('z_beam', 'Beam Zombie', 'zombies', 3, 2, 3, { strikethrough: true }))
+      state = gameReducer(state, { type: 'PLAY_CARD', side: 'zombies', cardId: 'z_beam', laneIndex: 0 })
+      expect(state.zombieHero.brains).toBe(1)
+
+      // Advance to Plant Play
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('PLANT_PLAY')
+
+      // Plant plays 4-cost Snapdragon (3/3) in Lane 3 against Smelly Zombie (2/4 Deadly)
+      state.plantHand.push(createMockCard('p_snap', 'Snapdragon', 'plants', 4, 3, 3))
+      state = gameReducer(state, { type: 'PLAY_CARD', side: 'plants', cardId: 'p_snap', laneIndex: 3 })
+      expect(state.lanes[3].plantMinion?.name).toBe('Snapdragon')
+
+      // Advance to Zombie Tricks
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('ZOMBIE_TRICKS')
+      expect(state.zombieHero.brains).toBe(1)
+
+      // Zombie uses 1-cost Bungee Plumber targeting Plant Hero directly
+      state.zombieHand.push(createMockCard('zombie_bungee_plumber', 'Bungee Plumber', 'zombies', 1, 0, 0, { type: 'trick' }))
+      const plantHpBeforeTrick = state.plantHero.hp
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        side: 'zombies',
+        cardId: 'zombie_bungee_plumber',
+        laneIndex: 0,
+        targetHero: true,
+      })
+      // If block meter wasn't full, takes 2 damage; if block triggered, damage was negated by Super-Block
+      expect(state.plantHero.hp <= plantHpBeforeTrick).toBe(true)
+      expect(state.plantHero.hp === plantHpBeforeTrick - 2 || state.plantHero.blockCount > 0).toBe(true)
+      expect(state.zombieHero.brains).toBe(0)
+
+      // Advance to Fight
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('FIGHT')
+
+      // Combat:
+      // - Lane 0: Beam Zombie pierces Plant Hero with Strikethrough
+      // - Lane 3: Snapdragon deals 3 dmg to Smelly Zombie (HP 4 -> 1). Smelly deals Deadly damage destroying Snapdragon!
+      state = gameReducer(state, { type: 'START_COMBAT' })
+      expect(state.lanes[3].plantMinion).toBeNull() // Snapdragon eliminated by Deadly
+      expect(state.lanes[3].zombieMinion?.currentHealth).toBe(1)
+
+      // Advance to Turn 5
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+
+      // --------------------------------------------------------
+      // TURN 5: Gatling Pea Deployed & Destroyed by Locust Swarm
+      // --------------------------------------------------------
+      expect(state.turn).toBe(5)
+      expect(state.phase).toBe('ZOMBIE_PLAY')
+      expect(state.zombieHero.brains).toBe(5)
+      expect(state.plantHero.sun).toBe(5)
+
+      // Zombie passes ZOMBIE_PLAY to conserve all 5 Brains for Locust Swarm
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('PLANT_PLAY')
+
+      // Plant plays 5-cost Gatling Pea (5/4 Double Strike) in Lane 2
+      state.plantHand.push(createMockCard('p_gatling', 'Gatling Pea', 'plants', 5, 5, 4, { doubleStrike: true }))
+      state = gameReducer(state, { type: 'PLAY_CARD', side: 'plants', cardId: 'p_gatling', laneIndex: 2 })
+      expect(state.lanes[2].plantMinion?.name).toBe('Gatling Pea')
+
+      // Advance to Zombie Tricks
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('ZOMBIE_TRICKS')
+      expect(state.zombieHero.brains).toBe(5)
+
+      // Zombie deploys Locust Swarm on Gatling Pea in Lane 2
+      state.zombieHand.push(createMockCard('zombie_locust_swarm', 'Locust Swarm', 'zombies', 5, 0, 0, { type: 'trick' }))
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        side: 'zombies',
+        cardId: 'zombie_locust_swarm',
+        laneIndex: 2,
+      })
+      expect(state.lanes[2].plantMinion).toBeNull() // Destroyed by Locust Swarm!
+      expect(state.zombieHero.brains).toBe(0)
+
+      // Advance to Fight & execute combat
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('FIGHT')
+      state = gameReducer(state, { type: 'START_COMBAT' })
+
+      // Advance to Turn 6 cleanly
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+
+      // --------------------------------------------------------
+      // FINAL MATCH INTEGRITY AUDIT AFTER 5 FULL TURNS
+      // --------------------------------------------------------
+      expect(state.turn).toBe(6)
+      expect(state.phase).toBe('ZOMBIE_PLAY')
+      expect(state.plantHero.maxSun).toBe(6)
+      expect(state.zombieHero.maxBrains).toBe(6)
+      expect(state.plantHero.sun).toBe(6)
+      expect(state.zombieHero.brains).toBe(6)
+
+      // Heroes remain alive with valid HP
+      expect(state.plantHero.hp).toBeGreaterThan(0)
+      expect(state.plantHero.hp).toBeLessThanOrEqual(20)
+      expect(state.zombieHero.hp).toBeGreaterThan(0)
+      expect(state.zombieHero.hp).toBeLessThanOrEqual(20)
+      expect(Number.isNaN(state.plantHero.hp)).toBe(false)
+      expect(Number.isNaN(state.zombieHero.hp)).toBe(false)
+
+      // Block meters are within standard 0-8 bounds
+      expect(state.plantHero.blockMeter).toBeGreaterThanOrEqual(0)
+      expect(state.plantHero.blockMeter).toBeLessThanOrEqual(8)
+      expect(state.zombieHero.blockMeter).toBeGreaterThanOrEqual(0)
+      expect(state.zombieHero.blockMeter).toBeLessThanOrEqual(8)
+
+      // Graveyards hold casualties
+      expect(state.plantGraveyard.length).toBeGreaterThanOrEqual(2)
+      expect(state.zombieGraveyard.length).toBeGreaterThanOrEqual(1)
+
+      // Robust logs and events recorded
+      expect(state.combatEvents.length).toBeGreaterThan(0)
+      expect(state.combatLog.length).toBeGreaterThan(15)
+    })
+
+    it('simulates an automated 5-turn game where Heuristic AI drives decisions through every phase without infinite loops or errors', () => {
+      let state = createInitialGameState()
+      // Give heroes ample HP to ensure full 5-turn progression without early knockout
+      state.plantHero.hp = 50
+      state.plantHero.maxHp = 50
+      state.zombieHero.hp = 50
+      state.zombieHero.maxHp = 50
+      expect(state.turn).toBe(1)
+
+      // Run through 5 complete turn cycles
+      for (let t = 1; t <= 5; t++) {
+        // ZOMBIE_PLAY: AI makes up to 2 minion plays, then passes
+        let zPlays = 0
+        while (state.phase === 'ZOMBIE_PLAY' && zPlays < 2) {
+          const decision = getAIDecision(state, 'zombies', 'normal')
+          if (decision.action === 'PLAY_MINION' && decision.card && decision.laneIndex !== undefined) {
+            state = gameReducer(state, {
+              type: 'PLAY_CARD',
+              side: 'zombies',
+              cardId: decision.card.id,
+              laneIndex: decision.laneIndex,
+            })
+            zPlays++
+          } else {
+            break
+          }
+        }
+        if (state.phase === 'ZOMBIE_PLAY') {
+          state = gameReducer(state, { type: 'NEXT_PHASE' })
+        }
+
+        // PLANT_PLAY: AI makes up to 2 minion plays, then passes
+        let pPlays = 0
+        while (state.phase === 'PLANT_PLAY' && pPlays < 2) {
+          const decision = getAIDecision(state, 'plants', 'normal')
+          if (decision.action === 'PLAY_MINION' && decision.card && decision.laneIndex !== undefined) {
+            state = gameReducer(state, {
+              type: 'PLAY_CARD',
+              side: 'plants',
+              cardId: decision.card.id,
+              laneIndex: decision.laneIndex,
+            })
+            pPlays++
+          } else {
+            break
+          }
+        }
+        if (state.phase === 'PLANT_PLAY') {
+          state = gameReducer(state, { type: 'NEXT_PHASE' })
+        }
+
+        // ZOMBIE_TRICKS: AI makes up to 1 trick play, then passes
+        if (state.phase === 'ZOMBIE_TRICKS') {
+          const decision = getAIDecision(state, 'zombies', 'normal')
+          if (decision.action === 'PLAY_TRICK' && decision.card) {
+            state = gameReducer(state, {
+              type: 'PLAY_CARD',
+              side: 'zombies',
+              cardId: decision.card.id,
+              laneIndex: decision.laneIndex ?? 0,
+              targetHero: decision.targetHero,
+            })
+          }
+          state = gameReducer(state, { type: 'NEXT_PHASE' })
+        }
+
+        // FIGHT: execute combat and advance to next turn
+        if (state.phase === 'FIGHT') {
+          state = gameReducer(state, { type: 'START_COMBAT' })
+          state = gameReducer(state, { type: 'NEXT_PHASE' })
+        }
+      }
+
+      // Assert that 5 turns completed smoothly into Turn 6
+      expect(state.turn).toBe(6)
+      expect(Number.isNaN(state.plantHero.hp)).toBe(false)
+      expect(Number.isNaN(state.zombieHero.hp)).toBe(false)
+      expect(state.plantHero.hp).toBeGreaterThan(0)
+      expect(state.zombieHero.hp).toBeGreaterThan(0)
+    })
+  })
+
+  // ==========================================================
+  // 12. GRAVESTONE MECHANICS & REVEAL TRIGGERS (Phase 7)
+  // ==========================================================
+  describe('12. Gravestone Mechanics & Reveal Triggers (Phase 7)', () => {
+    it('should deploy Zombie with gravestone trait as an anonymous Gravestone (isGravestone: true)', () => {
+      let state = createInitialGameState()
+      state.phase = 'ZOMBIE_PLAY'
+      state.zombieHero.brains = 5
+
+      // Gravestone card with when-played ability (Conga Zombie)
+      const congaCard: Card = {
+        id: 'zombie_conga_zombie',
+        name: 'Conga Zombie',
+        side: 'zombies',
+        type: 'minion',
+        cost: 2,
+        attack: 2,
+        health: 2,
+        image: '/assets/cards/zombies/Conga Zombie.png',
+        traits: ['gravestone'],
+        gravestone: true,
+      }
+      state.zombieHand = [congaCard]
+      // Opposing plant with 1 HP
+      state.lanes[1].plantMinion = createMockMinion('p_weak', 'Weak Plant', 'plants', 1, 1)
+
+      // Zombie plays Conga Zombie
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        side: 'zombies',
+        cardId: 'zombie_conga_zombie',
+        laneIndex: 1,
+      })
+
+      const placedMinion = state.lanes[1].zombieMinion
+      expect(placedMinion).toBeDefined()
+      expect(placedMinion?.gravestone).toBe(true)
+      expect(placedMinion?.isGravestone).toBe(true)
+      // When-played ability must NOT trigger yet while in Gravestone!
+      // Weak plant should still be alive with 1 HP
+      expect(state.lanes[1].plantMinion?.currentHealth).toBe(1)
+      // Combat log must conceal identity as an anonymous Gravestone
+      expect(state.combatLog.some(l => l.includes('Bia Mộ bí ẩn (Gravestone)'))).toBe(true)
+    })
+
+    it('should keep Gravestone concealed during PLANT_PLAY phase', () => {
+      let state = createInitialGameState()
+      state.phase = 'ZOMBIE_PLAY'
+      state.zombieHero.brains = 3
+
+      const gravestoneCard: Card = {
+        id: 'z_ninja',
+        name: 'Ninja Zombie',
+        side: 'zombies',
+        type: 'minion',
+        cost: 2,
+        attack: 3,
+        health: 2,
+        image: '/assets/ninja.png',
+        gravestone: true,
+      }
+      state.zombieHand = [gravestoneCard]
+      state = gameReducer(state, {
+        type: 'PLAY_CARD',
+        side: 'zombies',
+        cardId: 'z_ninja',
+        laneIndex: 2,
+      })
+      expect(state.lanes[2].zombieMinion?.isGravestone).toBe(true)
+
+      // Advance to PLANT_PLAY
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('PLANT_PLAY')
+      // Remains in Gravestone state during Plant turn
+      expect(state.lanes[2].zombieMinion?.isGravestone).toBe(true)
+    })
+
+    it('should automatically reveal all Gravestones at the beginning of ZOMBIE_TRICKS and trigger when-revealed abilities', () => {
+      let state = createInitialGameState()
+      state.phase = 'PLANT_PLAY'
+      // Plant with 1 HP in Lane 1
+      state.lanes[1].plantMinion = createMockMinion('p_shroom', 'Button Mushroom', 'plants', 1, 1)
+
+      // Conga Zombie hidden in Gravestone in Lane 1
+      state.lanes[1].zombieMinion = createMockMinion('z_conga', 'Conga Zombie', 'zombies', 2, 2, {
+        cardId: 'zombie_conga_zombie',
+        gravestone: true,
+        isGravestone: true,
+      })
+
+      // Advance to ZOMBIE_TRICKS
+      state = gameReducer(state, { type: 'NEXT_PHASE' })
+      expect(state.phase).toBe('ZOMBIE_TRICKS')
+
+      // Gravestone must now be cracked open!
+      const revealedZombie = state.lanes[1].zombieMinion
+      expect(revealedZombie?.isGravestone).toBe(false)
+      expect(revealedZombie?.name).toBe('Conga Zombie')
+
+      // "When Revealed" ability (Conga deals 1 damage to plant) executed and destroyed 1-HP plant!
+      expect(state.lanes[1].plantMinion).toBeNull()
+
+      // Combat events must record the Gravestone reveal
+      const revealEvent = state.combatEvents.find(e => e.description.includes('Bia Mộ vỡ tung'))
+      expect(revealEvent).toBeDefined()
+      expect(revealEvent?.laneIndex).toBe(1)
+      expect(revealEvent?.attackerName).toBe('Conga Zombie')
+    })
+
+    it('revealGravestones helper: should reveal multiple Gravestones from left to right in order', () => {
+      const state = createInitialGameState()
+      // Lane 0: Gravestone Zombie A
+      state.lanes[0].zombieMinion = createMockMinion('z0', 'Tomb Walker', 'zombies', 1, 3, {
+        gravestone: true,
+        isGravestone: true,
+      })
+      // Lane 2: Gravestone Zombie B
+      state.lanes[2].zombieMinion = createMockMinion('z2', 'Grave Ghoul', 'zombies', 4, 4, {
+        gravestone: true,
+        isGravestone: true,
+      })
+      // Lane 4: Regular non-gravestone zombie
+      state.lanes[4].zombieMinion = createMockMinion('z4', 'Regular Zombie', 'zombies', 2, 2, {
+        gravestone: false,
+        isGravestone: false,
+      })
+
+      const { updatedState, events } = revealGravestones(state)
+
+      // Both gravestones are revealed
+      expect(updatedState.lanes[0].zombieMinion?.isGravestone).toBe(false)
+      expect(updatedState.lanes[2].zombieMinion?.isGravestone).toBe(false)
+      // Regular zombie remains unchanged
+      expect(updatedState.lanes[4].zombieMinion?.isGravestone).toBe(false)
+
+      // Order of events must be lane 0 first, then lane 2
+      const revealEvents = events.filter(e => e.description.includes('Bia Mộ vỡ tung'))
+      expect(revealEvents).toHaveLength(2)
+      expect(revealEvents[0].laneIndex).toBe(0)
+      expect(revealEvents[1].laneIndex).toBe(2)
+    })
+
+    it('revealGravestones helper: should leave states with zero gravestones completely untouched', () => {
+      const state = createInitialGameState()
+      state.lanes[1].zombieMinion = createMockMinion('z_normal', 'Standard Zombie', 'zombies', 2, 3)
+
+      const { updatedState, events } = revealGravestones(state)
+      expect(events).toHaveLength(0)
+      expect(updatedState.lanes[1].zombieMinion?.isGravestone).toBeFalsy()
+      expect(updatedState.lanes[1].zombieMinion?.name).toBe('Standard Zombie')
     })
   })
 })
