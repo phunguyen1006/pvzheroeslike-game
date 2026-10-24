@@ -2,7 +2,6 @@ import { useReducer, useState, useEffect, useRef } from 'react'
 import {
   gameReducer,
   createInitialGameState,
-  getAIDecision,
   getAITurnPlan,
 } from './engine'
 import type { Card as CardType } from './engine/types'

@@ -50,7 +50,7 @@ function evaluateMinionThreat(lane: LaneState, enemySide: Side): number {
   if (!minion) return 0
 
   let threat = minion.currentAttack * 2 + minion.currentHealth
-  if (minion.traits?.includes('doubleStrike') || minion.traits?.includes('double-strike')) threat += 5
+  if (minion.traits?.some((t: any) => t === 'doubleStrike' || t === 'double-strike')) threat += 5
   if (minion.traits?.includes('strikethrough')) threat += 4
   if (minion.traits?.includes('frenzy')) threat += 4
   if (minion.traits?.includes('deadly')) threat += 4
@@ -106,7 +106,6 @@ export function getAIDecision(
   const isZombie = side === 'zombies'
   const hand = isZombie ? state.zombieHand : state.plantHand
   const myHero = isZombie ? state.zombieHero : state.plantHero
-  const enemyHero = isZombie ? state.plantHero : state.zombieHero
   const resource = isZombie ? myHero.brains : myHero.sun
 
   // Filter playable cards within current energy budget
@@ -583,6 +582,7 @@ export function getAITurnPlan(
           baseAttack: decision.card.attack,
           currentHealth: decision.card.health,
           maxHealth: decision.card.health,
+          image: decision.card.image || '',
         }
       } else {
         targetLane.plantMinion = {
@@ -594,6 +594,7 @@ export function getAITurnPlan(
           baseAttack: decision.card.attack,
           currentHealth: decision.card.health,
           maxHealth: decision.card.health,
+          image: decision.card.image || '',
         }
       }
     }
