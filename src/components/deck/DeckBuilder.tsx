@@ -82,19 +82,70 @@ export function exportDeckCode(deckName: string, side: Team, deckMap: Record<str
   return JSON.stringify(payload, null, 2)
 }
 
-export function validateAndParseDeckCode(jsonStr: string): {
+/**
+ * Exports deck configuration encoded as compact Base64 string for easy 1-line copy/sharing
+ */
+export function exportDeckCodeBase64(deckName: string, side: Team, deckMap: Record<string, number>): string {
+  const totalCards = Object.values(deckMap).reduce((a, b) => a + b, 0)
+  const payload: DeckCodeExportPayload = {
+    format: 'pvz_heroes_deck_v1',
+    name: deckName.trim() || (side === 'plants' ? 'Chiến Thuật Cây Trồng #1' : 'Đội Quân Thây Ma #1'),
+    side,
+    cardIds: { ...deckMap },
+    totalCards,
+    exportedAt: new Date().toISOString(),
+  }
+  const json = JSON.stringify(payload)
+  try {
+    if (typeof btoa !== 'undefined') {
+      return 'PVZ1:' + btoa(unescape(encodeURIComponent(json)))
+    }
+  } catch {}
+  const nodeBuf = (globalThis as any).Buffer
+  if (nodeBuf) {
+    return 'PVZ1:' + nodeBuf.from(json, 'utf-8').toString('base64')
+  }
+  return json
+}
+
+/**
+ * Decodes a deck code (either Base64 string with/without PVZ1: prefix, or raw JSON)
+ */
+export function decodeDeckCode(inputStr: string): string {
+  let trimmed = inputStr.trim()
+  if (trimmed.startsWith('PVZ1:')) {
+    trimmed = trimmed.slice(5)
+  }
+  if (!trimmed.startsWith('{')) {
+    try {
+      if (typeof atob !== 'undefined') {
+        return decodeURIComponent(escape(atob(trimmed)))
+      }
+    } catch {}
+    const nodeBuf = (globalThis as any).Buffer
+    if (nodeBuf) {
+      try {
+        return nodeBuf.from(trimmed, 'base64').toString('utf-8')
+      } catch {}
+    }
+  }
+  return trimmed
+}
+
+export function validateAndParseDeckCode(codeStr: string): {
   valid: boolean
   error?: string
   deck?: DeckCodeExportPayload
 } {
   try {
-    const trimmed = jsonStr.trim()
+    const trimmed = codeStr.trim()
     if (!trimmed) {
-      return { valid: false, error: 'Vui lòng dán chuỗi mã bộ bài JSON.' }
+      return { valid: false, error: 'Vui lòng dán chuỗi mã bộ bài (Base64 hoặc JSON).' }
     }
-    const parsed = JSON.parse(trimmed)
+    const decodedJson = decodeDeckCode(trimmed)
+    const parsed = JSON.parse(decodedJson)
     if (!parsed || typeof parsed !== 'object') {
-      return { valid: false, error: 'Mã bộ bài không phải là đối tượng JSON hợp lệ.' }
+      return { valid: false, error: 'Mã bộ bài không phải là đối tượng hợp lệ.' }
     }
     if (parsed.format !== 'pvz_heroes_deck_v1') {
       return { valid: false, error: 'Định dạng mã bộ bài không tương thích (yêu cầu format: pvz_heroes_deck_v1).' }
@@ -116,7 +167,7 @@ export function validateAndParseDeckCode(jsonStr: string): {
     }
     return { valid: true, deck: parsed }
   } catch (err: any) {
-    return { valid: false, error: `Lỗi phân tích JSON: ${err.message}` }
+    return { valid: false, error: `Lỗi phân tích JSON / mã bộ bài: ${err.message}` }
   }
 }
 
@@ -204,6 +255,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   // Export / Import Deck Code State
   const [shareModalOpen, setShareModalOpen] = useState<boolean>(false)
   const [shareMode, setShareMode] = useState<'export' | 'import'>('export')
+  const [exportFormat, setExportFormat] = useState<'base64' | 'json'>('base64')
   const [shareCodeString, setShareCodeString] = useState<string>('')
   const [shareError, setShareError] = useState<string | null>(null)
   const [shareCopied, setShareCopied] = useState<boolean>(false)
@@ -316,31 +368,45 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     return { minions, tricks, environments }
   }, [deckMap, availableCards])
 
-  // Calculate mana / cost curve (0, 1, 2, 3, 4, 5, 6, 7, 8+)
-  const costCurve = useMemo(() => {
-    const distribution: Record<number, number> = {
-      0: 0,
-      1: 0,
-      2: 0,
-      3: 0,
-      4: 0,
-      5: 0,
-      6: 0,
-      7: 0,
-      8: 0,
+  // Calculate Mana Curve Bar Chart bins: 1 (includes 0 & 1), 2, 3, 4, 5, 6+
+  const manaCurve = useMemo(() => {
+    const bins: Record<'1' | '2' | '3' | '4' | '5' | '6+', number> = {
+      '1': 0,
+      '2': 0,
+      '3': 0,
+      '4': 0,
+      '5': 0,
+      '6+': 0,
     }
+
+    let totalCost = 0
+    let totalCards = 0
 
     Object.entries(deckMap).forEach(([id, count]) => {
       const card = availableCards.find((c) => c.id === id)
       if (card) {
-        const bucket = Math.min(8, Math.max(0, card.cost))
-        distribution[bucket] = (distribution[bucket] || 0) + count
+        totalCost += card.cost * count
+        totalCards += count
+        if (card.cost <= 1) {
+          bins['1'] += count
+        } else if (card.cost === 2) {
+          bins['2'] += count
+        } else if (card.cost === 3) {
+          bins['3'] += count
+        } else if (card.cost === 4) {
+          bins['4'] += count
+        } else if (card.cost === 5) {
+          bins['5'] += count
+        } else {
+          bins['6+'] += count
+        }
       }
     })
 
-    const maxCount = Math.max(1, ...Object.values(distribution))
+    const maxCount = Math.max(1, ...Object.values(bins))
+    const averageCost = totalCards > 0 ? (totalCost / totalCards).toFixed(1) : '0.0'
 
-    return { distribution, maxCount }
+    return { bins, maxCount, averageCost, totalCards }
   }, [deckMap, availableCards])
 
   // Switch faction
@@ -458,8 +524,10 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
   // Open Export Modal
   const handleOpenExportModal = () => {
-    const jsonStr = exportDeckCode(deckName, selectedSide, deckMap)
-    setShareCodeString(jsonStr)
+    const code = exportFormat === 'base64'
+      ? exportDeckCodeBase64(deckName, selectedSide, deckMap)
+      : exportDeckCode(deckName, selectedSide, deckMap)
+    setShareCodeString(code)
     setShareMode('export')
     setShareCopied(false)
     setShareError(null)
@@ -891,24 +959,29 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           {/* Visual Mana Curve / Cost Curve Chart */}
           <div className="mana-curve-container">
             <div className="curve-header">
-              <span className="curve-title">Đồ thị Phân Bổ Năng Lượng (Mana Curve)</span>
+              <span className="curve-title">
+                {selectedSide === 'plants' ? '☀️ Biểu Đồ Năng Lượng' : '🧠 Biểu Đồ Não Bộ'} (Mana Curve)
+              </span>
+              <span className="curve-avg-badge">
+                TB: <strong>{manaCurve.averageCost}</strong> {selectedSide === 'plants' ? '☀️' : '🧠'}
+              </span>
             </div>
             <div className="mana-bars-row">
-              {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((cost) => {
-                const count = costCurve.distribution[cost] || 0
-                const fillPercent = (count / costCurve.maxCount) * 100
+              {(['1', '2', '3', '4', '5', '6+'] as const).map((costBin) => {
+                const count = manaCurve.bins[costBin] || 0
+                const fillPercent = (count / manaCurve.maxCount) * 100
 
                 return (
-                  <div key={cost} className="mana-bar-column">
+                  <div key={costBin} className="mana-bar-column">
                     <span className="bar-count-label">{count > 0 ? count : ''}</span>
                     <div className="mana-bar-track">
                       <div
-                        className="mana-bar-fill"
+                        className={`mana-bar-fill mana-bar-fill-${selectedSide}`}
                         style={{ height: `${Math.max(count > 0 ? 15 : 0, fillPercent)}%` }}
-                        title={`Cost ${cost === 8 ? '8+' : cost}: ${count} lá bài`}
+                        title={`Chi phí ${costBin}: ${count} lá bài`}
                       />
                     </div>
-                    <span className="bar-cost-label">{cost === 8 ? '8+' : cost}</span>
+                    <span className="bar-cost-label">{costBin}</span>
                   </div>
                 )
               })}
@@ -1060,14 +1133,39 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             <div className="share-modal-body">
               {shareMode === 'export' ? (
                 <>
+                  <div className="format-toggle-tabs">
+                    <button
+                      className={`format-tab-btn ${exportFormat === 'base64' ? 'active' : ''}`}
+                      onClick={() => {
+                        setExportFormat('base64')
+                        setShareCodeString(exportDeckCodeBase64(deckName, selectedSide, deckMap))
+                        setShareCopied(false)
+                      }}
+                    >
+                      ⚡ Mã Base64 (1 Dòng Gọn)
+                    </button>
+                    <button
+                      className={`format-tab-btn ${exportFormat === 'json' ? 'active' : ''}`}
+                      onClick={() => {
+                        setExportFormat('json')
+                        setShareCodeString(exportDeckCode(deckName, selectedSide, deckMap))
+                        setShareCopied(false)
+                      }}
+                    >
+                      📄 Định Dạng JSON
+                    </button>
+                  </div>
+
                   <p className="share-modal-desc">
-                    Sao chép mã chuỗi JSON bên dưới để chia sẻ hoặc lưu trữ bộ bài của bạn:
+                    {exportFormat === 'base64'
+                      ? 'Sao chép chuỗi mã Base64 bên dưới để gửi cho bạn bè hoặc import vào game:'
+                      : 'Sao chép mã định dạng JSON chi tiết để lưu trữ hoặc cấu hình tùy chỉnh:'}
                   </p>
                   <textarea
                     className="share-modal-textarea"
                     readOnly
                     value={shareCodeString}
-                    rows={10}
+                    rows={8}
                     onClick={(e) => (e.target as HTMLTextAreaElement).select()}
                   />
                   {shareCopied && (
@@ -1079,17 +1177,17 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               ) : (
                 <>
                   <p className="share-modal-desc">
-                    Dán mã chuỗi JSON bộ bài vào ô bên dưới để nhập danh sách thẻ bài:
+                    Dán mã bộ bài (chuỗi Base64 <code>PVZ1:...</code> hoặc định dạng JSON) vào ô bên dưới:
                   </p>
                   <textarea
                     className="share-modal-textarea"
-                    placeholder='Dán chuỗi JSON định dạng {"format": "pvz_heroes_deck_v1", ...} vào đây...'
+                    placeholder="Dán mã Base64 (PVZ1:...) hoặc JSON bộ bài vào đây..."
                     value={shareCodeString}
                     onChange={(e) => {
                       setShareCodeString(e.target.value)
                       setShareError(null)
                     }}
-                    rows={10}
+                    rows={8}
                   />
                   {shareError && (
                     <div className="share-modal-error-badge">

@@ -514,8 +514,8 @@ describe('Zombie Campaign Mode - Chapter 1: Zombie Onslaught Specifications', ()
     expect(ZOMBIE_CHAPTER_1_MISSIONS).toHaveLength(5)
     expect(ZOMBIE_CHAPTER_1_MISSIONS.map((m) => m.missionNumber)).toEqual([1, 2, 3, 4, 5])
     expect(ZOMBIE_CHAPTER_1_MISSIONS.every((m) => m.faction === 'zombies')).toBe(true)
-    expect(ALL_ZOMBIE_CAMPAIGN_MISSIONS).toHaveLength(5)
-    expect(ZOMBIE_CAMPAIGN_CHAPTERS).toHaveLength(1)
+    expect(ALL_ZOMBIE_CAMPAIGN_MISSIONS.length).toBeGreaterThanOrEqual(5)
+    expect(ZOMBIE_CAMPAIGN_CHAPTERS.length).toBeGreaterThanOrEqual(1)
   })
 
   it('Mission Z1 matches Green Shadow boss with starting Brains bonus', () => {

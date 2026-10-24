@@ -188,6 +188,7 @@ export interface GameState {
   pendingSuperBlock?: {
     side: Side
     superpower: Card
+    targetHero?: Side
   } | null
   combatEvents: CombatEvent[]
   combatLog: string[]

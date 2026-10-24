@@ -3753,11 +3753,32 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.curve-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
 .curve-title {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 800;
   color: #94a3b8;
   text-transform: uppercase;
+}
+
+.curve-avg-badge {
+  font-size: 0.72rem;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.curve-avg-badge strong {
+  color: #facc15;
+  font-family: var(--font-display);
 }
 
 .mana-bars-row {
@@ -3796,6 +3817,16 @@
   background: linear-gradient(to top, #3b82f6, #60a5fa);
   border-radius: 3px;
   transition: height 0.3s ease;
+}
+
+.mana-bar-fill-plants {
+  background: linear-gradient(to top, #d97706, #facc15);
+  box-shadow: 0 0 6px rgba(250, 204, 21, 0.4);
+}
+
+.mana-bar-fill-zombies {
+  background: linear-gradient(to top, #7e22ce, #c084fc);
+  box-shadow: 0 0 6px rgba(192, 132, 252, 0.4);
 }
 
 .bar-cost-label {
@@ -8876,6 +8907,39 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.format-toggle-tabs {
+  display: flex;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.format-tab-btn {
+  flex: 1;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 800;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.format-tab-btn:hover {
+  color: #fff;
+}
+
+.format-tab-btn.active {
+  background: #0284c7;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.5);
 }
 
 .share-modal-desc {

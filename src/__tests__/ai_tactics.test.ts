@@ -8,6 +8,8 @@ import {
   getHeroDefaultArchetype,
   isDangerousEnvironment,
   reserveBrainsForTricks,
+  getAIDynamicDialogue,
+  HERO_DYNAMIC_DIALOGUES,
 } from '../engine/ai'
 import { createInitialGameState } from '../engine/reducer'
 import { ALL_CARDS, getCardById } from '../data/cards'
@@ -1278,4 +1280,467 @@ describe('AI Opponent Engine Tactics Suite (Phase 7)', () => {
       })
     })
   })
+
+  // =========================================================================
+  // 8. 20 HERO SIGNATURE SUPERPOWERS DECISION MATRIX (PLANTS & ZOMBIES)
+  // =========================================================================
+  describe('8. 20 Hero Signature Superpowers Decision Matrix', () => {
+    function createSP(id: string, name: string, side: 'plants' | 'zombies'): Card {
+      return {
+        id,
+        name,
+        side,
+        cost: 0,
+        attack: 0,
+        health: 0,
+        type: 'superpower',
+        image: '/assets/mock_sp.png',
+      }
+    }
+
+    // --- 10 PLANT HEROES ---
+    describe('10 Plant Heroes Signature Superpowers', () => {
+      it('1. Green Shadow (Precision Blast): strikes middle lane (index 2)', () => {
+        const state = setupState()
+        const sp = createSP('sp_precision_blast', 'Precision Blast', 'plants')
+        state.lanes[2].zombieMinion = createTestMinion({
+          instanceId: 'z2',
+          cardId: 'zombie_swabbie',
+          name: 'Swabbie',
+          side: 'zombies',
+          currentAttack: 1,
+          currentHealth: 1,
+        })
+        const decision = getAISuperpowerDecision(state, 'plants', sp, 'tempo')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.targetLaneIndex).toBe(2)
+        expect(decision.reason).toContain('Precision Blast strikes middle lane')
+      })
+
+      it('2. Solar Flare (Sunburn): eliminates killable zombie and secures permanent +1 Sun', () => {
+        const state = setupState()
+        const sp = createSP('sp_sunburn', 'Sunburn', 'plants')
+        state.lanes[1].zombieMinion = createTestMinion({
+          instanceId: 'z1',
+          cardId: 'zombie_conehead',
+          name: 'Conehead',
+          side: 'zombies',
+          currentAttack: 2,
+          currentHealth: 2,
+        })
+        const decision = getAISuperpowerDecision(state, 'plants', sp, 'aggro')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.targetLaneIndex).toBe(1)
+        expect(decision.reason).toContain('Sunburn eliminates zombie in lane 2')
+      })
+
+      it('3. Wall-Knight (Uncrackable): shields hero from lethal damage and draws a card', () => {
+        const state = setupState()
+        const sp = createSP('sp_uncrackable', 'Uncrackable', 'plants')
+        state.plantHero.hp = 5
+        state.lanes[0].zombieMinion = createTestMinion({
+          instanceId: 'z0',
+          cardId: 'zombie_all_star',
+          name: 'All-Star Zombie',
+          side: 'zombies',
+          currentAttack: 6,
+          currentHealth: 5,
+        })
+        const decision = getAISuperpowerDecision(state, 'plants', sp, 'control')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.reason).toContain('Uncrackable shields Plant Hero')
+      })
+
+      it('4. Chompzilla (Devour): swallows lowest-health zombie or saves if board empty', () => {
+        const state = setupState()
+        const sp = createSP('sp_devour', 'Devour', 'plants')
+
+        // Empty board: save
+        const saveDecision = getAISuperpowerDecision(state, 'plants', sp, 'tempo')
+        expect(saveDecision.action).toBe('SAVE_SUPERPOWER')
+        expect(saveDecision.reason).toContain('Save Devour')
+
+        // Lane 1 has 5 HP zombie, Lane 3 has 2 HP zombie
+        state.lanes[1].zombieMinion = createTestMinion({
+          instanceId: 'z1',
+          cardId: 'zombie_buckethead',
+          name: 'Buckethead',
+          side: 'zombies',
+          currentAttack: 3,
+          currentHealth: 5,
+        })
+        state.lanes[3].zombieMinion = createTestMinion({
+          instanceId: 'z3',
+          cardId: 'zombie_swabbie',
+          name: 'Swabbie',
+          side: 'zombies',
+          currentAttack: 1,
+          currentHealth: 2,
+        })
+
+        const playDecision = getAISuperpowerDecision(state, 'plants', sp, 'tempo')
+        expect(playDecision.action).toBe('PLAY_SUPERPOWER')
+        expect(playDecision.targetLaneIndex).toBe(3) // Targets lowest HP zombie (Lane 4, index 3)
+        expect(playDecision.reason).toContain('Devour destroys lowest-health zombie Swabbie (2 HP)')
+      })
+
+      it('5. Spudow (Tater Toss): places Hothead in front of dangerous zombie to absorb and deal 6 dmg', () => {
+        const state = setupState()
+        const sp = createSP('sp_tater_toss', 'Tater Toss', 'plants')
+        state.lanes[2].zombieMinion = createTestMinion({
+          instanceId: 'z2',
+          cardId: 'zombie_all_star',
+          name: 'All-Star',
+          side: 'zombies',
+          currentAttack: 5,
+          currentHealth: 6,
+        })
+        const decision = getAISuperpowerDecision(state, 'plants', sp, 'tempo')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.targetLaneIndex).toBe(2)
+        expect(decision.reason).toContain('retaliate for 6 damage')
+      })
+
+      it('6. Citron (Peel Shield): grants invulnerability to plants facing combat and draws card', () => {
+        const state = setupState()
+        const sp = createSP('sp_peel_shield', 'Peel Shield', 'plants')
+
+        state.lanes[1].plantMinion = createTestMinion({
+          instanceId: 'p1',
+          cardId: 'plant_peashooter',
+          name: 'Peashooter',
+          side: 'plants',
+          currentAttack: 1,
+          currentHealth: 1,
+        })
+        state.lanes[1].zombieMinion = createTestMinion({
+          instanceId: 'z1',
+          cardId: 'zombie_swabbie',
+          name: 'Swabbie',
+          side: 'zombies',
+          currentAttack: 1,
+          currentHealth: 1,
+        })
+
+        const decision = getAISuperpowerDecision(state, 'plants', sp, 'control')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.reason).toContain('Peel Shield grants invulnerability')
+      })
+
+      it('7. Grass Knuckles (Power Pummel): attacks all 3 ground lanes when zombies present', () => {
+        const state = setupState()
+        const sp = createSP('sp_power_pummel', 'Power Pummel', 'plants')
+        state.lanes[2].zombieMinion = createTestMinion({
+          instanceId: 'z2',
+          cardId: 'zombie_swabbie',
+          name: 'Swabbie',
+          side: 'zombies',
+          currentAttack: 1,
+          currentHealth: 1,
+        })
+        const decision = getAISuperpowerDecision(state, 'plants', sp, 'tempo')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.reason).toContain('Power Pummel attacks across all 3 ground lanes')
+      })
+
+      it('8. Nightcap (Mush-Boom): deals 2 lethal damage to low-HP zombie and spawns Poison Mushroom', () => {
+        const state = setupState()
+        const sp = createSP('sp_mush_boom', 'Mush-Boom', 'plants')
+        state.lanes[1].zombieMinion = createTestMinion({
+          instanceId: 'z1',
+          cardId: 'zombie_conga_zombie',
+          name: 'Conga Zombie',
+          side: 'zombies',
+          currentAttack: 2,
+          currentHealth: 2,
+        })
+        const decision = getAISuperpowerDecision(state, 'plants', sp, 'aggro')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.targetLaneIndex).toBe(1)
+        expect(decision.reason).toContain('Mush-Boom deals 2 lethal damage')
+      })
+
+      it('9. Rose (Goatify): transforms highest attack zombie (>= 3 ATK) into a 1/1 Goat', () => {
+        const state = setupState()
+        const sp = createSP('sp_goatify', 'Goatify', 'plants')
+
+        // Lane 0: 2 ATK zombie, Lane 3: 6 ATK giant zombie
+        state.lanes[0].zombieMinion = createTestMinion({
+          instanceId: 'z0',
+          cardId: 'zombie_arm_wrestler',
+          name: 'Arm Wrestler',
+          side: 'zombies',
+          currentAttack: 2,
+          currentHealth: 2,
+        })
+        state.lanes[3].zombieMinion = createTestMinion({
+          instanceId: 'z3',
+          cardId: 'zombie_knight',
+          name: 'Knight of the Living Dead',
+          side: 'zombies',
+          currentAttack: 6,
+          currentHealth: 6,
+        })
+
+        const decision = getAISuperpowerDecision(state, 'plants', sp, 'control')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.targetLaneIndex).toBe(3) // Targets 6 ATK zombie
+        expect(decision.reason).toContain('Goatify transforms highest attack zombie Knight of the Living Dead (6 ATK)')
+      })
+
+      it('10. Captain Combustible (Blazing Bark): buffs unblocked plant with +4 Attack for burst', () => {
+        const state = setupState()
+        const sp = createSP('sp_blazing_bark', 'Blazing Bark', 'plants')
+
+        // Lane 1 has an unblocked plant
+        state.lanes[1].plantMinion = createTestMinion({
+          instanceId: 'p1',
+          cardId: 'plant_repeater',
+          name: 'Repeater',
+          side: 'plants',
+          currentAttack: 2,
+          currentHealth: 2,
+        })
+
+        const decision = getAISuperpowerDecision(state, 'plants', sp, 'aggro')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.targetLaneIndex).toBe(1)
+        expect(decision.reason).toContain('Blazing Bark grants +4 Attack to unblocked Repeater')
+      })
+    })
+
+    // --- 10 ZOMBIE HEROES ---
+    describe('10 Zombie Heroes Signature Superpowers', () => {
+      it('11. Super Brainz (Carried Away): moves zombie with >= 2 ATK to open lane for bonus attack', () => {
+        const state = setupState()
+        const sp = createSP('sp_carried_away', 'Carried Away', 'zombies')
+        state.lanes[0].zombieMinion = createTestMinion({
+          instanceId: 'z0',
+          cardId: 'zombie_arm_wrestler',
+          name: 'Arm Wrestler',
+          side: 'zombies',
+          currentAttack: 3,
+          currentHealth: 3,
+        })
+        const decision = getAISuperpowerDecision(state, 'zombies', sp, 'aggro')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.reason).toContain('Carried Away moves Arm Wrestler')
+      })
+
+      it('12. The Smash (Slammin\' Smash): destroys plant with <= 4 Attack of high threat', () => {
+        const state = setupState()
+        const sp = createSP('sp_slammin_pumpkin', 'Slammin\' Pumpkin', 'zombies')
+        state.lanes[1].plantMinion = createTestMinion({
+          instanceId: 'p1',
+          cardId: 'plant_repeater',
+          name: 'Repeater',
+          side: 'plants',
+          currentAttack: 4,
+          currentHealth: 3,
+        })
+        const decision = getAISuperpowerDecision(state, 'zombies', sp, 'tempo')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.targetLaneIndex).toBe(1)
+        expect(decision.reason).toContain('Slammin\' Smash destroys plant')
+      })
+
+      it('13. Impfinity (Triple Threat): summons two 2/1 Amphibious Imp Clones when lanes open', () => {
+        const state = setupState()
+        const sp = createSP('sp_triple_threat', 'Triple Threat', 'zombies')
+        const decision = getAISuperpowerDecision(state, 'zombies', sp, 'aggro')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.reason).toContain('Triple Threat floods lanes with two 2/1 Amphibious Imp Clones')
+      })
+
+      it('14. Rustbolt (Shrink Ray): suppresses 2+ attack plant with -3 Attack and draws card', () => {
+        const state = setupState()
+        const sp = createSP('sp_shrink_ray', 'Shrink Ray', 'zombies')
+        state.lanes[2].plantMinion = createTestMinion({
+          instanceId: 'p2',
+          cardId: 'plant_peashooter',
+          name: 'Peashooter',
+          side: 'plants',
+          currentAttack: 3,
+          currentHealth: 3,
+        })
+        const decision = getAISuperpowerDecision(state, 'zombies', sp, 'control')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.targetLaneIndex).toBe(2)
+        expect(decision.reason).toContain('Shrink Ray suppresses plant in lane 3 with -3 Attack')
+      })
+
+      it('15. Electric Boogaloo (Stayin\' Alive): deals 3 damage to plant and heals hero 3 HP', () => {
+        const state = setupState()
+        const sp = createSP('sp_stayin_alive', 'Stayin\' Alive', 'zombies')
+        state.lanes[1].plantMinion = createTestMinion({
+          instanceId: 'p1',
+          cardId: 'plant_snowdrop',
+          name: 'Snowdrop',
+          side: 'plants',
+          currentAttack: 2,
+          currentHealth: 3,
+        })
+        const decision = getAISuperpowerDecision(state, 'zombies', sp, 'control')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.targetLaneIndex).toBe(1)
+        expect(decision.reason).toContain('Stayin\' Alive deals 3 damage to Snowdrop')
+      })
+
+      it('16. Brain Freeze (Frozen Tundra): freezes all ground plants or saves if no ground plants', () => {
+        const state = setupState()
+        const sp = createSP('sp_frozen_tundra', 'Frozen Tundra', 'zombies')
+
+        // Empty board: save
+        const saveDecision = getAISuperpowerDecision(state, 'zombies', sp, 'tempo')
+        expect(saveDecision.action).toBe('SAVE_SUPERPOWER')
+        expect(saveDecision.reason).toContain('Save Frozen Tundra')
+
+        // Plant in ground lane 2 (index 1)
+        state.lanes[1].plantMinion = createTestMinion({
+          instanceId: 'p1',
+          cardId: 'plant_peashooter',
+          name: 'Peashooter',
+          side: 'plants',
+          currentAttack: 2,
+          currentHealth: 2,
+        })
+        const playDecision = getAISuperpowerDecision(state, 'zombies', sp, 'tempo')
+        expect(playDecision.action).toBe('PLAY_SUPERPOWER')
+        expect(playDecision.reason).toContain('Frozen Tundra freezes 1 plants on ground lanes')
+      })
+
+      it('17. Professor Brainstorm (Eureka): conjures 3 cards when hand <= 7', () => {
+        const state = setupState()
+        const sp = createSP('sp_eureka', 'Eureka', 'zombies')
+        state.zombieHand = [getCard('zombie_swabbie')]
+        const decision = getAISuperpowerDecision(state, 'zombies', sp, 'control')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.reason).toContain('Eureka conjures 3 random cards')
+      })
+
+      it('18. Immorticia (Witch\'s Familiar): summons 2/1 Amphibious Zombat prioritizing water lane', () => {
+        const state = setupState()
+        const sp = createSP('sp_witchs_familiar', 'Witch\'s Familiar', 'zombies')
+        const decision = getAISuperpowerDecision(state, 'zombies', sp, 'control')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.targetLaneIndex).toBe(4) // Water lane (index 4)
+        expect(decision.reason).toContain('Witch\'s Familiar summons 2/1 Amphibious Zombat in lane 5')
+      })
+
+      it('19. Z-Mech (Missile Madness): barrages enemy plants with rockets', () => {
+        const state = setupState()
+        const sp = createSP('sp_missile_madness', 'Missile Madness', 'zombies')
+        state.lanes[1].plantMinion = createTestMinion({
+          instanceId: 'p1',
+          cardId: 'plant_peashooter',
+          name: 'Peashooter',
+          side: 'plants',
+          currentAttack: 1,
+          currentHealth: 1,
+        })
+        const decision = getAISuperpowerDecision(state, 'zombies', sp, 'aggro')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.reason).toContain('Missile Madness barrages all enemy plants')
+      })
+
+      it('20. Neptuna (Octo-Pult): launches 3/2 Amphibious Octo-Pet into water lane', () => {
+        const state = setupState()
+        const sp = createSP('sp_octo_pult', 'Octo-Pult', 'zombies')
+        const decision = getAISuperpowerDecision(state, 'zombies', sp, 'tempo')
+        expect(decision.action).toBe('PLAY_SUPERPOWER')
+        expect(decision.targetLaneIndex).toBe(4) // Water lane (index 4)
+        expect(decision.reason).toContain('Octo-Pult launches 3/2 Amphibious Octo-Pet in lane 5')
+      })
+
+      it('Bonus: Beta-Carrotina (Genetic Amplification) and Huge-Gigantacus (Terror-Former)', () => {
+        const state = setupState()
+        const bc = createSP('sp_genetic_amplification', 'Genetic Amplification', 'plants')
+        const bcDecision = getAISuperpowerDecision(state, 'plants', bc, 'combo')
+        expect(bcDecision.action).toBe('PLAY_SUPERPOWER')
+        expect(bcDecision.reason).toContain('Genetic Amplification conjures an enhanced')
+
+        const hg = createSP('sp_terror_former_10000', 'Terror-Former 10,000', 'zombies')
+        const hgDecision = getAISuperpowerDecision(state, 'zombies', hg, 'combo')
+        expect(hgDecision.action).toBe('PLAY_SUPERPOWER')
+        expect(hgDecision.reason).toContain('Terror-Former 10,000 reduces the cost')
+      })
+    })
+  })
+
+  // =========================================================================
+  // 9. DYNAMIC BOSS & HERO DIALOGUE TRIGGERS (COMIC SPEECH BUBBLES)
+  // =========================================================================
+  describe('9. Dynamic Boss & Hero Dialogue Triggers', () => {
+    it('contains authentic dialogue quotes for all 20 Heroes in HERO_DYNAMIC_DIALOGUES', () => {
+      const heroes = [
+        // 10 Plants
+        'hero_green_shadow',
+        'hero_solar_flare',
+        'hero_wall_knight',
+        'hero_chompzilla',
+        'hero_spudow',
+        'hero_citron',
+        'hero_grass_knuckles',
+        'hero_nightcap',
+        'hero_rose',
+        'hero_captain_combustible',
+        // 10 Zombies
+        'hero_super_brainz',
+        'hero_the_smash',
+        'hero_impfinity',
+        'hero_rustbolt',
+        'hero_electric_boogaloo',
+        'hero_brain_freeze',
+        'hero_professor_brainstorm',
+        'hero_immorticia',
+        'hero_z_mech',
+        'hero_neptuna',
+      ]
+
+      for (const h of heroes) {
+        const dialogue = HERO_DYNAMIC_DIALOGUES[h]
+        expect(dialogue).toBeDefined()
+        expect(dialogue.superpower.text.length).toBeGreaterThan(10)
+        expect(dialogue.superpower.emoji.length).toBeGreaterThan(0)
+        expect(dialogue.lowHp.text.length).toBeGreaterThan(10)
+        expect(dialogue.destroyMinion.text.length).toBeGreaterThan(10)
+      }
+    })
+
+    it('generates dynamic dialogue when firing Signature Superpower', () => {
+      const d1 = getAIDynamicDialogue('hero_green_shadow', 'SIGNATURE_SUPERPOWER')
+      expect(d1.trigger).toBe('SIGNATURE_SUPERPOWER')
+      expect(d1.text).toContain('Precision Blast')
+      expect(d1.emoji).toBe('🎯')
+
+      const d2 = getAIDynamicDialogue('hero_the_smash', 'SIGNATURE_SUPERPOWER')
+      expect(d2.text).toContain('Slammin\' Smash')
+      expect(d2.emoji).toBe('🤼')
+    })
+
+    it('generates dynamic dialogue when HP drops to critical level (<= 5 HP)', () => {
+      const d = getAIDynamicDialogue('hero_solar_flare', 'LOW_HP', { heroHp: 4 })
+      expect(d.trigger).toBe('LOW_HP')
+      expect(d.text).toContain('Bão mặt trời sắp bùng nổ')
+      expect(d.emoji).toBe('🔥')
+    })
+
+    it('generates dynamic dialogue when eliminating an opposing key minion', () => {
+      const d = getAIDynamicDialogue('hero_super_brainz', 'DESTROY_KEY_MINION', {
+        destroyedMinionName: 'Dark Matter Dragonfruit',
+      })
+      expect(d.trigger).toBe('DESTROY_KEY_MINION')
+      expect(d.text).toContain('Dark Matter Dragonfruit đã bị tiêu diệt!')
+      expect(d.text).toContain('Cú đấm siêu anh hùng!')
+      expect(d.emoji).toBe('💪')
+    })
+
+    it('provides thematic fallback dialogue for unknown or custom heroes', () => {
+      const fallback = getAIDynamicDialogue('hero_unknown_boss', 'LOW_HP')
+      expect(fallback.trigger).toBe('LOW_HP')
+      expect(fallback.text).toContain('Máu sắp cạn nhưng tinh thần chiến đấu vẫn rực cháy!')
+      expect(fallback.emoji).toBe('💥')
+    })
+  })
 })
+

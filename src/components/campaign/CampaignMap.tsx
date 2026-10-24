@@ -783,14 +783,14 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
                     <span className="summary-card-emoji">🧟</span>
                     <span className="summary-card-label">Sao Thây Ma</span>
                     <span className="summary-card-val">
-                      {combinedCampaignStars.zombieStars} / 15 ⭐
+                      {combinedCampaignStars.zombieStars} / 30 ⭐
                     </span>
                   </div>
                   <div className="stars-summary-card total-stars-card">
                     <span className="summary-card-emoji">⭐</span>
                     <span className="summary-card-label">Tổng Sao Thu Thập</span>
                     <span className="summary-card-val">
-                      {combinedCampaignStars.totalStars} / 45 ⭐
+                      {combinedCampaignStars.totalStars} / 60 ⭐
                     </span>
                   </div>
                 </div>

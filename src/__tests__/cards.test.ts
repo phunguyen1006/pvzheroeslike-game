@@ -901,6 +901,170 @@ describe('Round 5 Card Catalog Validation Suite', () => {
         expect(transformedCard?.cost).toBe(3)
         expect(transformRes.events.some(e => e.includes('Interdimensional Zombie'))).toBe(true)
       })
+
+      it('should validate Space Cowboy metadata, tribes, and rightward movement when hurting Plant Hero', () => {
+        const card = getCardById('zombie_space_cowboy')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Space Cowboy')
+        expect(card?.cost).toBe(4)
+        expect(card?.attack).toBe(3)
+        expect(card?.hp).toBe(5)
+        expect(card?.rarity).toBe('Legendary')
+        expect(card?.heroClass).toBe('Sneaky')
+        expect(card?.strikethrough).toBe(true)
+        expect(card?.tribe).toBe('Pirate Science Monster Zombie')
+        expect(ASSET_MANIFEST.cards.zombies['Space Cowboy']).toBeDefined()
+
+        // Test combat: Space Cowboy in lane 0 hits Plant Hero directly (open lane), moves to lane 1 and attacks lane 1
+        const state = createInitialGameState()
+        state.plantHero.hp = 20
+        state.lanes[0].zombieMinion = createMockMinion('sc1', 'Space Cowboy', 'zombies', 3, 5, {
+          cardId: 'zombie_space_cowboy',
+          strikethrough: true,
+        })
+        // Lane 0 is open, lane 1 has an enemy plant with 2 HP
+        state.lanes[1].plantMinion = createMockMinion('p1', 'Peashooter', 'plants', 1, 2, { cardId: 'plant_peashooter' })
+        // Lane 2 has a zombie minion, blocking further movement to the right, and a plant minion absorbing zombie damage
+        state.lanes[2].plantMinion = createMockMinion('p2', 'Wall-Nut', 'plants', 0, 6, { cardId: 'plant_wall_nut' })
+        state.lanes[2].zombieMinion = createMockMinion('z2', 'Conehead', 'zombies', 2, 2)
+
+        const { updatedState, result } = resolveCombat(state)
+        // Space Cowboy attacked lane 0 -> hit Plant Hero for 3 -> moved to lane 1 -> attacked lane 1 (Strikethrough)
+        // Movement stopped at lane 1 because lane 2 is occupied by Conehead
+        expect(updatedState.plantHero.hp).toBe(14) // 20 - 3 (lane 0) - 3 (lane 1 Strikethrough)
+        expect(updatedState.lanes[0].zombieMinion).toBeNull()
+        expect(updatedState.lanes[1].zombieMinion?.name).toBe('Space Cowboy')
+        expect(updatedState.lanes[2].zombieMinion?.name).toBe('Conehead')
+        expect(result.events.some(e => e.description.includes('Space Cowboy') || e.attackerName === 'Space Cowboy')).toBe(true)
+      })
+
+      it('should validate Astrocado metadata, Strikethrough, and Pit reincarnation cycle', () => {
+        const card = getCardById('plant_astrocado')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Astrocado')
+        expect(card?.cost).toBe(5)
+        expect(card?.attack).toBe(5)
+        expect(card?.hp).toBe(3)
+        expect(card?.rarity).toBe('Legendary')
+        expect(card?.tribe).toBe('Fruit Plant')
+        expect(card?.heroClass).toBe('Solar')
+        expect(card?.strikethrough).toBe(true)
+        expect(ASSET_MANIFEST.cards.plants['Astrocado']).toBeDefined()
+
+        // When Astrocado is destroyed, creates Astrocado Pit in plant hand
+        const state = createInitialGameState()
+        state.plantHand = []
+        const astrocadoMinion = createMockMinion('astro1', 'Astrocado', 'plants', 5, 3, {
+          cardId: 'plant_astrocado',
+          strikethrough: true,
+        })
+        state.lanes[0].plantMinion = astrocadoMinion
+
+        const destroyRes = triggerWhenDestroyed(state, astrocadoMinion, 0, 'plants')
+        expect(destroyRes.updatedState.plantHand.length).toBe(1)
+        const pitCard = destroyRes.updatedState.plantHand[0]
+        expect(pitCard.name).toBe('Astrocado Pit')
+        expect(pitCard.cost).toBe(1)
+        expect(pitCard.health).toBe(1)
+        expect(pitCard.attack).toBe(0)
+      })
+
+      it('should validate Astrocado Pit metadata and start-of-turn transformation into Astrocado', () => {
+        const pitCard = getCardById('plant_astrocado_pit')
+        expect(pitCard).toBeDefined()
+        expect(pitCard?.name).toBe('Astrocado Pit')
+        expect(pitCard?.cost).toBe(1)
+        expect(pitCard?.attack).toBe(0)
+        expect(pitCard?.hp).toBe(1)
+        expect(pitCard?.rarity).toBe('Token')
+        expect(pitCard?.tribe).toBe('Fruit Plant')
+        expect(pitCard?.heroClass).toBe('Solar')
+        expect(ASSET_MANIFEST.cards.plants['Astrocado Pit']).toBeDefined()
+
+        // Start of turn: transforms into 5/3 Strikethrough Astrocado
+        const state = createInitialGameState()
+        state.lanes[1].plantMinion = createMockMinion('pit1', 'Astrocado Pit', 'plants', 0, 1, {
+          cardId: 'plant_astrocado_pit',
+        })
+
+        const turnRes = triggerStartOfTurn(state, 'plants')
+        const transformed = turnRes.updatedState.lanes[1].plantMinion
+        expect(transformed).toBeDefined()
+        expect(transformed?.name).toBe('Astrocado')
+        expect(transformed?.cardId).toBe('plant_astrocado')
+        expect(transformed?.currentAttack).toBe(5)
+        expect(transformed?.currentHealth).toBe(3)
+        expect(transformed?.strikethrough).toBe(true)
+      })
+
+      it('should validate Cob Cannon metadata, Corn Evolution placement, and splash destruction', () => {
+        const card = getCardById('plant_cob_cannon')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Cob Cannon')
+        expect(card?.cost).toBe(6)
+        expect(card?.attack).toBe(6)
+        expect(card?.hp).toBe(6)
+        expect(card?.rarity).toBe('Legendary')
+        expect(card?.tribe).toBe('Corn Plant')
+        expect(card?.heroClass).toBe('Solar')
+        expect(ASSET_MANIFEST.cards.plants['Cob Cannon']).toBeDefined()
+
+        // Test Corn Evolution placement: can evolve on Corn minion
+        const state = createInitialGameState()
+        state.lanes[2].plantMinion = createMockMinion('corn1', 'Kernel Corn', 'plants', 6, 6, {
+          cardId: 'plant_kernel_corn',
+          tribe: 'Corn Plant',
+        })
+        const cobCard = convertCardDataToCard(card, 'plants')
+        const canPlay = canPlayCardToLane(state, cobCard, 2, 'plants')
+        expect(canPlay.allowed).toBe(true)
+
+        // Test Cob Cannon when played with Corn Evolution
+        state.lanes[1].zombieMinion = createMockMinion('z1', 'Conehead', 'zombies', 2, 2)
+        state.lanes[2].zombieMinion = createMockMinion('z2', 'Gargantuar', 'zombies', 5, 5)
+        state.lanes[3].zombieMinion = createMockMinion('z3', 'Buckethead', 'zombies', 3, 3)
+
+        const cobMinion = createMockMinion('cob1', 'Cob Cannon', 'plants', 6, 6, {
+          cardId: 'plant_cob_cannon',
+          isEvolved: true,
+        })
+        const abilityRes = triggerWhenPlayed(state, cobMinion, 2, 'plants')
+
+        // Target zombie in lane 2 is destroyed
+        expect(abilityRes.updatedState.lanes[2].zombieMinion).toBeNull()
+        // Adjacent zombies take 1 splash damage
+        expect(abilityRes.updatedState.lanes[1].zombieMinion?.currentHealth).toBe(1)
+        expect(abilityRes.updatedState.lanes[3].zombieMinion?.currentHealth).toBe(2)
+      })
+
+      it('should validate Bird of Paradise metadata, Amphibious trait, and Superpower conjure at start of turn', () => {
+        const card = getCardById('plant_bird_of_paradise')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Bird of Paradise')
+        expect(card?.cost).toBe(5)
+        expect(card?.attack).toBe(4)
+        expect(card?.hp).toBe(5)
+        expect(card?.rarity).toBe('Legendary')
+        expect(card?.tribe).toBe('Flower Animal Plant')
+        expect(card?.heroClass).toBe('Smarty')
+        expect(card?.amphibious).toBe(true)
+        expect(ASSET_MANIFEST.cards.plants['Bird of Paradise']).toBeDefined()
+
+        // Test start of turn: Conjures random Superpower
+        const state = createInitialGameState()
+        state.plantHand = []
+        state.lanes[4].plantMinion = createMockMinion('bop1', 'Bird of Paradise', 'plants', 4, 5, {
+          cardId: 'plant_bird_of_paradise',
+          amphibious: true,
+        })
+
+        const turnRes = triggerStartOfTurn(state, 'plants')
+        expect(turnRes.updatedState.plantHand.length).toBe(1)
+        const conjured = turnRes.updatedState.plantHand[0]
+        expect(conjured.type).toBe('superpower')
+        expect(conjured.side).toBe('plants')
+        expect(turnRes.events.some(e => e.includes('Bird of Paradise'))).toBe(true)
+      })
     })
   })
 })

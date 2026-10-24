@@ -15,8 +15,8 @@ export interface AbilityTriggerResult {
 export function isSportsZombie(minion: Minion): boolean {
   if (minion.side && minion.side !== 'zombies') return false
   const tribe = (minion.tribe || '').toLowerCase()
-  const id = minion.cardId.toLowerCase()
-  const name = minion.name.toLowerCase()
+  const id = (minion.cardId || (minion as any).id || '').toLowerCase()
+  const name = (minion.name || '').toLowerCase()
   if (
     tribe.includes('sports') ||
     id.includes('sports') ||
@@ -29,15 +29,15 @@ export function isSportsZombie(minion: Minion): boolean {
   ) {
     return true
   }
-  const card = ZOMBIE_CARDS.find((c) => c.id === minion.cardId)
+  const card = ZOMBIE_CARDS.find((c) => c.id === (minion.cardId || (minion as any).id))
   return Boolean(card?.tribe?.toLowerCase().includes('sports'))
 }
 
 export function isScienceZombie(minion: Minion): boolean {
   if (minion.side && minion.side !== 'zombies') return false
   const tribe = (minion.tribe || '').toLowerCase()
-  const id = minion.cardId.toLowerCase()
-  const name = minion.name.toLowerCase()
+  const id = (minion.cardId || (minion as any).id || '').toLowerCase()
+  const name = (minion.name || '').toLowerCase()
   if (
     tribe.includes('science') ||
     id.includes('science') ||
@@ -51,15 +51,15 @@ export function isScienceZombie(minion: Minion): boolean {
   ) {
     return true
   }
-  const card = ZOMBIE_CARDS.find((c) => c.id === minion.cardId)
+  const card = ZOMBIE_CARDS.find((c) => c.id === (minion.cardId || (minion as any).id))
   return Boolean(card?.tribe?.toLowerCase().includes('science'))
 }
 
 export function isMushroomPlant(minion: Minion): boolean {
   if (minion.side && minion.side !== 'plants') return false
   const tribe = (minion.tribe || '').toLowerCase()
-  const id = minion.cardId.toLowerCase()
-  const name = minion.name.toLowerCase()
+  const id = (minion.cardId || (minion as any).id || '').toLowerCase()
+  const name = (minion.name || '').toLowerCase()
   if (
     tribe.includes('mushroom') ||
     id.includes('shroom') ||
@@ -69,15 +69,15 @@ export function isMushroomPlant(minion: Minion): boolean {
   ) {
     return true
   }
-  const card = ALL_CARDS.find((c) => c.id === minion.cardId)
+  const card = ALL_CARDS.find((c) => c.id === (minion.cardId || (minion as any).id))
   return Boolean(card?.tribe?.toLowerCase().includes('mushroom'))
 }
 
 export function isPeaPlant(minion: Minion): boolean {
   if (minion.side && minion.side !== 'plants') return false
   const tribe = (minion.tribe || '').toLowerCase()
-  const id = minion.cardId.toLowerCase()
-  const name = minion.name.toLowerCase()
+  const id = (minion.cardId || (minion as any).id || '').toLowerCase()
+  const name = (minion.name || '').toLowerCase()
   if (
     tribe.includes('pea') ||
     id.includes('pea') ||
@@ -87,7 +87,7 @@ export function isPeaPlant(minion: Minion): boolean {
   ) {
     return true
   }
-  const card = ALL_CARDS.find((c) => c.id === minion.cardId)
+  const card = ALL_CARDS.find((c) => c.id === (minion.cardId || (minion as any).id))
   return Boolean(card?.tribe?.toLowerCase().includes('pea'))
 }
 
@@ -648,7 +648,8 @@ export function triggerWhenPlayed(
   } else if (side === 'zombies') {
     // Interdimensional Zombie: When you play a Science card (minion or trick): Transforms into a random 3-cost Zombie!
     if (isScienceZombie(minion)) {
-      const sciRes = triggerWhenSciencePlayed(updatedState, minion, 'zombies', minion.instanceId)
+      const playedInstanceId = (minion as any).instanceId || updatedState.lanes[laneIndex]?.zombieMinion?.instanceId
+      const sciRes = triggerWhenSciencePlayed(updatedState, minion, 'zombies', playedInstanceId)
       updatedState = sciRes.updatedState
       events.push(...sciRes.events)
     }
@@ -736,7 +737,7 @@ export function triggerWhenHurt(
 /**
  * Triggered at the start of a turn (e.g. Sunflower, Doubled Mint)
  */
-export function triggerStartOfTurn(state: GameState, side: Side): AbilityTriggerResult {
+export function triggerStartOfTurn(state: GameState, side: Side = 'plants'): AbilityTriggerResult {
   let updatedState: GameState = {
     ...state,
     lanes: state.lanes.map(l => ({ ...l })),
@@ -745,7 +746,7 @@ export function triggerStartOfTurn(state: GameState, side: Side): AbilityTrigger
   }
   const events: string[] = []
 
-  if (side === 'plants') {
+  if (!side || side === 'plants') {
     // 1. Sunflower: "Start of Turn: You get +1 Sun"
     let bonusSun = 0
     updatedState.lanes.forEach(l => {
@@ -1172,6 +1173,26 @@ export function triggerWhenDestroyed(
   const events: string[] = []
 
   // 1. Minion's own When Destroyed ability
+  if (destroyedMinion.cardId === 'plant_astrocado') {
+    if (updatedState.plantHand.length < 10) {
+      const pitCard: Card = {
+        id: `plant_astrocado_pit_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        name: 'Astrocado Pit',
+        side: 'plants',
+        cost: 1,
+        attack: 0,
+        health: 1,
+        type: 'minion',
+        image: '/assets/cards/plants/Sunflower.png',
+        traits: [],
+        tribe: 'Fruit Plant',
+        description: 'Đầu lượt (Start of Turn): Hạt bơ này biến hình thành Astrocado 5/3!',
+      }
+      updatedState.plantHand.push(pitCard)
+      events.push(`🥑 Astrocado hy sinh nhưng để lại một Hạt Bơ (Astrocado Pit 0/1) vào tay bạn!`)
+    }
+  }
+
   if (destroyedMinion.cardId === 'plant_potato_mine') {
     const lane = updatedState.lanes[laneIndex]
     if (lane && lane.zombieMinion) {
@@ -1425,12 +1446,20 @@ export function freezeMinion(
            (l.plantTeamUpMinion && (l.plantTeamUpMinion.cardId === 'plant_winter_squash' || l.plantTeamUpMinion.name.toLowerCase().includes('winter squash')))
     )
     if (hasWinterSquash) {
-      events.push(`🎃 Winter Squash giáng đòn nghiền nát: Tiêu diệt ngay Zombie bị đóng băng (${targetMinion.name})!`)
+      events.push(`🎃 Winter Squash Tiêu diệt ngay Zombie bị đóng băng (${targetMinion.name})!`)
       lane.zombieMinion = null
     }
   }
 
   return { updatedState, events }
+}
+
+export function triggerWhenFrozen(
+  state: GameState,
+  laneIndex: number,
+  side: Side = 'zombies'
+): FreezeResult {
+  return freezeMinion(state, laneIndex, side)
 }
 
 /**

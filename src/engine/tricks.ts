@@ -1,4 +1,4 @@
-import type { GameState, HeroState, Side, Card } from './types'
+import type { GameState, HeroState, Side, Card, Minion } from './types'
 import { applyHeroDamage } from './combat'
 import { drawCard } from './reducer'
 import { triggerWhenTrickPlayed, isUntrickable } from './abilities'
@@ -137,15 +137,17 @@ export function executeTrick(
           if (lane.zombieMinion.isInvulnerable || lane.zombieMinion.invulnerableThisTurn) {
             message = `${lane.zombieMinion.name} Miễn thương (Invulnerable) nên không nhận sát thương từ Berry Blast!`
           } else {
+            const armor = lane.zombieMinion.armored || (lane.zombieMinion.traits?.includes('armored') ? 1 : 0)
+            const effectiveDmg = Math.max(0, 3 - armor)
             lane.zombieMinion = {
               ...lane.zombieMinion,
-              currentHealth: Math.max(0, lane.zombieMinion.currentHealth - 3),
+              currentHealth: Math.max(0, lane.zombieMinion.currentHealth - effectiveDmg),
             }
             if (lane.zombieMinion.currentHealth <= 0) {
               message = `Berry Blast tiêu diệt ${lane.zombieMinion.name}!`
               lane.zombieMinion = null
             } else {
-              message = `Berry Blast gây 3 sát thương lên ${lane.zombieMinion.name} (còn ${lane.zombieMinion.currentHealth} HP).`
+              message = `Berry Blast gây ${effectiveDmg} sát thương lên ${lane.zombieMinion.name} (còn ${lane.zombieMinion.currentHealth} HP).`
             }
           }
         }
@@ -199,6 +201,27 @@ export function executeTrick(
       break
     }
 
+    case 'plant_doom_shroom': {
+      // Destroy all plants and zombies with 4 Attack or more (affects untrickable because it's non-targeted AOE)
+      const destroyed: string[] = []
+      updatedLanes.forEach(lane => {
+        if (lane.plantMinion && lane.plantMinion.currentAttack >= 4) {
+          destroyed.push(lane.plantMinion.name)
+          lane.plantMinion = null
+        }
+        if (lane.plantTeamUpMinion && lane.plantTeamUpMinion.currentAttack >= 4) {
+          destroyed.push(lane.plantTeamUpMinion.name)
+          lane.plantTeamUpMinion = null
+        }
+        if (lane.zombieMinion && lane.zombieMinion.currentAttack >= 4) {
+          destroyed.push(lane.zombieMinion.name)
+          lane.zombieMinion = null
+        }
+      })
+      message = `Doom-Shroom hủy diệt tất cả đơn vị có từ 4 Attack trở lên: ${destroyed.join(', ') || 'Không có ai'}!`
+      break
+    }
+
     case 'plant_spring_bean': {
       // Bounce a Zombie
       if (targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.zombieMinion) {
@@ -238,15 +261,17 @@ export function executeTrick(
           if (lane.plantMinion.isInvulnerable || lane.plantMinion.invulnerableThisTurn) {
             message = `${lane.plantMinion.name} Miễn thương (Invulnerable) nên không nhận sát thương từ Bungee Plumber!`
           } else {
+            const armor = lane.plantMinion.armored || (lane.plantMinion.traits?.includes('armored') ? 1 : 0)
+            const effectiveDmg = Math.max(0, 2 - armor)
             lane.plantMinion = {
               ...lane.plantMinion,
-              currentHealth: Math.max(0, lane.plantMinion.currentHealth - 2),
+              currentHealth: Math.max(0, lane.plantMinion.currentHealth - effectiveDmg),
             }
             if (lane.plantMinion.currentHealth <= 0) {
               message = `Bungee Plumber tiêu diệt ${lane.plantMinion.name}!`
               lane.plantMinion = null
             } else {
-              message = `Bungee Plumber gây 2 sát thương lên ${lane.plantMinion.name}.`
+              message = `Bungee Plumber gây ${effectiveDmg} sát thương lên ${lane.plantMinion.name}.`
             }
           }
         }
@@ -310,6 +335,30 @@ export function executeTrick(
         }
       })
       message = `Weed Spray diệt sạch cỏ dại: ${destroyed.join(', ') || 'Không có ai'}!`
+      break
+    }
+
+    case 'zombie_the_chickening': {
+      // 2 damage to all Plants (AOE trick, bypasses untrickable single-target protection)
+      const hitPlants: string[] = []
+      updatedLanes.forEach(lane => {
+        const targets = [lane.plantMinion, lane.plantTeamUpMinion].filter(Boolean) as Minion[]
+        targets.forEach(p => {
+          if (p.isInvulnerable || p.invulnerableThisTurn) {
+            hitPlants.push(`${p.name} (Miễn thương)`)
+          } else {
+            const armor = p.armored || (p.traits?.includes('armored') ? 1 : 0)
+            const dmg = Math.max(0, 2 - armor)
+            p.currentHealth = Math.max(0, p.currentHealth - dmg)
+            hitPlants.push(`${p.name} (-${dmg})`)
+            if (p.currentHealth <= 0) {
+              if (lane.plantMinion === p) lane.plantMinion = null
+              if (lane.plantTeamUpMinion === p) lane.plantTeamUpMinion = null
+            }
+          }
+        })
+      })
+      message = `The Chickening thả bầy gà gây 2 sát thương lên tất cả Plants: ${hitPlants.join(', ') || 'Không có ai'}!`
       break
     }
 

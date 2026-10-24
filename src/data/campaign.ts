@@ -629,8 +629,236 @@ export const ZOMBIE_CHAPTER_1_MISSIONS: CampaignMission[] = [
   },
 ]
 
+export const ZOMBIE_CHAPTER_2_MISSIONS: CampaignMission[] = [
+  {
+    id: 'zombie_mission_6',
+    chapter: 2,
+    missionNumber: 6,
+    faction: 'zombies',
+    playerHeroId: 'hero_brain_freeze',
+    title: 'Nhiệm Vụ 6: Bùng Cháy Năng Lượng',
+    subtitle: 'Đối đầu Solar Flare - Làn sóng ánh dương vũ bão',
+    storyIntro:
+      'Solar Flare tăng tốc sản sinh Mặt Trời với môi trường Pair Pearadise nhân bản Cây Trồng và nhận thêm +1 Sun khởi đầu! Binh đoàn Zombie dưới sự chỉ huy của Brain Freeze phải cấp tốc dập tắt hỏa lực!',
+    bossHeroId: 'hero_solar_flare',
+    bossHeroName: 'Solar Flare',
+    bossHeroAvatar: '/assets/heroes/plants/Solar Flare.png',
+    difficulty: 'normal',
+    rule: {
+      id: 'zrule_mission_6',
+      name: 'Ánh Dương Bùng Nổ & Nhân Bản',
+      description:
+        'Solar Flare có +1 Mặt Trời khởi đầu; Làn 3 (Ground) có sẵn môi trường Pair Pearadise nhân đôi Cây Trồng!',
+      startingBrainsBonus: 0,
+      startingSunBonus: 1,
+      initialEnvironments: [
+        { laneIndex: 2, environmentCardId: 'plant_pair_pearadise' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Dập tắt hỏa lực của Solar Flare',
+      '⭐⭐ Bảo toàn Zombie Hero còn từ 12 HP trở lên',
+      '⭐⭐⭐ Tiêu diệt đối thủ trong vòng 9 lượt',
+    ],
+    rewards: {
+      gems: 250,
+      unlocksNext: true,
+      title: 'Kẻ Dập Lửa',
+    },
+    comicDialogue: {
+      issueTitle: 'BÙNG CHÁY NĂNG LƯỢNG MẶT TRỜI!',
+      issueTagline: 'Solar Flare thắp sáng sân vườn bằng hỏa lực vũ bão',
+      plantHeroQuote:
+        'Hãy cảm nhận sức nóng của Mặt Trời! Với nguồn năng lượng dồi dào và Pair Pearadise, hoa hướng dương của ta sẽ thiêu rụi mọi Thây Ma!',
+      zombieHeroQuote:
+        'Cứ việc tỏa sáng đi, hoa cúc nhỏ! Kho vũ khí băng giá của Brain Freeze sẽ dập tắt ngọn lửa của ngươi!',
+    },
+  },
+  {
+    id: 'zombie_mission_7',
+    chapter: 2,
+    missionNumber: 7,
+    faction: 'zombies',
+    playerHeroId: 'hero_the_smash',
+    title: 'Nhiệm Vụ 7: Pháo Đài Kiên Cố',
+    subtitle: 'Đối đầu Wall-Knight - Phòng tuyến gai góc bất hoại',
+    storyIntro:
+      'Wall-Knight biến sân vườn thành pháo đài thép gai góc với Spikeweed Sector trên Làn Ground gây 2 sát thương cho mọi Zombie, cùng quả hạch Wall-Nut kiên cố! The Smash phải dùng sức mạnh nghiền nát bức tường!',
+    bossHeroId: 'hero_wall_knight',
+    bossHeroName: 'Wall-Knight',
+    bossHeroAvatar: '/assets/heroes/plants/Wall-Knight.png',
+    difficulty: 'normal',
+    rule: {
+      id: 'zrule_mission_7',
+      name: 'Bãi Chông Gai & Vỏ Hạch Thép',
+      description:
+        'Làn 2 có sẵn Spikeweed Sector gây sát thương liên tục; Làn 1 có sẵn Wall-Nut che chắn cho Cây Trồng!',
+      startingBrainsBonus: 0,
+      startingSunBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 1, environmentCardId: 'plant_spikeweed_sector' },
+      ],
+      initialMinions: [
+        { laneIndex: 0, cardId: 'plant_wall_nut', side: 'plants' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đột phá phòng tuyến gai nhọn của Wall-Knight',
+      '⭐⭐ Chiến thắng với Zombie Hero còn ít nhất 14 HP',
+      '⭐⭐⭐ Hoàn tất trận đấu trong vòng 10 lượt',
+    ],
+    rewards: {
+      gems: 300,
+      unlocksNext: true,
+      title: 'Công Thành Trượng',
+    },
+    comicDialogue: {
+      issueTitle: 'PHÁO ĐÀI KIÊN CỐ BẤT KHẢ XÂM PHẠM!',
+      issueTagline: 'Bãi chông gai và vỏ quả hạch ngăn bước thây ma',
+      plantHeroQuote:
+        'Ngươi nghĩ cơ bắp thô kệch của The Smash đập vỡ được Spikeweed Sector sao? Mỗi bước chân của ngươi sẽ nát bấy!',
+      zombieHeroQuote:
+        'THE SMASH ĐẬP TAN TẤT CẢ! Gai nhọn hay quả hạch rồi cũng sẽ vỡ vụn dưới nắm đấm siêu cấp!',
+    },
+  },
+  {
+    id: 'zombie_mission_8',
+    chapter: 2,
+    missionNumber: 8,
+    faction: 'zombies',
+    playerHeroId: 'hero_rustbolt',
+    title: 'Nhiệm Vụ 8: Mìn Nổ Bát Ngát',
+    subtitle: 'Đối đầu Spudow - Dung nham Hot Lava sôi sục',
+    storyIntro:
+      'Spudow kích hoạt dung nham Hot Lava trên cả 2 làn đấu (Làn 1 và Làn 3), thiêu rụi mọi sinh vật mỗi lượt! Rustbolt trang bị áo giáp hợp kim titan và +1 Brains để phá hủy khoai nổ!',
+    bossHeroId: 'hero_spudow',
+    bossHeroName: 'Spudow',
+    bossHeroAvatar: '/assets/heroes/plants/Spudow.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'zrule_mission_8',
+      name: 'Biển Lửa Hot Lava & Giáp Hợp Kim',
+      description:
+        'Làn 1 và Làn 3 ngập tràn dung nham Hot Lava gây sát thương mỗi lượt; Zombie khởi đầu với +1 Não (Brains)!',
+      startingBrainsBonus: 1,
+      startingSunBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 0, environmentCardId: 'plant_hot_lava' },
+        { laneIndex: 2, environmentCardId: 'plant_hot_lava' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Chế ngự bãi mìn khoai tây nổ của Spudow',
+      '⭐⭐ Bảo toàn HP Zombie Hero từ 10 trở lên',
+      '⭐⭐⭐ Tiêu diệt Spudow trong vòng 8 lượt đấu',
+    ],
+    rewards: {
+      gems: 350,
+      unlocksNext: true,
+      title: 'Chuyên Gia Rà Mìn',
+    },
+    comicDialogue: {
+      issueTitle: 'MÌN NỔ BÁT NGÁT KHẮP ĐẤT TRỜI!',
+      issueTagline: 'Dung nham Hot Lava thiêu đốt mọi bước tiến',
+      plantHeroQuote:
+        'BOOM! Dung nham sôi sục khắp nơi, ngươi bước vào đâu cũng sẽ thành món thịt nướng cháy khét!',
+      zombieHeroQuote:
+        'Giáp thép của Rustbolt đã tôi luyện trong lò phản ứng hạt nhân! Nhiệt độ củ khoai chẳng làm trầy nổi lớp sơn của ta!',
+    },
+  },
+  {
+    id: 'zombie_mission_9',
+    chapter: 2,
+    missionNumber: 9,
+    faction: 'zombies',
+    playerHeroId: 'hero_electric_boogaloo',
+    title: 'Nhiệm Vụ 9: Đầm Lầy Nuốt Chửng',
+    subtitle: 'Đối đầu Chompzilla - Hành tinh bắt ruồi Venus',
+    storyIntro:
+      'Chompzilla thiết lập môi trường Venus Flytrap Planet hồi máu liên tục mỗi khi Cây Trồng tấn công! Electric Boogaloo khởi đầu với +1 Não và điệu nhảy disco bốc lửa để thiêu rụi đầm lầy!',
+    bossHeroId: 'hero_chompzilla',
+    bossHeroName: 'Chompzilla',
+    bossHeroAvatar: '/assets/heroes/plants/Chompzilla.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'zrule_mission_9',
+      name: 'Đầm Lầy Venus & Nhịp Điệu Disco',
+      description:
+        'Làn 2 có sẵn Venus Flytrap Planet giúp Cây Trồng hồi Máu mỗi khi đánh trúng mục tiêu; Zombie khởi đầu +1 Não!',
+      startingBrainsBonus: 1,
+      startingSunBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 1, environmentCardId: 'plant_venus_flytrap_planet' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đè bẹp khả năng hồi máu thần tốc của Chompzilla',
+      '⭐⭐ Kết thúc trận với Zombie Hero còn ít nhất 12 HP',
+      '⭐⭐⭐ Đánh bại Chompzilla trong vòng 10 lượt',
+    ],
+    rewards: {
+      gems: 400,
+      unlocksNext: true,
+      title: 'Kẻ Diệt Thực Vật',
+    },
+    comicDialogue: {
+      issueTitle: 'ĐẦM LẦY NUỐT CHỬNG BẤT TẬN!',
+      issueTagline: 'Venus Flytrap Planet hồi sinh sinh lực vô hạn',
+      plantHeroQuote:
+        'Mỗi cú cắn của ta trên mảnh đất Venus này đều hồi phục sinh lực dồi dào! Binh đoàn của ngươi sẽ làm mồi dinh dưỡng!',
+      zombieHeroQuote:
+        'Hãy lắc lư theo điệu nhảy sấm sét! Dòng điện 1 triệu volt của Electric Boogaloo sẽ nướng chín cây ăn thịt của ngươi!',
+    },
+  },
+  {
+    id: 'zombie_mission_10',
+    chapter: 2,
+    missionNumber: 10,
+    faction: 'zombies',
+    playerHeroId: 'hero_zmech',
+    title: 'Nhiệm Vụ 10: Bức Tường Bất Khả Xâm Phạm',
+    subtitle: 'Đại chiến Boss Citron - Lá chắn Peel Shield & Thủy chiến',
+    storyIntro:
+      'Boss tối thượng Citron đến từ tương lai kích hoạt lá chắn năng lượng Peel Shield và triển khai Đậu Hải Quân (Admiral Navy Bean) trên làn Nước! Z-Mech cùng kho tên lửa tối tân của Zomboss khởi đầu với +2 Não để tung đòn hủy diệt!',
+    bossHeroId: 'hero_citron',
+    bossHeroName: 'Citron',
+    bossHeroAvatar: '/assets/heroes/plants/Citron.png',
+    difficulty: 'boss',
+    rule: {
+      id: 'zrule_mission_10',
+      name: 'Lá Chắn Năng Lượng & Thủy Chiến Tương Lai',
+      description:
+        'Làn Nước có 1 Admiral Navy Bean án ngữ; Z-Mech khởi đầu với +2 Não (Brains) từ kho hỏa lực Zomboss!',
+      startingBrainsBonus: 2,
+      startingSunBonus: 0,
+      initialMinions: [
+        { laneIndex: 4, cardId: 'plant_admiral_navy_bean', side: 'plants' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đập tan lá chắn tối thượng của Boss Citron',
+      '⭐⭐ Kết thúc trận với Zombie Hero còn ít nhất 15 HP',
+      '⭐⭐⭐ Hoàn thành xuất sắc toàn bộ Chiến dịch Zombie Chapter 2!',
+    ],
+    rewards: {
+      gems: 1000,
+      unlocksNext: false,
+      title: 'Chúa Tể Thây Ma Vũ Trụ',
+    },
+    comicDialogue: {
+      issueTitle: 'BỨC TƯỜNG BẤT KHẢ XÂM PHẠM!',
+      issueTagline: 'Đại chiến chung kết: Z-Mech hủy diệt vs Citron tương lai',
+      plantHeroQuote:
+        'Lá chắn Peel Shield đã sẵn sàng! Hải quân Đậu của ta kiểm soát hoàn toàn làn nước! Tương lai không có chỗ cho Thây Ma!',
+      zombieHeroQuote:
+        'Hỏa tiễn Z-Mech khóa mục tiêu! Toàn bộ kho vũ khí hủy diệt Zomboss khai hỏa! Trận địa của ngươi sẽ thành tro bụi!',
+    },
+  },
+]
+
 export const ALL_ZOMBIE_CAMPAIGN_MISSIONS: CampaignMission[] = [
   ...ZOMBIE_CHAPTER_1_MISSIONS,
+  ...ZOMBIE_CHAPTER_2_MISSIONS,
 ]
 
 export interface CampaignChapter {
@@ -672,6 +900,15 @@ export const ZOMBIE_CAMPAIGN_CHAPTERS: CampaignChapter[] = [
       'Lãnh đạo binh đoàn Zombie dưới quyền chỉ huy tối cao của Tiến sĩ Zomboss! Tiêu diệt các chỉ huy Cây Trồng Green Shadow, Solar Flare, Wall-Knight, Spudow và Chompzilla để cắm cờ Zombie!',
     badgeText: 'ZOMBIE CH. 1',
     missions: ZOMBIE_CHAPTER_1_MISSIONS,
+  },
+  {
+    id: 2,
+    title: 'CHIẾN TUYẾN TƯƠNG LAI (FUTURE CITADEL)',
+    subtitle: 'Chapter 2: Đột phá thành lũy công nghệ cao',
+    description:
+      'Quân đoàn Zombie tiến vào pháo đài tương lai Future Citadel! Đối đầu với Solar Flare ánh dương, Wall-Knight bãi chông, Spudow biển lửa, Chompzilla hồi máu và Đại tướng Citron tối thượng!',
+    badgeText: 'ZOMBIE CH. 2',
+    missions: ZOMBIE_CHAPTER_2_MISSIONS,
   },
 ]
 
@@ -863,6 +1100,21 @@ export function calculateMissionStars(
   } else if (mission.id === 'zombie_mission_5') {
     if (playerHp >= 15) stars++
     if (turnCount <= 12) stars++
+  } else if (mission.id === 'zombie_mission_6') {
+    if (playerHp >= 12) stars++
+    if (turnCount <= 9) stars++
+  } else if (mission.id === 'zombie_mission_7') {
+    if (playerHp >= 14) stars++
+    if (turnCount <= 10) stars++
+  } else if (mission.id === 'zombie_mission_8') {
+    if (playerHp >= 10) stars++
+    if (turnCount <= 8) stars++
+  } else if (mission.id === 'zombie_mission_9') {
+    if (playerHp >= 12) stars++
+    if (turnCount <= 10) stars++
+  } else if (mission.id === 'zombie_mission_10') {
+    if (playerHp >= 15) stars++
+    if (turnCount <= 12) stars++
   }
 
   return Math.min(3, stars)
@@ -907,7 +1159,13 @@ export const CAMPAIGN_STAR_MILESTONES: CampaignStarMilestone[] = [
     requiredStars: 45,
     gems: 1000,
     badge: 'Huyền Thoại Vũ Trụ',
-    description: 'Thu thập toàn bộ 45 sao chiến dịch: Hoàn thành tuyệt đối mọi thử thách Plants & Zombies',
+    description: 'Thu thập 45 sao chiến dịch: Hoàn thành xuất sắc 3 chương chiến dịch',
+  },
+  {
+    requiredStars: 60,
+    gems: 1500,
+    badge: 'Bậc Thầy Đa Vũ Trụ',
+    description: 'Thu thập tuyệt đối 60 sao chiến dịch: Chinh phục trọn vẹn cả 4 Chương Cây Trồng & Thây Ma',
   },
 ]
 
