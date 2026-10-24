@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
-  CHAPTER_1_MISSIONS,
+  CAMPAIGN_CHAPTERS,
+  ALL_CAMPAIGN_MISSIONS,
   loadCampaignProgress,
   saveCampaignProgress,
   getInitialCampaignProgress,
@@ -15,18 +16,27 @@ export interface CampaignMapProps {
 
 export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack }) => {
   const [progress, setProgress] = useState<CampaignProgress>(loadCampaignProgress)
+  const [activeChapterId, setActiveChapterId] = useState<number>(1)
   const [selectedMission, setSelectedMission] = useState<CampaignMission | null>(null)
 
   useEffect(() => {
-    setProgress(loadCampaignProgress())
+    const loaded = loadCampaignProgress()
+    setProgress(loaded)
+    // If player has already unlocked Chapter 2 (unlocked >= 6), auto-focus Chapter 2 if active
+    if (loaded.unlockedMissionNumber >= 6 && activeChapterId === 1) {
+      // Keep on 1 or allow player to toggle
+    }
   }, [])
 
-  // Calculate total stars earned
+  const currentChapter =
+    CAMPAIGN_CHAPTERS.find((c) => c.id === activeChapterId) || CAMPAIGN_CHAPTERS[0]
+
+  // Calculate total stars earned across entire campaign
   const totalStars = Object.values(progress.completedMissions).reduce(
     (sum, m) => sum + (m.stars || 0),
     0
   )
-  const maxStars = CHAPTER_1_MISSIONS.length * 3
+  const maxStars = ALL_CAMPAIGN_MISSIONS.length * 3
   const completedCount = Object.keys(progress.completedMissions).length
 
   // Select a mission to view briefing
@@ -46,9 +56,16 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
     onStartMission(mission)
   }
 
+  // Switch active chapter
+  const handleSwitchChapter = (chapterId: number) => {
+    soundManager.playCardDrop()
+    setActiveChapterId(chapterId)
+    setSelectedMission(null)
+  }
+
   // Reset progress (useful for players to replay the whole campaign)
   const handleResetProgress = () => {
-    if (window.confirm('Bạn có chắc chắn muốn đặt lại toàn bộ tiến độ Campaign Chapter 1 không?')) {
+    if (window.confirm('Bạn có chắc chắn muốn đặt lại toàn bộ tiến độ Chiến dịch (Chapters 1 & 2) không?')) {
       const reset = getInitialCampaignProgress()
       saveCampaignProgress(reset)
       setProgress(reset)
@@ -68,7 +85,7 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
         <div className="campaign-title-group">
           <h1 className="campaign-main-heading">CHIẾN DỊCH (CAMPAIGN MODE)</h1>
           <span className="campaign-sub-heading">
-            Chapter 1: Suburban Crisis (Khủng Hoảng Ngoại Ô)
+            {currentChapter.title}
           </span>
         </div>
 
@@ -82,13 +99,13 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
           <div className="stat-mission-item">
             <span className="mission-icon">🗺️</span>
             <span className="mission-count">
-              {completedCount} / {CHAPTER_1_MISSIONS.length} Màn
+              {completedCount} / {ALL_CAMPAIGN_MISSIONS.length} Màn
             </span>
           </div>
           <button
             className="campaign-reset-btn"
             onClick={handleResetProgress}
-            title="Đặt lại tiến trình Chapter 1"
+            title="Đặt lại toàn bộ tiến trình Chiến Dịch"
           >
             🔄
           </button>
@@ -97,19 +114,46 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
 
       {/* Main Campaign Canvas */}
       <main className="campaign-map-content">
+        {/* Chapter Selection Tab Pills */}
+        <div className="campaign-chapter-tabs-strip">
+          {CAMPAIGN_CHAPTERS.map((ch) => {
+            const isChUnlocked =
+              ch.id === 1 || progress.unlockedMissionNumber >= (ch.id - 1) * 5 + 1
+            const isChActive = ch.id === activeChapterId
+            const chStars = ch.missions.reduce(
+              (sum, m) => sum + (progress.completedMissions[m.id]?.stars || 0),
+              0
+            )
+
+            return (
+              <button
+                key={ch.id}
+                className={`chapter-selector-tab ${isChActive ? 'tab-active' : ''} ${
+                  isChUnlocked ? 'tab-unlocked' : 'tab-locked'
+                }`}
+                onClick={() => handleSwitchChapter(ch.id)}
+              >
+                <span className="chapter-tab-badge">{ch.badgeText}</span>
+                <span className="chapter-tab-name">
+                  {ch.id === 1 ? 'Khủng Hoảng Ngoại Ô' : 'Đô Thị Zombie'}
+                </span>
+                <span className="chapter-tab-stars">⭐ {chStars}/15</span>
+                {!isChUnlocked && <span className="chapter-tab-lock">🔒</span>}
+              </button>
+            )
+          })}
+        </div>
+
         {/* Story Chapter Banner */}
         <div className="chapter-story-banner">
-          <div className="chapter-banner-badge">CHAPTER 1</div>
-          <h2 className="chapter-banner-title">KHỦNG HOẢNG NGOẠI Ô (SUBURBAN CRISIS)</h2>
-          <p className="chapter-banner-desc">
-            Tiến sĩ Zomboss đã phái 5 tướng lĩnh Zombie sừng sỏ nhất tràn vào khu phố ngoại ô! Hãy
-            sát cánh cùng Dave và các chiến binh Cây Trồng để đập tan âm mưu thôn tính sân vườn!
-          </p>
+          <div className="chapter-banner-badge">{currentChapter.badgeText}</div>
+          <h2 className="chapter-banner-title">{currentChapter.title}</h2>
+          <p className="chapter-banner-desc">{currentChapter.description}</p>
         </div>
 
         {/* Roadmap Nodes Sequence */}
         <div className="campaign-nodes-timeline">
-          {CHAPTER_1_MISSIONS.map((mission, index) => {
+          {currentChapter.missions.map((mission, index) => {
             const isUnlocked = mission.missionNumber <= progress.unlockedMissionNumber
             const missionRecord = progress.completedMissions[mission.id]
             const starsWon = missionRecord?.stars || 0

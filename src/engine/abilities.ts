@@ -367,6 +367,29 @@ export function triggerWhenPlayed(
       })
       break
     }
+
+    case 'zombie_synchronized_swimmer': {
+      // Synchronized Swimmer: Copy the stats of another Zombie with highest stats on board
+      const otherZombies = updatedState.lanes
+        .map(l => l.zombieMinion)
+        .filter((z): z is Minion => Boolean(z && z.instanceId !== minion.instanceId))
+      if (otherZombies.length > 0) {
+        otherZombies.sort((a, b) => (b.currentAttack + b.currentHealth) - (a.currentAttack + a.currentHealth))
+        const target = otherZombies[0]
+        const currentLane = updatedState.lanes[laneIndex]
+        if (currentLane.zombieMinion) {
+          currentLane.zombieMinion = {
+            ...currentLane.zombieMinion,
+            currentAttack: target.currentAttack,
+            baseAttack: target.currentAttack,
+            currentHealth: target.currentHealth,
+            maxHealth: target.currentHealth,
+          }
+          events.push(`🏊 Synchronized Swimmer sao chép chỉ số của ${target.name}: Tăng chỉ số thành ${target.currentAttack}/${target.currentHealth}!`)
+        }
+      }
+      break
+    }
   }
 
   // 2. React to other minions on board
@@ -648,6 +671,50 @@ export function triggerWhenTrickPlayed(state: GameState, _trickCard: Card, caste
     })
     if (tricksterDiscounted) {
       events.push('🃏 Trickster trên tay Zombie được giảm 1 Brain chi phí!')
+    }
+
+    // Sportacus: "When a Zombie Trick is played, do 2 damage to Zombie Hero"
+    updatedState.lanes.forEach(l => {
+      const hasSportacus =
+        (l.plantMinion && l.plantMinion.cardId === 'plant_sportacus') ||
+        (l.plantTeamUpMinion && l.plantTeamUpMinion.cardId === 'plant_sportacus')
+      if (hasSportacus) {
+        const res = applyHeroDamage(updatedState.zombieHero, 2, false)
+        updatedState.zombieHero = res.updatedHero
+        events.push('🍄 Sportacus phản ứng với Zombie Trick: Bắn 2 sát thương vào Zombie Hero!')
+      }
+    })
+
+    // Trick-or-Treater: "When you play a Trick, add a Treat trick to your hand"
+    const hasTrickOrTreater = updatedState.lanes.some(l => l.zombieMinion?.cardId === 'zombie_trick_or_treater')
+    if (hasTrickOrTreater && updatedState.zombieHand.length < 10) {
+      const TREAT_POOL: Card[] = [
+        {
+          id: `zombie_healthy_treat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          name: 'Healthy Treat',
+          side: 'zombies',
+          cost: 1,
+          attack: 0,
+          health: 0,
+          type: 'trick',
+          image: '/assets/cards/zombies/Lurch for Lunch.png',
+          description: 'Một Zombie nhận +1 Tấn công và +3 Máu (+1/+3).',
+        },
+        {
+          id: `zombie_sugary_treat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          name: 'Sugary Treat',
+          side: 'zombies',
+          cost: 1,
+          attack: 0,
+          health: 0,
+          type: 'trick',
+          image: '/assets/cards/zombies/Bungee Plumber.png',
+          description: 'Một Zombie nhận +3 Tấn công và +1 Máu (+3/+1).',
+        },
+      ]
+      const treat = TREAT_POOL[Math.floor(Math.random() * TREAT_POOL.length)]
+      updatedState.zombieHand = [...updatedState.zombieHand, treat]
+      events.push(`🍬 Trick-or-Treater phát kẹo Treat: Thêm 1 lá [${treat.name}] vào tay Zombie!`)
     }
   }
 

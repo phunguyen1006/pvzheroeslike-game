@@ -3,7 +3,7 @@
  * Manages Environment placement, passives, combat triggers, and end-of-turn effects
  */
 
-import type { GameState, Side, Card, EnvironmentState } from './types'
+import type { GameState, Side, Card, Minion, EnvironmentState, TerrainCoordinationResult } from './types'
 import { applyHeroDamage } from './combat'
 import { drawCard } from './reducer'
 
@@ -292,3 +292,144 @@ export function applyEnvironmentEndOfTurn(state: GameState): EnvironmentTriggerR
 
   return { updatedState, events }
 }
+
+/**
+ * Coordinates automated stat buffs and reactions when a minion appears on a lane/terrain.
+ * Handles:
+ * 1. Heights Terrain base rule (+1/+1).
+ * 2. Active Lily of the Valley entities (+2/+2 per Lily for Plants played on Heights).
+ * 3. Reactive enemy reactions (Arm Wrestler gaining +1/+1 when a Plant enters its lane).
+ * 4. Active Environment on-play triggers (Area 22, Bog of Sunken Hope, Laser Base Alpha, Cone Zone, Total Eclipse, Medulla Nebula).
+ */
+export function coordinateTerrainAndLaneBuffs(
+  state: GameState,
+  minion: Minion,
+  laneIndex: number,
+  side: Side
+): TerrainCoordinationResult {
+  let updatedMinion: Minion = { ...minion }
+  let updatedState: GameState = {
+    ...state,
+    lanes: state.lanes.map(l => ({ ...l })),
+  }
+  const events: string[] = []
+
+  const targetLane = updatedState.lanes[laneIndex]
+  if (!targetLane) {
+    return { updatedMinion, updatedState: state, events }
+  }
+
+  const isHeights = targetLane.type === 'heights' || laneIndex === 0
+
+  // 1. Heights Terrain Base Rule (+1/+1)
+  if (isHeights) {
+    updatedMinion = {
+      ...updatedMinion,
+      currentAttack: updatedMinion.currentAttack + 1,
+      baseAttack: updatedMinion.baseAttack + 1,
+      currentHealth: updatedMinion.currentHealth + 1,
+      maxHealth: updatedMinion.maxHealth + 1,
+    }
+    events.push(`🏔️ Địa hình Đồi Cao (Heights): ${updatedMinion.name} nhận +1/+1 (${updatedMinion.currentAttack}/${updatedMinion.currentHealth})!`)
+  }
+
+  // 2. Lily of the Valley (+2/+2 per Lily of the Valley on board when a Plant is played on Heights)
+  if (side === 'plants' && isHeights) {
+    let lilyCount = 0
+    for (const l of updatedState.lanes) {
+      if (l.plantMinion?.cardId === 'plant_lily_of_the_valley') lilyCount++
+      if (l.plantTeamUpMinion?.cardId === 'plant_lily_of_the_valley') lilyCount++
+    }
+    if (lilyCount > 0) {
+      const bonus = 2 * lilyCount
+      updatedMinion = {
+        ...updatedMinion,
+        currentAttack: updatedMinion.currentAttack + bonus,
+        baseAttack: updatedMinion.baseAttack + bonus,
+        currentHealth: updatedMinion.currentHealth + bonus,
+        maxHealth: updatedMinion.maxHealth + bonus,
+      }
+      events.push(`🌸 Lily of the Valley ban phước! Plant đặt ${updatedMinion.name} lên Đồi Cao (${targetLane.name}) nhận thêm +${bonus}/+${bonus} (${updatedMinion.currentAttack}/${updatedMinion.currentHealth})!`)
+    }
+  }
+
+  // 3. Enemy Reaction: Arm Wrestler (+1/+1 when a Plant enters its lane)
+  if (side === 'plants' && targetLane.zombieMinion?.cardId === 'zombie_arm_wrestler') {
+    targetLane.zombieMinion = {
+      ...targetLane.zombieMinion,
+      currentAttack: targetLane.zombieMinion.currentAttack + 1,
+      baseAttack: targetLane.zombieMinion.baseAttack + 1,
+      currentHealth: targetLane.zombieMinion.currentHealth + 1,
+      maxHealth: targetLane.zombieMinion.maxHealth + 1,
+    }
+    events.push(`💪 Arm Wrestler (${targetLane.zombieMinion.name}) nhận +1/+1 khi Plant xuất hiện cùng làn (${targetLane.zombieMinion.currentAttack}/${targetLane.zombieMinion.currentHealth})!`)
+  }
+
+  // 4. Environment on-play triggers
+  if (targetLane.environment) {
+    const envId = targetLane.environment.id
+    if (envId === 'zombie_area_22' && side === 'zombies') {
+      updatedMinion = {
+        ...updatedMinion,
+        currentAttack: updatedMinion.currentAttack + 2,
+        baseAttack: updatedMinion.baseAttack + 2,
+        currentHealth: updatedMinion.currentHealth + 2,
+        maxHealth: updatedMinion.maxHealth + 2,
+        frenzy: true,
+      }
+      events.push(`Area 22 ban phước: ${updatedMinion.name} nhận +2/+2 và Cuồng nộ (Frenzy)!`)
+    } else if (envId === 'zombie_laser_base_alpha' && side === 'zombies') {
+      updatedMinion = {
+        ...updatedMinion,
+        deadly: true,
+        strikethrough: true,
+      }
+      events.push(`Laser Base Alpha: ${updatedMinion.name} nhận Deadly và Strikethrough!`)
+    } else if (envId === 'zombie_cone_zone' && side === 'zombies') {
+      updatedMinion = {
+        ...updatedMinion,
+        currentHealth: updatedMinion.currentHealth + 3,
+        maxHealth: updatedMinion.maxHealth + 3,
+      }
+      events.push(`Cone Zone: ${updatedMinion.name} nhận thêm +3 Máu (+3 HP)!`)
+    } else if (envId === 'zombie_total_eclipse' && side === 'plants') {
+      updatedMinion = {
+        ...updatedMinion,
+        currentAttack: Math.max(0, updatedMinion.currentAttack - 1),
+        currentHealth: updatedMinion.currentHealth - 1,
+      }
+      events.push(`Total Eclipse làm suy yếu: ${updatedMinion.name} (-1/-1)!`)
+    } else if (envId === 'plant_bog_of_sunken_hope') {
+      if (side === 'plants') {
+        const isAlreadyAmphibious = Boolean(updatedMinion.amphibious || updatedMinion.traits?.includes('amphibious'))
+        updatedMinion = {
+          ...updatedMinion,
+          amphibious: true,
+          currentAttack: isAlreadyAmphibious ? updatedMinion.currentAttack + 2 : updatedMinion.currentAttack,
+          baseAttack: isAlreadyAmphibious ? updatedMinion.baseAttack + 2 : updatedMinion.baseAttack,
+          currentHealth: isAlreadyAmphibious ? updatedMinion.currentHealth + 2 : updatedMinion.currentHealth,
+          maxHealth: isAlreadyAmphibious ? updatedMinion.maxHealth + 2 : updatedMinion.maxHealth,
+        }
+        events.push(`Bog of Sunken Hope: Thủy quân ${updatedMinion.name} nhận +2/+2!`)
+      } else if (side === 'zombies' && !updatedMinion.amphibious && !updatedMinion.traits?.includes('amphibious')) {
+        updatedMinion = {
+          ...updatedMinion,
+          currentAttack: Math.max(0, updatedMinion.currentAttack - 2),
+        }
+        events.push(`Bog of Sunken Hope làm sa lầy: ${updatedMinion.name} bị giảm 2 Tấn công (-2 ATK)!`)
+      }
+    } else if (envId === 'zombie_medulla_nebula' && side === 'zombies') {
+      updatedState = {
+        ...updatedState,
+        zombieHero: {
+          ...updatedState.zombieHero,
+          brains: updatedState.zombieHero.brains + 2,
+        },
+      }
+      events.push(`Tinh vân não Medulla Nebula nạp năng lượng: Cung cấp thêm +2 Brains (${updatedState.zombieHero.brains} Brains)!`)
+    }
+  }
+
+  return { updatedMinion, updatedState, events }
+}
+

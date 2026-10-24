@@ -83,7 +83,13 @@ export function executeTrick(
   const updatedLanes = updatedState.lanes.map(l => ({ ...l }))
   let message = ''
 
-  switch (card.id) {
+  const trickKey = card.id.startsWith('zombie_healthy_treat')
+    ? 'zombie_healthy_treat'
+    : card.id.startsWith('zombie_sugary_treat')
+      ? 'zombie_sugary_treat'
+      : card.id
+
+  switch (trickKey) {
     // === PLANT TRICKS ===
     case 'plant_berry_blast': {
       // 3 damage to any zombie or zombie hero
@@ -431,6 +437,52 @@ export function executeTrick(
       updatedState.zombieDeck = [...updatedState.zombieDeck, ...virals]
 
       message = `Going Viral! Toàn bộ ${buffedCount} Zombie nhận +1/+1 và Cuồng nộ (Frenzy)! Rút 1 lá [${drawnCard?.name || 'bài'}] và hòa trộn thêm 3 lá Going Viral vào bộ bài!`
+      break
+    }
+
+    case 'zombie_healthy_treat': {
+      // Healthy Treat: A Zombie gets +1/+3
+      if (targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.zombieMinion) {
+        const z = updatedLanes[targetLaneIndex].zombieMinion!
+        z.currentAttack += 1
+        z.baseAttack += 1
+        z.currentHealth += 3
+        z.maxHealth += 3
+        message = `Healthy Treat: ${z.name} nhận +1 Tấn công và +3 Máu (+1/+3)!`
+      } else {
+        const firstZombieLane = updatedLanes.find(l => l.zombieMinion)
+        if (firstZombieLane?.zombieMinion) {
+          const z = firstZombieLane.zombieMinion
+          z.currentAttack += 1
+          z.baseAttack += 1
+          z.currentHealth += 3
+          z.maxHealth += 3
+          message = `Healthy Treat: ${z.name} nhận +1 Tấn công và +3 Máu (+1/+3)!`
+        }
+      }
+      break
+    }
+
+    case 'zombie_sugary_treat': {
+      // Sugary Treat: A Zombie gets +3/+1
+      if (targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.zombieMinion) {
+        const z = updatedLanes[targetLaneIndex].zombieMinion!
+        z.currentAttack += 3
+        z.baseAttack += 3
+        z.currentHealth += 1
+        z.maxHealth += 1
+        message = `Sugary Treat: ${z.name} nhận +3 Tấn công và +1 Máu (+3/+1)!`
+      } else {
+        const firstZombieLane = updatedLanes.find(l => l.zombieMinion)
+        if (firstZombieLane?.zombieMinion) {
+          const z = firstZombieLane.zombieMinion
+          z.currentAttack += 3
+          z.baseAttack += 3
+          z.currentHealth += 1
+          z.maxHealth += 1
+          message = `Sugary Treat: ${z.name} nhận +3 Tấn công và +1 Máu (+3/+1)!`
+        }
+      }
       break
     }
 

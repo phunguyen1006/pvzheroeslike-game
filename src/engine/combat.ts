@@ -1223,6 +1223,23 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
         description: `${zombie.name} dealt ${dmgToPlant} damage to ${plant.name}${plant.currentHealth <= 0 ? ' (Destroyed)' : ''}`,
       })
 
+      // Blooming Heart: Gets +1 Attack when it deals damage
+      if (plant.cardId === 'plant_blooming_heart' && dmgToZombie > 0 && plant.currentHealth > 0) {
+        plant.currentAttack += 1
+        plant.baseAttack += 1
+        events.push({
+          laneIndex: i,
+          attackerSide: 'plants',
+          attackerName: 'Blooming Heart',
+          target: 'minion',
+          targetSide: 'plants',
+          damageDealt: 0,
+          isBlocked: false,
+          isLethal: false,
+          description: `🌸 Blooming Heart nhận +1 Tấn công sau khi gây sát thương (hiện là ${plant.currentAttack} ATK)!`,
+        })
+      }
+
       // Dusk Lobber: If on an Environment, attacks adjacent lanes as well!
       if (plant.cardId === 'plant_dusk_lobber' && lane.environment && plantCanAttack) {
         const adjIndices = [i - 1, i + 1].filter(idx => idx >= 0 && idx < updatedLanes.length)
@@ -1507,6 +1524,23 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
               description: `🍇 Planet of the Grapes: Rút thêm 1 lá [${drawn.name}]!`,
             })
           }
+        }
+
+        // Blooming Heart: Gets +1 Attack when it deals damage
+        if (plant.cardId === 'plant_blooming_heart' && res.actualDamage > 0 && plant.currentHealth > 0) {
+          plant.currentAttack += 1
+          plant.baseAttack += 1
+          events.push({
+            laneIndex: i,
+            attackerSide: 'plants',
+            attackerName: 'Blooming Heart',
+            target: 'hero',
+            targetSide: 'plants',
+            damageDealt: 0,
+            isBlocked: false,
+            isLethal: false,
+            description: `🌸 Blooming Heart nhận +1 Tấn công sau khi đánh trúng Zombie Hero (hiện là ${plant.currentAttack} ATK)!`,
+          })
         }
 
         // Double Strike bonus direct attack in open lane

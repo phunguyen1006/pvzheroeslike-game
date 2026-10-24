@@ -568,4 +568,149 @@ describe('Round 5 Card Catalog Validation Suite', () => {
       })
     })
   })
+
+  describe('Round 7: Event & Triassic Card Suite', () => {
+      it('should validate Blooming Heart (Kabloom Event Plant) data & +1 ATK growth on damage', () => {
+        const card = getCardById('plant_blooming_heart')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Blooming Heart')
+        expect(card?.cost).toBe(1)
+        expect(card?.attack).toBe(2)
+        expect(card?.hp).toBe(2)
+        expect(card?.rarity).toBe('Event')
+        expect(card?.tribe).toBe('Flower Plant')
+        expect(card?.heroClass).toBe('Kabloom')
+        expect(ASSET_MANIFEST.cards.plants['Blooming Heart']).toBeDefined()
+
+        // Test combat damage trigger: deals damage -> gains +1 ATK
+        const state = createInitialGameState()
+        state.phase = 'FIGHT'
+        const bloomingHeart = createMockMinion('bh1', 'Blooming Heart', 'plants', 2, 2, { cardId: 'plant_blooming_heart' })
+        state.lanes[1].plantMinion = bloomingHeart
+        // Enemy zombie with 5 HP so both survive
+        state.lanes[1].zombieMinion = createMockMinion('z1', 'Conehead', 'zombies', 1, 5)
+
+        const { updatedState: combatState } = resolveCombat(state)
+        // Blooming Heart dealt 2 damage to Conehead, so currentAttack should become 3
+        const resultPlant = combatState.lanes[1].plantMinion
+        expect(resultPlant).toBeDefined()
+        expect(resultPlant?.currentAttack).toBe(3)
+      })
+
+      it('should validate Sportacus (Smarty Super-Rare Plant) data & 2 damage to Zombie Hero on trick', () => {
+        const card = getCardById('plant_sportacus')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Sportacus')
+        expect(card?.cost).toBe(3)
+        expect(card?.attack).toBe(3)
+        expect(card?.hp).toBe(3)
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.tribe).toBe('Mushroom Plant')
+        expect(card?.heroClass).toBe('Smarty')
+        expect(ASSET_MANIFEST.cards.plants['Sportacus']).toBeDefined()
+
+        // Test reaction when Zombie plays a trick
+        const state = createInitialGameState()
+        state.lanes[2].plantMinion = createMockMinion('sp1', 'Sportacus', 'plants', 3, 3, { cardId: 'plant_sportacus' })
+        const initialHeroHp = state.zombieHero.hp
+        const trickCard: Card = {
+          id: 'zombie_bungee_plumber',
+          name: 'Bungee Plumber',
+          side: 'zombies',
+          cost: 1,
+          attack: 0,
+          health: 0,
+          type: 'trick',
+          image: '',
+        }
+
+        const reaction = triggerWhenTrickPlayed(state, trickCard, 'zombies')
+        expect(reaction.updatedState.zombieHero.hp).toBe(initialHeroHp - 2)
+        expect(reaction.events.some(e => e.includes('Sportacus'))).toBe(true)
+      })
+
+      it('should validate Kitchen Sink Zombie (Brainy Event Zombie) multi-traits', () => {
+        const card = getCardById('zombie_kitchen_sink')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Kitchen Sink Zombie')
+        expect(card?.cost).toBe(6)
+        expect(card?.attack).toBe(3)
+        expect(card?.hp).toBe(6)
+        expect(card?.rarity).toBe('Event')
+        expect(card?.tribe).toBe('Monster Zombie')
+        expect(card?.heroClass).toBe('Brainy')
+        expect(card?.armored).toBe(1)
+        expect(card?.antiHero).toBe(3)
+        expect(card?.frenzy).toBe(true)
+        expect(card?.bullseye).toBe(true)
+        expect(card?.gravestone).toBe(false)
+        expect(card?.traits).toContain('Armored 1')
+        expect(card?.traits).toContain('Anti-Hero 3')
+        expect(card?.traits).toContain('Frenzy')
+        expect(card?.traits).toContain('Bullseye')
+        expect(ASSET_MANIFEST.cards.zombies['Kitchen Sink Zombie']).toBeDefined()
+      })
+
+      it('should validate Trick-or-Treater (Hearty Event Zombie) & Treat trick conjuring', () => {
+        const card = getCardById('zombie_trick_or_treater')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Trick-or-Treater')
+        expect(card?.cost).toBe(3)
+        expect(card?.attack).toBe(2)
+        expect(card?.hp).toBe(3)
+        expect(card?.rarity).toBe('Event')
+        expect(card?.tribe).toBe('Monster Zombie')
+        expect(card?.heroClass).toBe('Hearty')
+        expect(card?.gravestone).toBe(true)
+        expect(ASSET_MANIFEST.cards.zombies['Trick-or-Treater']).toBeDefined()
+
+        // Test trick conjuring
+        const state = createInitialGameState()
+        state.lanes[1].zombieMinion = createMockMinion('tot1', 'Trick-or-Treater', 'zombies', 2, 3, { cardId: 'zombie_trick_or_treater' })
+        const initialHandSize = state.zombieHand.length
+
+        const trickCard: Card = {
+          id: 'zombie_lurch_for_lunch',
+          name: 'Lurch for Lunch',
+          side: 'zombies',
+          cost: 2,
+          attack: 0,
+          health: 0,
+          type: 'trick',
+          image: '',
+        }
+
+        const reaction = triggerWhenTrickPlayed(state, trickCard, 'zombies')
+        expect(reaction.updatedState.zombieHand.length).toBe(initialHandSize + 1)
+        const conjuredTreat = reaction.updatedState.zombieHand[reaction.updatedState.zombieHand.length - 1]
+        expect(['Healthy Treat', 'Sugary Treat']).toContain(conjuredTreat.name)
+        expect(conjuredTreat.type).toBe('trick')
+      })
+
+      it('should validate Synchronized Swimmer (Beastly Event Zombie) stat copying', () => {
+        const card = getCardById('zombie_synchronized_swimmer')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Synchronized Swimmer')
+        expect(card?.cost).toBe(2)
+        expect(card?.attack).toBe(2)
+        expect(card?.hp).toBe(2)
+        expect(card?.rarity).toBe('Event')
+        expect(card?.tribe).toBe('Sports Zombie')
+        expect(card?.heroClass).toBe('Beastly')
+        expect(card?.amphibious).toBe(true)
+        expect(ASSET_MANIFEST.cards.zombies['Synchronized Swimmer']).toBeDefined()
+
+        // Test stat copying when placed
+        const state = createInitialGameState()
+        // Put a powerful zombie on lane 1 (e.g. 5/6 Warlord or Kitchen Sink)
+        state.lanes[1].zombieMinion = createMockMinion('z_boss', 'Kitchen Sink Zombie', 'zombies', 6, 6)
+        // Put Swimmer on water lane (lane 4)
+        const swimmer = createMockMinion('swimmer_1', 'Synchronized Swimmer', 'zombies', 2, 2, { cardId: 'zombie_synchronized_swimmer' })
+        state.lanes[4].zombieMinion = swimmer
+
+        const result = triggerWhenPlayed(state, swimmer, 4, 'zombies')
+        expect(result.updatedState.lanes[4].zombieMinion?.currentAttack).toBe(6)
+        expect(result.updatedState.lanes[4].zombieMinion?.currentHealth).toBe(6)
+      })
+  })
 })

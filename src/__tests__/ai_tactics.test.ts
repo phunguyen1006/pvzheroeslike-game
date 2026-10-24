@@ -706,4 +706,235 @@ describe('AI Opponent Engine Tactics Suite (Phase 7)', () => {
       expect(totalCostPlanned).toBeLessThanOrEqual(4)
     })
   })
+
+  // =========================================================================
+  // 6. ROUND 7 ENHANCEMENTS: ENVIRONMENT PLACEMENT & TRICK TACTICS
+  // =========================================================================
+  describe('6. Round 7 Enhancements (Environment Placement & Trick Tactics)', () => {
+    it('Laser Base Alpha targets the highest attack zombie on board for Deadly and Strikethrough', () => {
+      const state = setupState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 3
+
+      // Lane 1 has a 2/3 Zombie
+      state.lanes[1].zombieMinion = createTestMinion({
+        instanceId: 'z_small',
+        cardId: 'zombie_swabbie',
+        name: 'Swabbie',
+        side: 'zombies',
+        currentAttack: 2,
+        currentHealth: 3,
+      })
+
+      // Lane 3 has a 6/5 Zombie
+      state.lanes[3].zombieMinion = createTestMinion({
+        instanceId: 'z_big',
+        cardId: 'zombie_all_star',
+        name: 'All-Star Zombie',
+        side: 'zombies',
+        currentAttack: 6,
+        currentHealth: 5,
+      })
+
+      state.zombieHand = [getCard('zombie_laser_base_alpha')]
+
+      const decision = getAIDecision(state, 'zombies', { difficulty: 'expert', archetype: 'tempo' })
+      expect(decision.action).toBe('PLAY_TRICK')
+      expect(decision.card?.id).toBe('zombie_laser_base_alpha')
+      // Must target lane 3 because 6 ATK > 2 ATK
+      expect(decision.laneIndex).toBe(3)
+      expect(decision.reason).toContain('highest attack zombie')
+    })
+
+    it('Area 22 empowers highest attack / unblocked zombie with +2/+2 & Frenzy', () => {
+      const state = setupState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 3
+
+      // Lane 1 has a 3/3 Zombie blocked by a Plant
+      state.lanes[1].zombieMinion = createTestMinion({
+        instanceId: 'z_blocked',
+        cardId: 'zombie_arm_wrestler',
+        name: 'Arm Wrestler',
+        side: 'zombies',
+        currentAttack: 3,
+        currentHealth: 3,
+      })
+      state.lanes[1].plantMinion = createTestMinion({
+        instanceId: 'p_blocker',
+        cardId: 'plant_wall_nut',
+        name: 'Wall-Nut',
+        side: 'plants',
+        currentAttack: 0,
+        currentHealth: 6,
+      })
+
+      // Lane 2 has a 4/4 unblocked Zombie
+      state.lanes[2].zombieMinion = createTestMinion({
+        instanceId: 'z_unblocked',
+        cardId: 'zombie_super_vampire',
+        name: 'Vampire Zombie',
+        side: 'zombies',
+        currentAttack: 4,
+        currentHealth: 4,
+      })
+
+      state.zombieHand = [getCard('zombie_area_22')]
+
+      const decision = getAIDecision(state, 'zombies', { difficulty: 'expert', archetype: 'tempo' })
+      expect(decision.action).toBe('PLAY_TRICK')
+      expect(decision.card?.id).toBe('zombie_area_22')
+      expect(decision.laneIndex).toBe(2)
+      expect(decision.reason).toContain('Area 22')
+    })
+
+    it('Rocket Science prioritizes destroying the highest-threat 4+ attack plant', () => {
+      const state = setupState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 3
+
+      // Lane 1: 4/1 Plant (threat ~ 4 + 1 = 5)
+      state.lanes[1].plantMinion = createTestMinion({
+        instanceId: 'p_threat_low',
+        cardId: 'plant_repeater',
+        name: 'Repeater',
+        side: 'plants',
+        currentAttack: 4,
+        currentHealth: 1,
+      })
+
+      // Lane 3: 8/8 Plant (threat ~ 8*1.5 + 8 = 20)
+      state.lanes[3].plantMinion = createTestMinion({
+        instanceId: 'p_threat_high',
+        cardId: 'plant_gatling_pea',
+        name: 'Gatling Pea',
+        side: 'plants',
+        currentAttack: 8,
+        currentHealth: 8,
+      })
+
+      state.zombieHand = [getCard('zombie_rocket_science')]
+
+      const decision = getAIDecision(state, 'zombies', { difficulty: 'expert', archetype: 'control' })
+      expect(decision.action).toBe('PLAY_TRICK')
+      expect(decision.card?.id).toBe('zombie_rocket_science')
+      // Must target Lane 3 (Gatling Pea) instead of arbitrarily picking Lane 1
+      expect(decision.laneIndex).toBe(3)
+      expect(decision.reason).toContain('highest threat 4+ attack plant')
+    })
+
+    it('Locust Swarm destroys the highest-threat plant minion on board', () => {
+      const state = setupState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 5
+
+      // Lane 0: 2/2 Peashooter
+      state.lanes[0].plantMinion = createTestMinion({
+        instanceId: 'p_small',
+        cardId: 'plant_peashooter',
+        name: 'Peashooter',
+        side: 'plants',
+        currentAttack: 2,
+        currentHealth: 2,
+      })
+
+      // Lane 2: 7/7 Boss Plant
+      state.lanes[2].plantMinion = createTestMinion({
+        instanceId: 'p_giant',
+        cardId: 'plant_dark_matter_dragonfruit',
+        name: 'Dark Matter Dragonfruit',
+        side: 'plants',
+        currentAttack: 7,
+        currentHealth: 7,
+      })
+
+      state.zombieHand = [getCard('zombie_locust_swarm')]
+
+      const decision = getAIDecision(state, 'zombies', { difficulty: 'expert', archetype: 'control' })
+      expect(decision.action).toBe('PLAY_TRICK')
+      expect(decision.card?.id).toBe('zombie_locust_swarm')
+      expect(decision.laneIndex).toBe(2)
+      expect(decision.reason).toContain('highest threat plant')
+    })
+
+    it('Calculates lethal face damage with Brute Strength on an unblocked zombie', () => {
+      const state = setupState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 3
+      state.plantHero.hp = 5 // Plant hero has 5 HP remaining
+
+      // Lane 2 has an unblocked 2-attack zombie. With Brute Strength (+3), it hits for 5 damage (Lethal!)
+      state.lanes[2].zombieMinion = createTestMinion({
+        instanceId: 'z_finisher',
+        cardId: 'zombie_arm_wrestler',
+        name: 'Arm Wrestler',
+        side: 'zombies',
+        currentAttack: 2,
+        currentHealth: 2,
+      })
+
+      state.zombieHand = [getCard('zombie_brute_strength')]
+
+      const decision = getAIDecision(state, 'zombies', { difficulty: 'expert', archetype: 'aggro' })
+      expect(decision.action).toBe('PLAY_TRICK')
+      expect(decision.card?.id).toBe('zombie_brute_strength')
+      expect(decision.laneIndex).toBe(2)
+      expect(decision.reason).toContain('Lethal Brute Strength')
+    })
+
+    it('Calculates lethal face damage with Lurch for Lunch on an unblocked zombie', () => {
+      const state = setupState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 2
+      state.plantHero.hp = 4
+
+      // Lane 1 has an unblocked 4-attack zombie. Lurch for Lunch bonus attack does 4 damage immediately (Lethal!)
+      state.lanes[1].zombieMinion = createTestMinion({
+        instanceId: 'z_striker',
+        cardId: 'zombie_stealthy_imp',
+        name: 'Stealthy Imp',
+        side: 'zombies',
+        currentAttack: 4,
+        currentHealth: 2,
+      })
+
+      state.zombieHand = [getCard('zombie_lurch_for_lunch')]
+
+      const decision = getAIDecision(state, 'zombies', { difficulty: 'expert', archetype: 'aggro' })
+      expect(decision.action).toBe('PLAY_TRICK')
+      expect(decision.card?.id).toBe('zombie_lurch_for_lunch')
+      expect(decision.laneIndex).toBe(1)
+      expect(decision.reason).toContain('Lethal Lurch for Lunch bonus attack')
+    })
+
+    it('Deploys Going Viral when zombies are present to grant +1/+1 and Frenzy', () => {
+      const state = setupState()
+      state.phase = 'ZOMBIE_TRICKS'
+      state.zombieHero.brains = 3
+
+      state.lanes[1].zombieMinion = createTestMinion({
+        instanceId: 'z_1',
+        cardId: 'zombie_swabbie',
+        name: 'Swabbie',
+        side: 'zombies',
+        currentAttack: 1,
+        currentHealth: 1,
+      })
+      state.lanes[3].zombieMinion = createTestMinion({
+        instanceId: 'z_2',
+        cardId: 'zombie_conga_zombie',
+        name: 'Conga Zombie',
+        side: 'zombies',
+        currentAttack: 2,
+        currentHealth: 2,
+      })
+
+      state.zombieHand = [getCard('zombie_going_viral')]
+
+      const decision = getAIDecision(state, 'zombies', { difficulty: 'normal', archetype: 'tempo' })
+      expect(decision.action).toBe('PLAY_TRICK')
+      expect(decision.card?.id).toBe('zombie_going_viral')
+      expect(decision.reason).toContain('Going Viral buffs 2 zombies')
+    })
+  })
 })

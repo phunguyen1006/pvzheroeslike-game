@@ -11,6 +11,7 @@ export interface HandProps {
   onDragStartCard?: (card: CardType) => void
   onDragEndCard?: () => void
   side?: 'plants' | 'zombies'
+  onInspectCard?: (card: CardType) => void
 }
 
 export const Hand: React.FC<HandProps> = ({
@@ -22,6 +23,7 @@ export const Hand: React.FC<HandProps> = ({
   onDragStartCard,
   onDragEndCard,
   side = 'plants',
+  onInspectCard,
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
@@ -85,6 +87,7 @@ export const Hand: React.FC<HandProps> = ({
                 isSelected={isSelected}
                 isPlayable={isPlayable}
                 onClick={() => onSelectCard(card)}
+                onInspect={onInspectCard}
                 size="sm"
               />
             </div>

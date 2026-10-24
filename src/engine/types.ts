@@ -53,6 +53,8 @@ export interface Card {
   gravestone?: boolean
   untrickable?: boolean
   tribe?: string
+  set?: string
+  rarity?: string
   description?: string
   heroClass?: string
   laneRequirement?: 'ground' | 'heights' | 'water' | 'any'
@@ -223,6 +225,7 @@ export interface MissionRule {
 
 export interface CampaignMission {
   id: string
+  chapter?: number
   missionNumber: number
   title: string
   subtitle: string
@@ -256,3 +259,35 @@ export interface SavedDeck {
   createdAt: string
   updatedAt: string
 }
+
+export interface TerrainCoordinationResult {
+  updatedMinion: Minion
+  updatedState: GameState
+  events: string[]
+}
+
+export interface ConjureFilter {
+  tribe?: string
+  set?: string
+  cardType?: 'minion' | 'trick' | 'environment'
+  side?: Side
+  rarity?: string
+  minCost?: number
+  maxCost?: number
+}
+
+export interface ConjureOptions {
+  count?: number
+  filter?: ConjureFilter
+  costDiscount?: number
+  targetCardId?: string
+  customPool?: (Card | any)[]
+  sourceName?: string
+}
+
+export interface ConjureResult {
+  updatedState: GameState
+  conjuredCards: Card[]
+  events: string[]
+}
+

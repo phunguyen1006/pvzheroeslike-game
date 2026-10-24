@@ -630,7 +630,7 @@ function checkLethalPossibility(
 ): AIDecision | null {
   const enemyHero = side === 'zombies' ? state.plantHero : state.zombieHero
 
-  // 1. Check direct damage tricks
+  // 1. Check direct damage tricks & buff lines to face
   if (side === 'zombies') {
     // Bungee Plumber (2 dmg, cost 1)
     const bungee = hand.find((c) => c.id === 'zombie_bungee_plumber' && c.cost <= resource)
@@ -643,7 +643,82 @@ function checkLethalPossibility(
     if (finalMission && enemyHero.hp <= 4) {
       return { action: 'PLAY_TRICK', card: finalMission, targetHero: true, reason: 'Lethal Final Mission to face' }
     }
+
+    // 2. Lethal Buffs / Bonus Attacks on Unblocked Zombie Attackers
+    for (let idx = 0; idx < state.lanes.length; idx++) {
+      const lane = state.lanes[idx]
+      if (lane.zombieMinion && !lane.plantMinion && !lane.zombieMinion.isFrozen) {
+        const currentAtk = lane.zombieMinion.currentAttack
+
+        // Lurch for Lunch (bonus attack immediately for currentAtk damage)
+        const lurch = hand.find((c) => c.id === 'zombie_lurch_for_lunch' && c.cost <= resource)
+        if (lurch && currentAtk >= enemyHero.hp) {
+          return {
+            action: 'PLAY_TRICK',
+            card: lurch,
+            laneIndex: idx,
+            reason: `Lethal Lurch for Lunch bonus attack to face from lane ${idx + 1}`,
+          }
+        }
+
+        // Brute Strength (+3 Attack to Zombie)
+        const brute = hand.find(
+          (c) => (c.id === 'zombie_brute_strength' || c.id === 'sp_brute_strength') && c.cost <= resource
+        )
+        if (brute && currentAtk + 3 >= enemyHero.hp) {
+          return {
+            action: 'PLAY_TRICK',
+            card: brute,
+            laneIndex: idx,
+            reason: `Lethal Brute Strength on unblocked zombie in lane ${idx + 1} for face damage`,
+          }
+        }
+
+        // Area 22 (+2 Attack & Frenzy)
+        const area22 = hand.find((c) => c.id === 'zombie_area_22' && c.cost <= resource)
+        if (area22 && currentAtk + 2 >= enemyHero.hp) {
+          return {
+            action: 'PLAY_TRICK',
+            card: area22,
+            laneIndex: idx,
+            reason: `Lethal Area 22 on unblocked zombie in lane ${idx + 1} for face damage`,
+          }
+        }
+      }
+
+      // Laser Base Alpha: Strikethrough on high-attack Zombie pierces blocker directly to face!
+      if (lane.zombieMinion && lane.plantMinion && !lane.zombieMinion.isFrozen && !lane.zombieMinion.strikethrough) {
+        const laserBase = hand.find((c) => c.id === 'zombie_laser_base_alpha' && c.cost <= resource)
+        if (laserBase && lane.zombieMinion.currentAttack >= enemyHero.hp) {
+          return {
+            action: 'PLAY_TRICK',
+            card: laserBase,
+            laneIndex: idx,
+            reason: `Lethal Laser Base Alpha grants Strikethrough to pierce through blocker for face lethal`,
+          }
+        }
+      }
+    }
+
+    // Going Viral: all zombies get +1 attack
+    const viral = hand.find((c) => c.id === 'zombie_going_viral' && c.cost <= resource)
+    if (viral) {
+      let totalUnblockedAtk = 0
+      state.lanes.forEach((l) => {
+        if (l.zombieMinion && !l.plantMinion && !l.zombieMinion.isFrozen) {
+          totalUnblockedAtk += l.zombieMinion.currentAttack + 1
+        }
+      })
+      if (totalUnblockedAtk >= enemyHero.hp && totalUnblockedAtk > 0) {
+        return {
+          action: 'PLAY_TRICK',
+          card: viral,
+          reason: 'Lethal Going Viral push across open lanes',
+        }
+      }
+    }
   } else {
+    // Plant side lethal check
     // Berry Blast (3 dmg, cost 2)
     const berryBlast = hand.find((c) => c.id === 'plant_berry_blast' && c.cost <= resource)
     if (berryBlast && enemyHero.hp <= 3) {
@@ -962,7 +1037,7 @@ export function getAIDecision(
     const lethal = checkLethalPossibility(state, 'zombies', playableTricks, resource)
     if (lethal) return lethal
 
-    // B. Environment Overwrite Tactics: Neutralize dangerous Plant environments!
+    // B. Environment Overwrite & Strategic Placement Tactics:
     const envCard = playableTricks.find((c) => c.type === 'environment')
     if (envCard) {
       // Priority 1: Overwrite an active, dangerous plant environment (e.g., Spikeweed Sector, Bog of Hope)
@@ -978,7 +1053,60 @@ export function getAIDecision(
         }
       }
 
-      // Priority 2: Place environment in an unoccupied environment lane where we have a living zombie
+      // Priority 1b: Overwrite ANY plant environment to deny opponent their advantage!
+      const anyPlantEnvLaneIdx = state.lanes.findIndex(
+        (l) => l.environment && l.environment.side === 'plants'
+      )
+      if (anyPlantEnvLaneIdx !== -1) {
+        return {
+          action: 'PLAY_TRICK',
+          card: envCard,
+          laneIndex: anyPlantEnvLaneIdx,
+          reason: `Environment Tactics: ${envCard.name} overrides beneficial plant environment ${state.lanes[anyPlantEnvLaneIdx].environment!.name} in lane ${anyPlantEnvLaneIdx + 1}`,
+        }
+      }
+
+      // Priority 2: Optimal Placement for Laser Base Alpha (Deadly and Strikethrough)
+      if (envCard.id === 'zombie_laser_base_alpha') {
+        const candidateZombieLanes = state.lanes
+          .map((l, idx) => ({ l, idx }))
+          .filter((x) => x.l.zombieMinion && x.l.environment?.id !== 'zombie_laser_base_alpha')
+          .sort((a, b) => b.l.zombieMinion!.currentAttack - a.l.zombieMinion!.currentAttack)
+
+        if (candidateZombieLanes.length > 0) {
+          const target = candidateZombieLanes[0]
+          return {
+            action: 'PLAY_TRICK',
+            card: envCard,
+            laneIndex: target.idx,
+            reason: `Environment Tactics: Laser Base Alpha placed on highest attack zombie ${target.l.zombieMinion!.name} (${target.l.zombieMinion!.currentAttack} ATK) in lane ${target.idx + 1} for Deadly and Strikethrough`,
+          }
+        }
+      }
+
+      // Priority 3: Optimal Placement for Area 22 (+2/+2 & Frenzy)
+      if (envCard.id === 'zombie_area_22') {
+        const candidateZombieLanes = state.lanes
+          .map((l, idx) => ({ l, idx }))
+          .filter((x) => x.l.zombieMinion && x.l.environment?.id !== 'zombie_area_22')
+          .sort((a, b) => {
+            const aBonus = !a.l.plantMinion ? 4 : 0
+            const bBonus = !b.l.plantMinion ? 4 : 0
+            return (b.l.zombieMinion!.currentAttack + bBonus) - (a.l.zombieMinion!.currentAttack + aBonus)
+          })
+
+        if (candidateZombieLanes.length > 0) {
+          const target = candidateZombieLanes[0]
+          return {
+            action: 'PLAY_TRICK',
+            card: envCard,
+            laneIndex: target.idx,
+            reason: `Environment Tactics: Area 22 empowers ${target.l.zombieMinion!.name} in lane ${target.idx + 1} with +2/+2 & Frenzy`,
+          }
+        }
+      }
+
+      // Priority 4: Place environment in an unoccupied environment lane where we have a living zombie
       const livingZombieLane = state.lanes.findIndex((l) => l.zombieMinion && !l.environment)
       if (livingZombieLane !== -1) {
         return {
@@ -990,34 +1118,27 @@ export function getAIDecision(
       }
     }
 
-    // C. Bad Moon Rising: If we have >= 2 Zombies on board, transform them
-    const bmr = playableTricks.find((c) => c.id === 'zombie_bad_moon_rising')
-    const zombieCount = state.lanes.filter((l) => l.zombieMinion).length
-    if (bmr && zombieCount >= 2) {
-      return {
-        action: 'PLAY_TRICK',
-        card: bmr,
-        reason: `Bad Moon Rising transforms ${zombieCount} zombies`,
-      }
-    }
-
-    // D. Hard Removal: Rocket Science on plants with >= 4 Attack
+    // C. Hard Removal: Rocket Science on highest threat plant with >= 4 Attack
     const rocket = playableTricks.find((c) => c.id === 'zombie_rocket_science')
     if (rocket) {
-      const highAtkPlantIdx = state.lanes.findIndex(
-        (l) => l.plantMinion && l.plantMinion.currentAttack >= 4 && !isUntrickable(l.plantMinion)
-      )
+      const highAtkPlantIdx = state.lanes.reduce((best, lane, idx) => {
+        if (!lane.plantMinion || lane.plantMinion.currentAttack < 4 || isUntrickable(lane.plantMinion)) return best
+        if (best === -1) return idx
+        return evaluateMinionThreat(lane, 'plants') > evaluateMinionThreat(state.lanes[best], 'plants')
+          ? idx
+          : best
+      }, -1)
       if (highAtkPlantIdx !== -1) {
         return {
           action: 'PLAY_TRICK',
           card: rocket,
           laneIndex: highAtkPlantIdx,
-          reason: 'Rocket Science neutralizes high attack plant',
+          reason: `Rocket Science destroys highest threat 4+ attack plant ${state.lanes[highAtkPlantIdx].plantMinion!.name} in lane ${highAtkPlantIdx + 1}`,
         }
       }
     }
 
-    // E. Hard Removal: Locust Swarm on strongest Plant minion
+    // D. Hard Removal: Locust Swarm on highest threat Plant minion
     const locust = playableTricks.find((c) => c.id === 'zombie_locust_swarm')
     if (locust) {
       const strongestPlantIdx = state.lanes.reduce((best, lane, idx) => {
@@ -1032,12 +1153,59 @@ export function getAIDecision(
           action: 'PLAY_TRICK',
           card: locust,
           laneIndex: strongestPlantIdx,
-          reason: 'Locust Swarm destroys highest threat plant',
+          reason: `Locust Swarm destroys highest threat plant ${state.lanes[strongestPlantIdx].plantMinion!.name}`,
         }
       }
     }
 
-    // F. AOE Wipe: Weed Spray against plants with <= 2 Attack
+    // E. Team Buff: Going Viral (+1/+1 and Frenzy to all zombies, draw 1, shuffle 3 virals)
+    const viral = playableTricks.find((c) => c.id === 'zombie_going_viral')
+    const livingZombies = state.lanes.filter((l) => l.zombieMinion)
+    if (viral && livingZombies.length >= 1) {
+      return {
+        action: 'PLAY_TRICK',
+        card: viral,
+        reason: `Going Viral buffs ${livingZombies.length} zombies with +1/+1 and Frenzy`,
+      }
+    }
+
+    // F. Direct Buff: Brute Strength (+3 Attack to Zombie, prioritizing unblocked lanes)
+    const brute = playableTricks.find(
+      (c) => c.id === 'zombie_brute_strength' || c.id === 'sp_brute_strength'
+    )
+    if (brute) {
+      // Prioritize unblocked zombie for massive face damage
+      const unblockedZombie = state.lanes
+        .map((l, idx) => ({ l, idx }))
+        .filter((x) => x.l.zombieMinion && !x.l.plantMinion && !x.l.zombieMinion.isFrozen)
+        .sort((a, b) => b.l.zombieMinion!.currentAttack - a.l.zombieMinion!.currentAttack)[0]
+
+      if (unblockedZombie) {
+        return {
+          action: 'PLAY_TRICK',
+          card: brute,
+          laneIndex: unblockedZombie.idx,
+          reason: `Brute Strength buffs unblocked zombie ${unblockedZombie.l.zombieMinion!.name} in lane ${unblockedZombie.idx + 1} with +3 Attack for face damage`,
+        }
+      }
+
+      // Fallback: Contested zombie to swing the trade
+      const contestedZombie = state.lanes
+        .map((l, idx) => ({ l, idx }))
+        .filter((x) => x.l.zombieMinion && !x.l.zombieMinion.isFrozen)
+        .sort((a, b) => b.l.zombieMinion!.currentAttack - a.l.zombieMinion!.currentAttack)[0]
+
+      if (contestedZombie) {
+        return {
+          action: 'PLAY_TRICK',
+          card: brute,
+          laneIndex: contestedZombie.idx,
+          reason: `Brute Strength buffs zombie in lane ${contestedZombie.idx + 1} with +3 Attack`,
+        }
+      }
+    }
+
+    // G. AOE Wipe: Weed Spray against plants with <= 2 Attack
     const weedSpray = playableTricks.find((c) => c.id === 'zombie_weed_spray')
     if (weedSpray) {
       const smallPlantsCount = state.lanes.filter(
@@ -1052,7 +1220,7 @@ export function getAIDecision(
       }
     }
 
-    // G. Direct Damage: Bungee Plumber to eliminate low HP plant or push face
+    // H. Direct Damage: Bungee Plumber to eliminate low HP plant or push face
     const bungee = playableTricks.find((c) => c.id === 'zombie_bungee_plumber')
     if (bungee) {
       const killablePlantIdx = state.lanes.findIndex(
@@ -1076,9 +1244,27 @@ export function getAIDecision(
       }
     }
 
-    // H. Buff / Bonus Attack: Lurch for Lunch on high damage Zombie
+    // I. Buff / Bonus Attack: Lurch for Lunch on high damage Zombie
     const lurch = playableTricks.find((c) => c.id === 'zombie_lurch_for_lunch')
     if (lurch) {
+      // Priority 1: Unblocked zombie with >= 2 attack for direct face smash
+      const unblockedZombie = state.lanes
+        .map((l, idx) => ({ l, idx }))
+        .filter(
+          (x) => x.l.zombieMinion && !x.l.plantMinion && !x.l.zombieMinion.isFrozen && x.l.zombieMinion.currentAttack >= 2
+        )
+        .sort((a, b) => b.l.zombieMinion!.currentAttack - a.l.zombieMinion!.currentAttack)[0]
+
+      if (unblockedZombie) {
+        return {
+          action: 'PLAY_TRICK',
+          card: lurch,
+          laneIndex: unblockedZombie.idx,
+          reason: `Lurch for Lunch grants bonus attack to unblocked zombie ${unblockedZombie.l.zombieMinion!.name} for face damage`,
+        }
+      }
+
+      // Priority 2: Highest attack zombie with >= 3 attack
       const bestZombieLane = state.lanes.reduce((best, lane, idx) => {
         if (!lane.zombieMinion || lane.zombieMinion.isFrozen) return best
         if (best === -1) return idx
@@ -1096,17 +1282,14 @@ export function getAIDecision(
       }
     }
 
-    // I. Environment: Area 22 (+2/+2 & Frenzy)
-    const area22 = playableTricks.find((c) => c.id === 'zombie_area_22')
-    if (area22) {
-      const livingZombieLane = state.lanes.findIndex((l) => l.zombieMinion && !l.environment)
-      if (livingZombieLane !== -1) {
-        return {
-          action: 'PLAY_TRICK',
-          card: area22,
-          laneIndex: livingZombieLane,
-          reason: 'Area 22 empowers zombie with +2/+2 & Frenzy',
-        }
+    // J. Bad Moon Rising: If we have >= 2 Zombies on board, transform them
+    const bmr = playableTricks.find((c) => c.id === 'zombie_bad_moon_rising')
+    const zombieCount = state.lanes.filter((l) => l.zombieMinion).length
+    if (bmr && zombieCount >= 2) {
+      return {
+        action: 'PLAY_TRICK',
+        card: bmr,
+        reason: `Bad Moon Rising transforms ${zombieCount} zombies`,
       }
     }
   }
@@ -1122,6 +1305,7 @@ export function getAIDecision(
     // B. Environment Overwrite Tactics: Neutralize dangerous Zombie environments!
     const plantEnv = playableCards.find((c) => c.type === 'environment')
     if (plantEnv) {
+      // Priority 1: Overwrite dangerous zombie environment
       const dangerousZombieEnvLaneIdx = state.lanes.findIndex(
         (l) => l.environment && l.environment.side === 'zombies' && isDangerousEnvironment(l.environment.id, 'plants')
       )
@@ -1130,7 +1314,20 @@ export function getAIDecision(
           action: 'PLAY_TRICK',
           card: plantEnv,
           laneIndex: dangerousZombieEnvLaneIdx,
-          reason: `Environment Tactics: ${plantEnv.name} overrides dangerous zombie environment in lane ${dangerousZombieEnvLaneIdx + 1}`,
+          reason: `Environment Tactics: ${plantEnv.name} overrides dangerous zombie environment ${state.lanes[dangerousZombieEnvLaneIdx].environment!.name} in lane ${dangerousZombieEnvLaneIdx + 1}`,
+        }
+      }
+
+      // Priority 1b: Overwrite ANY zombie environment to deny opponent value
+      const anyZombieEnvLaneIdx = state.lanes.findIndex(
+        (l) => l.environment && l.environment.side === 'zombies'
+      )
+      if (anyZombieEnvLaneIdx !== -1) {
+        return {
+          action: 'PLAY_TRICK',
+          card: plantEnv,
+          laneIndex: anyZombieEnvLaneIdx,
+          reason: `Environment Tactics: ${plantEnv.name} overrides beneficial zombie environment ${state.lanes[anyZombieEnvLaneIdx].environment!.name} in lane ${anyZombieEnvLaneIdx + 1}`,
         }
       }
     }
@@ -1138,30 +1335,38 @@ export function getAIDecision(
     // C. Removal Tricks (Squash, Shamrocket, Cherry Bomb, Berry Blast)
     const squash = playableCards.find((c) => c.id === 'plant_squash')
     if (squash) {
-      const dangerousZombieIdx = state.lanes.findIndex(
-        (l) => l.zombieMinion && evaluateMinionThreat(l, 'zombies') >= 6 && !isUntrickable(l.zombieMinion)
-      )
-      if (dangerousZombieIdx !== -1) {
+      const highestThreatZombieIdx = state.lanes.reduce((best, lane, idx) => {
+        if (!lane.zombieMinion || isUntrickable(lane.zombieMinion)) return best
+        if (best === -1) return idx
+        return evaluateMinionThreat(lane, 'zombies') > evaluateMinionThreat(state.lanes[best], 'zombies')
+          ? idx
+          : best
+      }, -1)
+      if (highestThreatZombieIdx !== -1 && evaluateMinionThreat(state.lanes[highestThreatZombieIdx], 'zombies') >= 5) {
         return {
           action: 'PLAY_TRICK',
           card: squash,
-          laneIndex: dangerousZombieIdx,
-          reason: 'Squash crushes high threat zombie',
+          laneIndex: highestThreatZombieIdx,
+          reason: `Squash crushes high threat zombie ${state.lanes[highestThreatZombieIdx].zombieMinion!.name} in lane ${highestThreatZombieIdx + 1}`,
         }
       }
     }
 
     const shamrocket = playableCards.find((c) => c.id === 'plant_shamrocket')
     if (shamrocket) {
-      const bigZombieIdx = state.lanes.findIndex(
-        (l) => l.zombieMinion && l.zombieMinion.currentAttack >= 4 && !isUntrickable(l.zombieMinion)
-      )
+      const bigZombieIdx = state.lanes.reduce((best, lane, idx) => {
+        if (!lane.zombieMinion || lane.zombieMinion.currentAttack < 4 || isUntrickable(lane.zombieMinion)) return best
+        if (best === -1) return idx
+        return evaluateMinionThreat(lane, 'zombies') > evaluateMinionThreat(state.lanes[best], 'zombies')
+          ? idx
+          : best
+      }, -1)
       if (bigZombieIdx !== -1) {
         return {
           action: 'PLAY_TRICK',
           card: shamrocket,
           laneIndex: bigZombieIdx,
-          reason: 'Shamrocket destroys 4+ attack zombie',
+          reason: `Shamrocket destroys 4+ attack zombie ${state.lanes[bigZombieIdx].zombieMinion!.name} in lane ${bigZombieIdx + 1}`,
         }
       }
     }
@@ -1184,13 +1389,20 @@ export function getAIDecision(
     // D. Environments: Spikeweed Sector
     const spikeweed = playableCards.find((c) => c.id === 'plant_spikeweed_sector')
     if (spikeweed) {
-      const targetLane = state.lanes.findIndex((l) => l.zombieMinion && !l.environment)
-      if (targetLane !== -1) {
+      // Prioritize placing under strongest zombie
+      const strongestZombieLane = state.lanes.reduce((best, lane, idx) => {
+        if (!lane.zombieMinion || lane.environment?.id === 'plant_spikeweed_sector') return best
+        if (best === -1) return idx
+        return evaluateMinionThreat(lane, 'zombies') > evaluateMinionThreat(state.lanes[best], 'zombies')
+          ? idx
+          : best
+      }, -1)
+      if (strongestZombieLane !== -1) {
         return {
           action: 'PLAY_TRICK',
           card: spikeweed,
-          laneIndex: targetLane,
-          reason: 'Spikeweed Sector damages zombie before combat',
+          laneIndex: strongestZombieLane,
+          reason: `Spikeweed Sector damages zombie ${state.lanes[strongestZombieLane].zombieMinion!.name} before combat in lane ${strongestZombieLane + 1}`,
         }
       }
     }

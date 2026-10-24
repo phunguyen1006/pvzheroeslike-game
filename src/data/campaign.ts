@@ -11,6 +11,7 @@ import { getCardById } from './cards'
 export const CHAPTER_1_MISSIONS: CampaignMission[] = [
   {
     id: 'mission_1',
+    chapter: 1,
     missionNumber: 1,
     title: 'Nhiệm Vụ 1: Cú Đấm Siêu Não',
     subtitle: 'Đối đầu Super Brainz tại Phố Ngoại Ô',
@@ -40,6 +41,7 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
   },
   {
     id: 'mission_2',
+    chapter: 1,
     missionNumber: 2,
     title: 'Nhiệm Vụ 2: Binh Đoàn Tí Hòn',
     subtitle: 'Đối đầu Impfinity - Hỗn chiến nhân bản',
@@ -73,6 +75,7 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
   },
   {
     id: 'mission_3',
+    chapter: 1,
     missionNumber: 3,
     title: 'Nhiệm Vụ 3: Đầm Lầy Sụt Lún',
     subtitle: 'Đối đầu The Smash tại Vùng Trũng',
@@ -105,6 +108,7 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
   },
   {
     id: 'mission_4',
+    chapter: 1,
     missionNumber: 4,
     title: 'Nhiệm Vụ 4: Giáp Sắt Bất Diệt',
     subtitle: 'Đối đầu Rustbolt - Pháo Đài Di Động',
@@ -137,6 +141,7 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
   },
   {
     id: 'mission_5',
+    chapter: 1,
     missionNumber: 5,
     title: 'Nhiệm Vụ 5: Phòng Thí Nghiệm Điên Loạn',
     subtitle: 'ĐẠI CHIẾN BOSS CUỐI CHAPTER 1: Professor Brainstorm',
@@ -163,9 +168,220 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
     ],
     rewards: {
       gems: 500,
-      unlocksNext: false,
+      unlocksNext: true,
       title: 'Vệ Binh Ngoại Ô (Suburban Hero)',
     },
+  },
+]
+
+export const CHAPTER_2_MISSIONS: CampaignMission[] = [
+  {
+    id: 'mission_6',
+    chapter: 2,
+    missionNumber: 6,
+    title: 'Nhiệm Vụ 6: Pháo Đài Cơ Giới',
+    subtitle: 'Đối đầu Z-Mech - Chiến xa hủy diệt',
+    storyIntro:
+      'Z-Mech chỉ huy cỗ xe cơ giới bọc thép tiến thẳng vào đại lộ trung tâm Metropolis! Làn 2 được trang bị Laser Base Alpha tạo Strikethrough & Deadly, nhưng Dave cũng chuẩn bị sẵn 1 Spikeweed Sector trên Làn 1!',
+    bossHeroId: 'hero_z_mech',
+    bossHeroName: 'Z-Mech',
+    bossHeroAvatar: '/assets/heroes/zombies/Z-Mech.png',
+    difficulty: 'normal',
+    rule: {
+      id: 'rule_mission_6',
+      name: 'Căn Cứ Laser Base Alpha',
+      description: 'Làn 2 (Ground) có sẵn Laser Base Alpha (Deadly & Strikethrough); Làn 1 (Heights) có sẵn Cỏ Gai Spikeweed Sector!',
+      startingSunBonus: 0,
+      startingBrainsBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 1, environmentCardId: 'zombie_laser_base_alpha' },
+        { laneIndex: 0, environmentCardId: 'plant_spikeweed_sector' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Tiêu diệt cỗ máy chiến tranh Z-Mech',
+      '⭐⭐ Hero thực vật còn lại từ 12 HP trở lên',
+      '⭐⭐⭐ Kết liễu Z-Mech trong vòng 9 lượt đấu',
+    ],
+    rewards: {
+      gems: 150,
+      unlocksNext: true,
+      title: 'Thợ Phá Giáp Cơ Giới',
+    },
+  },
+  {
+    id: 'mission_7',
+    chapter: 2,
+    missionNumber: 7,
+    title: 'Nhiệm Vụ 7: Lâu Đài Phù Thủy',
+    subtitle: 'Đối đầu Immorticia - Nữ vương Dơi Quỷ',
+    storyIntro:
+      'Immorticia giăng bóng tối bao trùm Thành phố Đô thị với Total Eclipse trên Làn 3 làm suy yếu toàn bộ cây! Hắn cài cắm 1 Dr. Spacetime đang rình rập, nhưng Dave đã tiếp tế cho bạn +1 Năng lượng!',
+    bossHeroId: 'hero_immorticia',
+    bossHeroName: 'Immorticia',
+    bossHeroAvatar: '/assets/heroes/zombies/Immorticia.png',
+    difficulty: 'normal',
+    rule: {
+      id: 'rule_mission_7',
+      name: 'Nhật Thực Total Eclipse & Tiến Sĩ Spacetime',
+      description: 'Làn 3 (Ground) có sẵn Total Eclipse (-1/-1 cho Cây); Zombie có sẵn 1 Dr. Spacetime tại Làn 3! Bạn nhận +1 Sun khởi đầu.',
+      startingSunBonus: 1,
+      startingBrainsBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 2, environmentCardId: 'zombie_total_eclipse' },
+      ],
+      initialMinions: [
+        { laneIndex: 2, cardId: 'zombie_dr_spacetime', side: 'zombies' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đánh bại phù thủy Immorticia',
+      '⭐⭐ Giữ vững Hero với ít nhất 14 HP còn lại',
+      '⭐⭐⭐ Tiêu diệt Dr. Spacetime trước khi hắn kịp gây sát thương lên Hero',
+    ],
+    rewards: {
+      gems: 200,
+      unlocksNext: true,
+      title: 'Thợ Săn Phù Thủy',
+    },
+  },
+  {
+    id: 'mission_8',
+    chapter: 2,
+    missionNumber: 8,
+    title: 'Nhiệm Vụ 8: Bão Tuyết Bắc Cực',
+    subtitle: 'Đối đầu Brain Freeze - Quái thú Băng giá',
+    storyIntro:
+      'Brain Freeze giải phóng đợt bão tuyết đóng băng toàn bộ mặt hồ và dựng căn cứ Area 22 hùng mạnh trên Làn 4! Bạn có sẵn 1 Snow Pea kiên cường trên Làn 4 để làm chậm bước tiến của quái thú!',
+    bossHeroId: 'hero_brain_freeze',
+    bossHeroName: 'Brain Freeze',
+    bossHeroAvatar: '/assets/heroes/zombies/Brain Freeze.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'rule_mission_8',
+      name: 'Khu Vực Area 22 & Đậu Băng Giá',
+      description: 'Làn 4 (Ground) có sẵn Area 22 (+2/+2 & Frenzy cho Zombie); Cây trồng có sẵn 1 Snow Pea tại Làn 4!',
+      startingSunBonus: 0,
+      startingBrainsBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 3, environmentCardId: 'zombie_area_22' },
+      ],
+      initialMinions: [
+        { laneIndex: 3, cardId: 'plant_snow_pea', side: 'plants' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đánh bại Quái thú Băng giá Brain Freeze',
+      '⭐⭐ Không để bất kỳ Zombie nào có Frenzy đánh trúng Hero',
+      '⭐⭐⭐ Giành thắng lợi trong vòng 8 lượt đấu',
+    ],
+    rewards: {
+      gems: 250,
+      unlocksNext: true,
+      title: 'Ngọn Lửa Băng Giá',
+    },
+  },
+  {
+    id: 'mission_9',
+    chapter: 2,
+    missionNumber: 9,
+    title: 'Nhiệm Vụ 9: Vũ Hội Sấm Sét',
+    subtitle: 'Đối đầu Electric Boogaloo - Sàn nhảy tử thần',
+    storyIntro:
+      'Boogaloo biến Làn 3 thành trạm phóng Moon Base Z (Overshoot 3) cực kỳ cuồng nhiệt! Bạn được Dave tăng cường +2 Sun khởi đầu để dập tắt vũ điệu sấm chớp trước khi quá muộn!',
+    bossHeroId: 'hero_electric_boogaloo',
+    bossHeroName: 'Electric Boogaloo',
+    bossHeroAvatar: '/assets/heroes/zombies/Electric Boogaloo.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'rule_mission_9',
+      name: 'Trạm Mặt Trăng Moon Base Z',
+      description: 'Làn 3 (Ground) có sẵn Moon Base Z (Overshoot 3); Bạn khởi đầu với +2 Mặt trời (Sun)!',
+      startingSunBonus: 2,
+      startingBrainsBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 2, environmentCardId: 'zombie_moon_base_z' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Dập tắt vũ hội sấm sét của Electric Boogaloo',
+      '⭐⭐ Kết thúc trận đấu với ít nhất 12 HP còn lại',
+      '⭐⭐⭐ Hạ gục đối thủ bằng đòn tấn công từ Làn Cao (Heights) hoặc Nước (Water)',
+    ],
+    rewards: {
+      gems: 300,
+      unlocksNext: true,
+      title: 'Vua Vũ Trường',
+    },
+  },
+  {
+    id: 'mission_10',
+    chapter: 2,
+    missionNumber: 10,
+    title: 'Nhiệm Vụ 10: Tái Đấu Pháo Đài Bất Hoại',
+    subtitle: 'ĐẠI CHIẾN BOSS CUỐI CHAPTER 2: Rustbolt Tối Thượng',
+    storyIntro:
+      'Rustbolt trở lại với áo giáp siêu cấp và mạng lưới năng lượng Medulla Nebula! Hai phe bước vào trận quyết chiến đỉnh cao với +2 Năng lượng! Cây Nho Planet of the Grapes được trồng sẵn ở Làn 3 để tiếp tế bài liên tục!',
+    bossHeroId: 'hero_rustbolt',
+    bossHeroName: 'Rustbolt',
+    bossHeroAvatar: '/assets/heroes/zombies/Rustbolt.png',
+    difficulty: 'boss',
+    rule: {
+      id: 'rule_mission_10',
+      name: 'Lò Năng Lượng Đô Thị Metropolis',
+      description: 'Cả 2 phe nhận +2 Sun/Brains khởi đầu! Làn 2 có Medulla Nebula; Làn 3 có Planet of the Grapes!',
+      startingSunBonus: 2,
+      startingBrainsBonus: 2,
+      initialEnvironments: [
+        { laneIndex: 1, environmentCardId: 'zombie_medulla_nebula' },
+        { laneIndex: 2, environmentCardId: 'plant_planet_of_the_grapes' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Phá tan pháo đài Rustbolt Tối Thượng',
+      '⭐⭐ Giành chiến thắng với Hero còn từ 15 HP trở lên',
+      '⭐⭐⭐ Hoàn thành xuất sắc toàn bộ Chapter 2: Zombie Metropolis!',
+    ],
+    rewards: {
+      gems: 600,
+      unlocksNext: false,
+      title: 'Chúa Tể Đô Thị (Metropolis Hero)',
+    },
+  },
+]
+
+export const ALL_CAMPAIGN_MISSIONS: CampaignMission[] = [
+  ...CHAPTER_1_MISSIONS,
+  ...CHAPTER_2_MISSIONS,
+]
+
+export interface CampaignChapter {
+  id: number
+  title: string
+  subtitle: string
+  description: string
+  badgeText: string
+  missions: CampaignMission[]
+}
+
+export const CAMPAIGN_CHAPTERS: CampaignChapter[] = [
+  {
+    id: 1,
+    title: 'KHỦNG HOẢNG NGOẠI Ô (SUBURBAN CRISIS)',
+    subtitle: 'Chapter 1: Bảo vệ khu phố bình yên',
+    description:
+      'Tiến sĩ Zomboss đã phái 5 tướng lĩnh Zombie sừng sỏ nhất tràn vào khu phố ngoại ô! Hãy sát cánh cùng Dave và các chiến binh Cây Trồng để đập tan âm mưu thôn tính sân vườn!',
+    badgeText: 'CHAPTER 1',
+    missions: CHAPTER_1_MISSIONS,
+  },
+  {
+    id: 2,
+    title: 'ĐÔ THỊ ZOMBIE (ZOMBIE METROPOLIS)',
+    subtitle: 'Chapter 2: Đột kích hang ổ công nghệ cao',
+    description:
+      'Chiến trường chuyển dịch đến trung tâm Đô thị Zombie Metropolis! Z-Mech, Immorticia, Brain Freeze, Electric Boogaloo và Rustbolt Tối Thượng với kho vũ khí hủy diệt đang chờ đón bạn!',
+    badgeText: 'CHAPTER 2',
+    missions: CHAPTER_2_MISSIONS,
   },
 ]
 
@@ -292,6 +508,21 @@ export function calculateMissionStars(
     if (turnCount <= 10) stars++
   } else if (mission.id === 'mission_5') {
     if (playerHp >= 10) stars++
+    if (turnCount <= 12) stars++
+  } else if (mission.id === 'mission_6') {
+    if (playerHp >= 12) stars++
+    if (turnCount <= 9) stars++
+  } else if (mission.id === 'mission_7') {
+    if (playerHp >= 14) stars++
+    if (turnCount <= 10) stars++
+  } else if (mission.id === 'mission_8') {
+    if (playerHp >= 10) stars++
+    if (turnCount <= 8) stars++
+  } else if (mission.id === 'mission_9') {
+    if (playerHp >= 12) stars++
+    if (turnCount <= 10) stars++
+  } else if (mission.id === 'mission_10') {
+    if (playerHp >= 15) stars++
     if (turnCount <= 12) stars++
   }
 

@@ -108,7 +108,9 @@ export const ASSET_MANIFEST = {
       "Dusk Lobber": "/assets/cards/plants/Dark Matter Dragonfruit.png",
       "Pineclone": "/assets/cards/plants/Cherry Bomb.png",
       "Galacta-Cactus": "/assets/cards/plants/Shamrocket.png",
-      "Lily of the Valley": "/assets/cards/plants/Sunflower.png"
+      "Lily of the Valley": "/assets/cards/plants/Sunflower.png",
+      "Blooming Heart": "/assets/cards/plants/Sunflower.png",
+      "Sportacus": "/assets/cards/plants/Astro-Shroom.png"
     },
     "zombies": {
       "Area 22": "/assets/cards/zombies/Area 22.png",
@@ -148,7 +150,10 @@ export const ASSET_MANIFEST = {
       "Intergalactic Warlord": "/assets/cards/zombies/Dr. Spacetime.png",
       "Raiding Raptor": "/assets/heroes/zombies/Brain Freeze.png",
       "Quickdraw Con Man": "/assets/cards/zombies/Swabbie.png",
-      "Going Viral": "/assets/cards/zombies/Lurch for Lunch.png"
+      "Going Viral": "/assets/cards/zombies/Lurch for Lunch.png",
+      "Kitchen Sink Zombie": "/assets/cards/zombies/Zombot 1000.png",
+      "Trick-or-Treater": "/assets/cards/zombies/Conga Zombie.png",
+      "Synchronized Swimmer": "/assets/cards/zombies/Swabbie.png"
     }
   },
   "traits": {

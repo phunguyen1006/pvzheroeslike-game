@@ -58,6 +58,68 @@ const RARITIES: Rarity[] = ['Common', 'Rare', 'Super-Rare', 'Legendary']
 
 export const DECK_STORAGE_KEY = 'pvz_heroes_saved_decks_v1'
 
+export type CostFilter = number | 'all' | '1-2' | '3-4' | '5+'
+
+export interface DeckCodeExportPayload {
+  format: 'pvz_heroes_deck_v1'
+  name: string
+  side: Team
+  cardIds: Record<string, number>
+  totalCards: number
+  exportedAt: string
+}
+
+export function exportDeckCode(deckName: string, side: Team, deckMap: Record<string, number>): string {
+  const totalCards = Object.values(deckMap).reduce((a, b) => a + b, 0)
+  const payload: DeckCodeExportPayload = {
+    format: 'pvz_heroes_deck_v1',
+    name: deckName.trim() || (side === 'plants' ? 'Chiến Thuật Cây Trồng #1' : 'Đội Quân Thây Ma #1'),
+    side,
+    cardIds: { ...deckMap },
+    totalCards,
+    exportedAt: new Date().toISOString(),
+  }
+  return JSON.stringify(payload, null, 2)
+}
+
+export function validateAndParseDeckCode(jsonStr: string): {
+  valid: boolean
+  error?: string
+  deck?: DeckCodeExportPayload
+} {
+  try {
+    const trimmed = jsonStr.trim()
+    if (!trimmed) {
+      return { valid: false, error: 'Vui lòng dán chuỗi mã bộ bài JSON.' }
+    }
+    const parsed = JSON.parse(trimmed)
+    if (!parsed || typeof parsed !== 'object') {
+      return { valid: false, error: 'Mã bộ bài không phải là đối tượng JSON hợp lệ.' }
+    }
+    if (parsed.format !== 'pvz_heroes_deck_v1') {
+      return { valid: false, error: 'Định dạng mã bộ bài không tương thích (yêu cầu format: pvz_heroes_deck_v1).' }
+    }
+    if (parsed.side !== 'plants' && parsed.side !== 'zombies') {
+      return { valid: false, error: 'Phe chiến đấu không hợp lệ (phải là plants hoặc zombies).' }
+    }
+    if (!parsed.cardIds || typeof parsed.cardIds !== 'object') {
+      return { valid: false, error: 'Danh sách thẻ bài (cardIds) không hợp lệ.' }
+    }
+    for (const [cardId, count] of Object.entries(parsed.cardIds)) {
+      if (typeof count !== 'number' || count < 1 || count > 4) {
+        return { valid: false, error: `Thẻ bài ${cardId} có số lượng không hợp lệ (phải từ 1 đến 4).` }
+      }
+    }
+    const total = Object.values(parsed.cardIds as Record<string, number>).reduce((a: number, b: number) => a + b, 0)
+    if (total > 40) {
+      return { valid: false, error: `Tổng số thẻ bài (${total}) vượt quá giới hạn tối đa 40 lá.` }
+    }
+    return { valid: true, deck: parsed }
+  } catch (err: any) {
+    return { valid: false, error: `Lỗi phân tích JSON: ${err.message}` }
+  }
+}
+
 // Helper to convert CardData to pure EngineCard
 export function toEngineCard(c: CardData): EngineCard {
   return {
@@ -121,7 +183,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   const [selectedSide, setSelectedSide] = useState<Team>(initialSide)
   const [selectedClass, setSelectedClass] = useState<string>('all')
   const [selectedType, setSelectedType] = useState<string>('all')
-  const [selectedCost, setSelectedCost] = useState<number | 'all'>('all')
+  const [selectedCost, setSelectedCost] = useState<CostFilter>('all')
   const [selectedTribe, setSelectedTribe] = useState<string>('all')
   const [selectedRarity, setSelectedRarity] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
@@ -138,6 +200,13 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   const [savedDecks, setSavedDecks] = useState<SavedDeck[]>([])
   const [selectedSavedDeckId, setSelectedSavedDeckId] = useState<string>('')
   const [saveStatusMessage, setSaveStatusMessage] = useState<string | null>(null)
+
+  // Export / Import Deck Code State
+  const [shareModalOpen, setShareModalOpen] = useState<boolean>(false)
+  const [shareMode, setShareMode] = useState<'export' | 'import'>('export')
+  const [shareCodeString, setShareCodeString] = useState<string>('')
+  const [shareError, setShareError] = useState<string | null>(null)
+  const [shareCopied, setShareCopied] = useState<boolean>(false)
 
   // Load saved decks from localStorage on mount
   useEffect(() => {
@@ -170,12 +239,20 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         if (!nameMatch && !descMatch && !tribeMatch) return false
       }
 
-      // Cost filter
+      // Cost filter (supports ranges '1-2', '3-4', '5+' or specific cost number 0..8+)
       if (selectedCost !== 'all') {
-        if (selectedCost === 8) {
-          if (card.cost < 8) return false
-        } else if (card.cost !== selectedCost) {
-          return false
+        if (selectedCost === '1-2') {
+          if (card.cost < 1 || card.cost > 2) return false
+        } else if (selectedCost === '3-4') {
+          if (card.cost < 3 || card.cost > 4) return false
+        } else if (selectedCost === '5+') {
+          if (card.cost < 5) return false
+        } else if (typeof selectedCost === 'number') {
+          if (selectedCost === 8) {
+            if (card.cost < 8) return false
+          } else if (card.cost !== selectedCost) {
+            return false
+          }
         }
       }
 
@@ -379,6 +456,75 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     }
   }
 
+  // Open Export Modal
+  const handleOpenExportModal = () => {
+    const jsonStr = exportDeckCode(deckName, selectedSide, deckMap)
+    setShareCodeString(jsonStr)
+    setShareMode('export')
+    setShareCopied(false)
+    setShareError(null)
+    setShareModalOpen(true)
+    soundManager.playCardDrop()
+  }
+
+  // Copy Export Code to Clipboard
+  const handleCopyExportCode = async () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareCodeString)
+        setShareCopied(true)
+        soundManager.playBuff()
+        setTimeout(() => setShareCopied(false), 3000)
+      } else {
+        // Fallback for environments without clipboard API
+        setShareCopied(true)
+      }
+    } catch (err) {
+      console.warn('Clipboard write failed, user can copy manually', err)
+      setShareCopied(true)
+    }
+  }
+
+  // Open Import Modal
+  const handleOpenImportModal = () => {
+    setShareCodeString('')
+    setShareMode('import')
+    setShareCopied(false)
+    setShareError(null)
+    setShareModalOpen(true)
+    soundManager.playCardDrop()
+  }
+
+  // Execute Import Deck Code
+  const handleExecuteImportCode = () => {
+    const result = validateAndParseDeckCode(shareCodeString)
+    if (!result.valid || !result.deck) {
+      setShareError(result.error || 'Mã bộ bài không hợp lệ.')
+      soundManager.playCardDrop()
+      return
+    }
+
+    const imported = result.deck
+
+    // If deck faction differs from current side, switch automatically
+    if (imported.side !== selectedSide) {
+      setSelectedSide(imported.side)
+      setSelectedClass('all')
+      setSelectedType('all')
+      setSelectedCost('all')
+      setSelectedTribe('all')
+      setSelectedRarity('all')
+    }
+
+    setDeckName(imported.name || (imported.side === 'plants' ? 'Chiến Thuật Cây Trồng' : 'Đội Quân Thây Ma'))
+    setDeckMap({ ...imported.cardIds })
+    setShareModalOpen(false)
+    soundManager.playBuff()
+
+    setSaveStatusMessage(`Đã nhập thành công bộ bài "${imported.name}" (${imported.totalCards || Object.values(imported.cardIds).reduce((a, b) => a + b, 0)} lá)!`)
+    setTimeout(() => setSaveStatusMessage(null), 3500)
+  }
+
   // Confirm and start battle with this deck
   const handleConfirmSaveAndPlay = () => {
     soundManager.playBuff()
@@ -478,7 +624,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
             {/* Filter Rows: Cost, Tribe, Rarity, Class, Type */}
             <div className="filters-controls-strip">
-              {/* Cost Filter (0, 1, 2, 3, 4, 5, 6, 7, 8+) */}
+              {/* Cost Filter (Ranges: '1-2', '3-4', '5+' & Exact 0..8+) */}
               <div className="filter-group cost-filter-group">
                 <span className="filter-group-label">Chi phí (Cost):</span>
                 <div className="cost-bubbles-row">
@@ -488,6 +634,28 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   >
                     Tất cả
                   </button>
+                  <button
+                    className={`cost-filter-btn cost-range-pill ${selectedCost === '1-2' ? 'active' : ''}`}
+                    onClick={() => setSelectedCost('1-2')}
+                    title="Các thẻ bài tiêu tốn 1 đến 2 Sun/Brains"
+                  >
+                    1-2
+                  </button>
+                  <button
+                    className={`cost-filter-btn cost-range-pill ${selectedCost === '3-4' ? 'active' : ''}`}
+                    onClick={() => setSelectedCost('3-4')}
+                    title="Các thẻ bài tiêu tốn 3 đến 4 Sun/Brains"
+                  >
+                    3-4
+                  </button>
+                  <button
+                    className={`cost-filter-btn cost-range-pill ${selectedCost === '5+' ? 'active' : ''}`}
+                    onClick={() => setSelectedCost('5+')}
+                    title="Các thẻ bài tiêu tốn từ 5 Sun/Brains trở lên"
+                  >
+                    5+
+                  </button>
+                  <span className="cost-separator">|</span>
                   {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((c) => (
                     <button
                       key={c}
@@ -754,7 +922,21 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               onClick={handleSaveToLocalStorage}
               title="Lưu bộ bài này vào trình duyệt"
             >
-              💾 Lưu Bộ Bài
+              💾 Lưu
+            </button>
+            <button
+              className="storage-btn export-code-btn"
+              onClick={handleOpenExportModal}
+              title="Xuất mã bộ bài dạng JSON để chia sẻ"
+            >
+              📤 Xuất Mã
+            </button>
+            <button
+              className="storage-btn import-code-btn"
+              onClick={handleOpenImportModal}
+              title="Nhập mã bộ bài từ chuỗi JSON"
+            >
+              📥 Nhập Mã
             </button>
             <button
               className="storage-btn load-preset-btn"
@@ -768,7 +950,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               onClick={handleClearDeck}
               title="Xóa toàn bộ bài để tạo mới"
             >
-              🗑️ Xóa Trắng
+              🗑️ Xóa
             </button>
           </div>
 
@@ -861,6 +1043,87 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           </div>
         </aside>
       </main>
+
+      {/* Export / Import Deck Code Modal */}
+      {shareModalOpen && (
+        <div className="deck-share-modal-backdrop" onClick={() => setShareModalOpen(false)}>
+          <div className="deck-share-modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="share-modal-header">
+              <h3 className="share-modal-title">
+                {shareMode === 'export' ? '📤 XUẤT MÃ BỘ BÀI (EXPORT DECK)' : '📥 NHẬP MÃ BỘ BÀI (IMPORT DECK)'}
+              </h3>
+              <button className="share-modal-close-btn" onClick={() => setShareModalOpen(false)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="share-modal-body">
+              {shareMode === 'export' ? (
+                <>
+                  <p className="share-modal-desc">
+                    Sao chép mã chuỗi JSON bên dưới để chia sẻ hoặc lưu trữ bộ bài của bạn:
+                  </p>
+                  <textarea
+                    className="share-modal-textarea"
+                    readOnly
+                    value={shareCodeString}
+                    rows={10}
+                    onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                  />
+                  {shareCopied && (
+                    <div className="share-modal-success-badge">
+                      ✓ Đã sao chép mã bộ bài vào Clipboard!
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="share-modal-desc">
+                    Dán mã chuỗi JSON bộ bài vào ô bên dưới để nhập danh sách thẻ bài:
+                  </p>
+                  <textarea
+                    className="share-modal-textarea"
+                    placeholder='Dán chuỗi JSON định dạng {"format": "pvz_heroes_deck_v1", ...} vào đây...'
+                    value={shareCodeString}
+                    onChange={(e) => {
+                      setShareCodeString(e.target.value)
+                      setShareError(null)
+                    }}
+                    rows={10}
+                  />
+                  {shareError && (
+                    <div className="share-modal-error-badge">
+                      ⚠️ {shareError}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="share-modal-footer">
+              {shareMode === 'export' ? (
+                <>
+                  <button className="share-cancel-btn" onClick={() => setShareModalOpen(false)}>
+                    Đóng
+                  </button>
+                  <button className="share-action-btn" onClick={handleCopyExportCode}>
+                    📋 Sao Chép (Copy)
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className="share-cancel-btn" onClick={() => setShareModalOpen(false)}>
+                    Hủy
+                  </button>
+                  <button className="share-action-btn" onClick={handleExecuteImportCode}>
+                    ✅ Xác Nhận Nhập
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

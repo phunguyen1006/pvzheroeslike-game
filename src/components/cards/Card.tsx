@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import type { Card as CardType } from '../../engine/types'
 import { ASSET_MANIFEST } from '../../data/assetsManifest'
 
@@ -8,6 +8,7 @@ export interface CardProps {
   isPlayable?: boolean
   onClick?: () => void
   onHover?: (hovered: boolean) => void
+  onInspect?: (card: CardType) => void
   size?: 'sm' | 'md' | 'lg'
   showTooltip?: boolean
   interactive?: boolean
@@ -100,12 +101,15 @@ export const Card: React.FC<CardProps> = ({
   isPlayable = true,
   onClick,
   onHover,
+  onInspect,
   size = 'md',
   showTooltip = true,
   interactive = true,
 }) => {
   const [imageFailed, setImageFailed] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isLongPressRef = useRef(false)
 
   const isPlant = card.side === 'plants'
   const isSuperpower = card.type === 'superpower'
@@ -147,6 +151,56 @@ export const Card: React.FC<CardProps> = ({
   const handleMouseLeave = () => {
     setIsHovered(false)
     onHover?.(false)
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
+  // Right-click inspection handler
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    onInspect?.(card)
+  }
+
+  // Touch / pointer long-press inspection handler (450ms threshold)
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.button === 2) return // Secondary click handled by onContextMenu
+    isLongPressRef.current = false
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+    }
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressRef.current = true
+      onInspect?.(card)
+    }, 450)
+  }
+
+  const handlePointerUp = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
+  const handlePointerCancel = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isLongPressRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      isLongPressRef.current = false
+      return
+    }
+    if (isPlayable && interactive) {
+      onClick?.()
+    }
   }
 
   return (
@@ -154,12 +208,16 @@ export const Card: React.FC<CardProps> = ({
       className={`pvz-card-wrapper card-size-${size} ${interactive ? 'interactive' : ''}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onContextMenu={handleContextMenu}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
     >
       <div
         className={`pvz-card ${card.side}-card type-${card.type} ${isSelected ? 'is-selected' : ''} ${
           isPlayable ? 'is-playable' : 'is-unplayable'
         }`}
-        onClick={isPlayable && interactive ? onClick : undefined}
+        onClick={handleClick}
       >
         {/* Outer Frame Decoration (Plant leaf / Zombie metallic plate) */}
         <div className="card-frame-border" />
