@@ -10,6 +10,12 @@ import {
   loadZombieCampaignProgress,
   saveZombieCampaignProgress,
   getInitialZombieCampaignProgress,
+  loadSavedDecks,
+  buildEngineDeckFromMap,
+  CAMPAIGN_STAR_MILESTONES,
+  loadClaimedMilestones,
+  claimMilestoneReward,
+  getTotalCampaignStars,
 } from '../../data/campaign'
 import {
   CURRENT_WEEKLY_EVENT,
@@ -18,11 +24,11 @@ import {
   getWeeklyEventCountdown,
   type WeeklyEventProgress,
 } from '../../data/eventTickets'
-import type { CampaignMission, CampaignProgress, Side } from '../../engine/types'
+import type { CampaignMission, CampaignProgress, Side, Card as EngineCard, SavedDeck } from '../../engine/types'
 import { soundManager } from '../../audio/SoundManager'
 
 export interface CampaignMapProps {
-  onStartMission: (mission: CampaignMission) => void
+  onStartMission: (mission: CampaignMission, customDeck?: EngineCard[]) => void
   onBack: () => void
 }
 
@@ -33,6 +39,15 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
   const [activeChapterId, setActiveChapterId] = useState<number>(1)
   const [selectedMission, setSelectedMission] = useState<CampaignMission | null>(null)
 
+  // Custom Deck Selection state for Mission Briefing
+  const [availableSavedDecks, setAvailableSavedDecks] = useState<SavedDeck[]>([])
+  const [selectedDeckId, setSelectedDeckId] = useState<string>('starter')
+
+  // Star Milestone Rewards Modal state
+  const [showRewardsModal, setShowRewardsModal] = useState<boolean>(false)
+  const [claimedMilestones, setClaimedMilestones] = useState<number[]>(loadClaimedMilestones)
+  const [milestoneRewardMessage, setMilestoneRewardMessage] = useState<string | null>(null)
+
   // Weekly Event state
   const [eventProgress, setEventProgress] = useState<WeeklyEventProgress>(loadEventTicketsProgress)
   const [showEventModal, setShowEventModal] = useState<boolean>(false)
@@ -42,6 +57,7 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
     setPlantProgress(loadCampaignProgress())
     setZombieProgress(loadZombieCampaignProgress())
     setEventProgress(loadEventTicketsProgress())
+    setClaimedMilestones(loadClaimedMilestones())
   }, [])
 
   const isZombie = campaignFaction === 'zombies'
@@ -60,6 +76,9 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
   const maxStars = allMissions.length * 3
   const completedCount = Object.keys(currentProgress.completedMissions).length
 
+  // Overall combined stars across both campaigns
+  const combinedCampaignStars = getTotalCampaignStars(plantProgress, zombieProgress)
+
   // Select a mission to view briefing
   const handleSelectMission = (mission: CampaignMission) => {
     const isUnlocked = mission.missionNumber <= currentProgress.unlockedMissionNumber
@@ -68,13 +87,43 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
       return
     }
     soundManager.playBuff()
+    const playerSide = mission.faction === 'zombies' ? 'zombies' : 'plants'
+    const decks = loadSavedDecks(playerSide)
+    setAvailableSavedDecks(decks)
+    setSelectedDeckId('starter')
     setSelectedMission(mission)
   }
 
-  // Start the mission
+  // Start the mission with optional custom deck
   const handleLaunchBattle = (mission: CampaignMission) => {
     soundManager.playBuff()
-    onStartMission(mission)
+    const playerSide = mission.faction === 'zombies' ? 'zombies' : 'plants'
+    let customDeck: EngineCard[] | undefined = undefined
+
+    if (selectedDeckId !== 'starter') {
+      const chosenDeck = availableSavedDecks.find((d) => d.id === selectedDeckId)
+      if (chosenDeck && chosenDeck.cardIds) {
+        customDeck = buildEngineDeckFromMap(chosenDeck.cardIds, playerSide)
+      }
+    }
+
+    onStartMission(mission, customDeck)
+  }
+
+  // Claim a star milestone reward
+  const handleClaimMilestone = (requiredStars: number) => {
+    const starsData = getTotalCampaignStars(plantProgress, zombieProgress)
+    const res = claimMilestoneReward(requiredStars, starsData.totalStars)
+    if (res.success) {
+      setClaimedMilestones(loadClaimedMilestones())
+      setMilestoneRewardMessage(`Chúc mừng! Bạn đã nhận ${res.gemsAwarded} Gems và danh hiệu "${res.badge}"!`)
+      soundManager.playBuff()
+      setTimeout(() => setMilestoneRewardMessage(null), 4500)
+    } else if (res.error) {
+      setMilestoneRewardMessage(res.error)
+      soundManager.playCardDrop()
+      setTimeout(() => setMilestoneRewardMessage(null), 3000)
+    }
   }
 
   // Switch active chapter
@@ -161,6 +210,16 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
               {completedCount} / {allMissions.length} Màn
             </span>
           </div>
+          <button
+            className="campaign-rewards-pill-btn"
+            onClick={() => {
+              setClaimedMilestones(loadClaimedMilestones())
+              setShowRewardsModal(true)
+            }}
+            title="Xem và nhận phần thưởng mốc sao chiến dịch"
+          >
+            🏆 THƯỞNG ({combinedCampaignStars.totalStars}/45 ⭐)
+          </button>
           <button
             className="campaign-reset-btn"
             onClick={handleResetProgress}
@@ -478,6 +537,40 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
                     </div>
                   )}
                 </div>
+
+                {/* Custom Deck Selector */}
+                <div className="briefing-deck-selector-box">
+                  <div className="deck-selector-label-row">
+                    <span className="deck-selector-title">🃏 BỘ BÀI CHIẾN ĐẤU:</span>
+                    <span className="deck-selector-faction">
+                      {selectedMission.faction === 'zombies' ? '🧟 Phe Thây Ma' : '🌱 Phe Cây Trồng'}
+                    </span>
+                  </div>
+                  <select
+                    className="briefing-deck-select-dropdown"
+                    value={selectedDeckId}
+                    onChange={(e) => setSelectedDeckId(e.target.value)}
+                  >
+                    <option value="starter">Bộ bài Starter mặc định</option>
+                    {availableSavedDecks.map((deck) => {
+                      const cardCount = Object.values(deck.cardIds || {}).reduce((a, b) => a + b, 0)
+                      return (
+                        <option key={deck.id} value={deck.id}>
+                          {deck.name} ({cardCount} lá)
+                        </option>
+                      )
+                    })}
+                  </select>
+                  {selectedDeckId !== 'starter' ? (
+                    <span className="deck-selected-hint active">
+                      ✅ Đang dùng bộ bài tùy chỉnh: {availableSavedDecks.find((d) => d.id === selectedDeckId)?.name}
+                    </span>
+                  ) : (
+                    <span className="deck-selected-hint">
+                      ℹ️ Bạn có thể tạo bộ bài tùy chỉnh tại Deck Builder và chọn tại đây
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Briefing Footer Action */}
@@ -650,6 +743,128 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
                     Chưa Đủ Vé Mở Khóa ({eventProgress.tickets % CURRENT_WEEKLY_EVENT.targetTicketsPerCopy} / {CURRENT_WEEKLY_EVENT.targetTicketsPerCopy})
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Campaign Star Milestone Rewards Modal */}
+        {showRewardsModal && (
+          <div
+            className="mission-briefing-drawer-backdrop"
+            onClick={() => setShowRewardsModal(false)}
+          >
+            <div
+              className="campaign-rewards-modal-dialog"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="rewards-modal-header">
+                <div className="rewards-modal-badge">TIẾN ĐỘ CHIẾN DỊCH</div>
+                <h3 className="rewards-modal-title">🏆 PHẦN THƯỞNG MỐC SAO & HUY HIỆU</h3>
+                <button
+                  className="briefing-close-btn"
+                  onClick={() => setShowRewardsModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="rewards-modal-body">
+                {/* Combined Stars Summary Cards */}
+                <div className="rewards-stars-summary-grid">
+                  <div className="stars-summary-card plant-stars-card">
+                    <span className="summary-card-emoji">🌿</span>
+                    <span className="summary-card-label">Sao Cây Trồng</span>
+                    <span className="summary-card-val">
+                      {combinedCampaignStars.plantStars} / 30 ⭐
+                    </span>
+                  </div>
+                  <div className="stars-summary-card zombie-stars-card">
+                    <span className="summary-card-emoji">🧟</span>
+                    <span className="summary-card-label">Sao Thây Ma</span>
+                    <span className="summary-card-val">
+                      {combinedCampaignStars.zombieStars} / 15 ⭐
+                    </span>
+                  </div>
+                  <div className="stars-summary-card total-stars-card">
+                    <span className="summary-card-emoji">⭐</span>
+                    <span className="summary-card-label">Tổng Sao Thu Thập</span>
+                    <span className="summary-card-val">
+                      {combinedCampaignStars.totalStars} / 45 ⭐
+                    </span>
+                  </div>
+                </div>
+
+                {/* Milestone Reward Message Notification */}
+                {milestoneRewardMessage && (
+                  <div className="milestone-claim-alert">
+                    🎉 {milestoneRewardMessage}
+                  </div>
+                )}
+
+                {/* Milestones List */}
+                <div className="rewards-milestones-list">
+                  <h4 className="milestones-list-title">
+                    MỐC PHẦN THƯỞNG GEMS VÀ HUY HIỆU DANH HIỆU:
+                  </h4>
+                  {CAMPAIGN_STAR_MILESTONES.map((m) => {
+                    const isClaimed = claimedMilestones.includes(m.requiredStars)
+                    const canClaim =
+                      !isClaimed && combinedCampaignStars.totalStars >= m.requiredStars
+
+                    return (
+                      <div
+                        key={m.requiredStars}
+                        className={`reward-milestone-row ${
+                          isClaimed
+                            ? 'row-claimed'
+                            : canClaim
+                              ? 'row-ready'
+                              : 'row-locked'
+                        }`}
+                      >
+                        <div className="milestone-stars-badge">
+                          <span className="star-req-num">{m.requiredStars}</span>
+                          <span className="star-req-icon">⭐</span>
+                        </div>
+
+                        <div className="milestone-info-col">
+                          <div className="milestone-badge-title">
+                            <span className="badge-name">🎖️ {m.badge}</span>
+                            <span className="reward-gems-pill">💎 +{m.gems} Gems</span>
+                          </div>
+                          <p className="milestone-desc-text">{m.description}</p>
+                        </div>
+
+                        <div className="milestone-action-col">
+                          {isClaimed ? (
+                            <span className="claimed-status-pill">✅ Đã nhận</span>
+                          ) : canClaim ? (
+                            <button
+                              className="claim-reward-action-btn"
+                              onClick={() => handleClaimMilestone(m.requiredStars)}
+                            >
+                              🎁 NHẬN THƯỞNG!
+                            </button>
+                          ) : (
+                            <span className="locked-stars-needed">
+                              🔒 Cần {m.requiredStars - combinedCampaignStars.totalStars} ⭐ nữa
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="event-modal-footer">
+                <button
+                  className="briefing-cancel-btn"
+                  onClick={() => setShowRewardsModal(false)}
+                >
+                  Đóng
+                </button>
               </div>
             </div>
           </div>

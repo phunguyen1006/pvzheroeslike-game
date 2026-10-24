@@ -8,6 +8,8 @@ import {
   triggerDinoRoar,
   triggerWhenTrickPlayed,
   triggerWhenDestroyed,
+  triggerStartOfTurn,
+  triggerWhenSciencePlayed,
 } from '../engine/abilities'
 import { gameReducer, canPlayCardToLane, createInitialGameState } from '../engine/reducer'
 import { resolveCombat } from '../engine/combat'
@@ -712,5 +714,193 @@ describe('Round 5 Card Catalog Validation Suite', () => {
         expect(result.updatedState.lanes[4].zombieMinion?.currentAttack).toBe(6)
         expect(result.updatedState.lanes[4].zombieMinion?.currentHealth).toBe(6)
       })
+
+    describe('Round 8: Galactic Gardens & Colossal Fossils Iconic Card Suite', () => {
+      it('should validate Galacta-Cactus metadata, Bullseye trait, and universal death explosion', () => {
+        const card = getCardById('plant_galacta_cactus')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Galacta-Cactus')
+        expect(card?.cost).toBe(1)
+        expect(card?.attack).toBe(2)
+        expect(card?.hp).toBe(2)
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.tribe).toBe('Cactus Plant')
+        expect(card?.heroClass).toBe('Guardian')
+        expect(card?.bullseye).toBe(true)
+        expect(ASSET_MANIFEST.cards.plants['Galacta-Cactus']).toBeDefined()
+
+        // Test death trigger damaging all minions and both heroes
+        const state = createInitialGameState()
+        state.plantHero.hp = 20
+        state.zombieHero.hp = 20
+        // Ally plant on lane 0
+        state.lanes[0].plantMinion = createMockMinion('p1', 'Peashooter', 'plants', 1, 3, { cardId: 'plant_peashooter' })
+        // Enemy zombie on lane 1
+        state.lanes[1].zombieMinion = createMockMinion('z1', 'Conehead', 'zombies', 2, 2, { cardId: 'zombie_conehead' })
+        // Galacta-Cactus destroyed on lane 2
+        const cactus = createMockMinion('gc1', 'Galacta-Cactus', 'plants', 2, 2, { cardId: 'plant_galacta_cactus' })
+        state.lanes[2].plantMinion = null
+
+        const res = triggerWhenDestroyed(state, cactus, 2, 'plants')
+        expect(res.updatedState.plantHero.hp).toBe(19)
+        expect(res.updatedState.zombieHero.hp).toBe(19)
+        expect(res.updatedState.lanes[0].plantMinion?.currentHealth).toBe(2)
+        expect(res.updatedState.lanes[1].zombieMinion?.currentHealth).toBe(1)
+        expect(res.events.some(e => e.includes('Galacta-Cactus'))).toBe(true)
+      })
+
+      it('should validate Captain Cucumber metadata and on-damage Legendary conjure discounted by 1 Sun', () => {
+        const card = getCardById('plant_captain_cucumber')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Captain Cucumber')
+        expect(card?.cost).toBe(3)
+        expect(card?.attack).toBe(1)
+        expect(card?.hp).toBe(4)
+        expect(card?.rarity).toBe('Legendary')
+        expect(card?.tribe).toBe('Fruit Plant')
+        expect(card?.heroClass).toBe('Mega-Grow')
+        expect(ASSET_MANIFEST.cards.plants['Captain Cucumber']).toBeDefined()
+
+        // Test combat: dealing damage to Zombie minion triggers conjure
+        const state = createInitialGameState()
+        state.plantHand = []
+        state.lanes[0].plantMinion = createMockMinion('cc1', 'Captain Cucumber', 'plants', 1, 4, { cardId: 'plant_captain_cucumber' })
+        state.lanes[0].zombieMinion = createMockMinion('z1', 'Browncoat', 'zombies', 1, 3, { cardId: 'zombie_browncoat' })
+
+        const combatResult = resolveCombat(state)
+        expect(combatResult.updatedState.plantHand.length).toBe(1)
+        const conjured = combatResult.updatedState.plantHand[0]
+        const catalogCard = getCardById(conjured.id)
+        if (catalogCard) {
+          expect(catalogCard.rarity).toBe('Legendary')
+          expect(conjured.cost).toBe(Math.max(0, catalogCard.cost - 1))
+        }
+      })
+
+      it('should validate Banana Launcher metadata and start-of-turn Banana Bomb generation', () => {
+        const card = getCardById('plant_banana_launcher')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Banana Launcher')
+        expect(card?.cost).toBe(2)
+        expect(card?.attack).toBe(0)
+        expect(card?.hp).toBe(3)
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.tribe).toBe('Fruit Plant')
+        expect(card?.heroClass).toBe('Kabloom')
+        expect(ASSET_MANIFEST.cards.plants['Banana Launcher']).toBeDefined()
+
+        // Test Start of Turn generation
+        const state = createInitialGameState()
+        state.plantHand = []
+        state.lanes[1].plantMinion = createMockMinion('bl1', 'Banana Launcher', 'plants', 0, 3, { cardId: 'plant_banana_launcher' })
+
+        const startTurnRes = triggerStartOfTurn(state, 'plants')
+        expect(startTurnRes.updatedState.plantHand.length).toBe(1)
+        const generatedBomb = startTurnRes.updatedState.plantHand[0]
+        expect(generatedBomb.id.startsWith('plant_banana_bomb')).toBe(true)
+        expect(generatedBomb.name).toBe('Banana Bomb')
+        expect(generatedBomb.cost).toBe(1)
+        expect(generatedBomb.type).toBe('trick')
+      })
+
+      it('should validate Banana Bomb token trick execution dealing 1 damage', () => {
+        const card = getCardById('plant_banana_bomb')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Banana Bomb')
+        expect(card?.cost).toBe(1)
+        expect(card?.type).toBe('trick')
+        expect(card?.rarity).toBe('Token')
+        expect(card?.heroClass).toBe('Kabloom')
+        expect(ASSET_MANIFEST.cards.plants['Banana Bomb']).toBeDefined()
+
+        // Test trick damaging zombie
+        const state = createInitialGameState()
+        state.lanes[2].zombieMinion = createMockMinion('z_target', 'Basic Zombie', 'zombies', 1, 3)
+        const bombCard: Card = {
+          id: 'plant_banana_bomb_test',
+          name: 'Banana Bomb',
+          side: 'plants',
+          cost: 1,
+          attack: 0,
+          health: 0,
+          type: 'trick',
+          image: '',
+        }
+
+        const trickRes = executeTrick(state, bombCard, 'plants', 2)
+        expect(trickRes.updatedState.lanes[2].zombieMinion?.currentHealth).toBe(2)
+
+        // Test lethal damage destroying zombie
+        state.lanes[2].zombieMinion = createMockMinion('z_weak', 'Weak Imp', 'zombies', 1, 1)
+        const lethalRes = executeTrick(state, bombCard, 'plants', 2)
+        expect(lethalRes.updatedState.lanes[2].zombieMinion).toBeNull()
+      })
+
+      it('should validate Quickdraw Con Man metadata, Bullseye and reaction to Plant Hero card draw', () => {
+        const card = getCardById('zombie_quickdraw_con_man')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Quickdraw Con Man')
+        expect(card?.cost).toBe(1)
+        expect(card?.attack).toBe(1)
+        expect(card?.hp).toBe(3)
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.tribe).toBe('Pirate Zombie')
+        expect(card?.heroClass).toBe('Crazy')
+        expect(card?.bullseye).toBe(true)
+        expect(ASSET_MANIFEST.cards.zombies['Quickdraw Con Man']).toBeDefined()
+
+        // Test reaction when Plant draws a card (triggerDinoRoar with plants)
+        const state = createInitialGameState()
+        state.plantHero.hp = 20
+        state.plantHero.blockMeter = 0
+        state.lanes[2].zombieMinion = createMockMinion('qd1', 'Quickdraw Con Man', 'zombies', 1, 3, { cardId: 'zombie_quickdraw_con_man' })
+
+        const roarResult = triggerDinoRoar(state, 'plants')
+        expect(roarResult.updatedState.plantHero.hp).toBe(19)
+        // Bullseye damage does NOT charge Super-Block meter
+        expect(roarResult.updatedState.plantHero.blockMeter).toBe(0)
+        expect(roarResult.events.some(e => e.includes('Quickdraw Con Man'))).toBe(true)
+      })
+
+      it('should validate Interdimensional Zombie metadata and transformation on Science play', () => {
+        const card = getCardById('zombie_interdimensional_zombie')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Interdimensional Zombie')
+        expect(card?.cost).toBe(1)
+        expect(card?.attack).toBe(1)
+        expect(card?.hp).toBe(3)
+        expect(card?.rarity).toBe('Legendary')
+        expect(card?.tribe).toBe('Science Zombie')
+        expect(card?.heroClass).toBe('Brainy')
+        expect(ASSET_MANIFEST.cards.zombies['Interdimensional Zombie']).toBeDefined()
+
+        // Test transformation when playing another Science card
+        const state = createInitialGameState()
+        const idZombie = createMockMinion('idz1', 'Interdimensional Zombie', 'zombies', 1, 3, {
+          cardId: 'zombie_interdimensional_zombie',
+        })
+        state.lanes[1].zombieMinion = idZombie
+
+        // Play a science trick like Rocket Science or Teleport
+        const scienceTrick: Card = {
+          id: 'zombie_teleport',
+          name: 'Teleport',
+          side: 'zombies',
+          cost: 1,
+          attack: 0,
+          health: 0,
+          type: 'trick',
+          image: '',
+        }
+
+        const transformRes = triggerWhenSciencePlayed(state, scienceTrick, 'zombies')
+        expect(transformRes.updatedState.lanes[1].zombieMinion).toBeDefined()
+        expect(transformRes.updatedState.lanes[1].zombieMinion?.cardId).not.toBe('zombie_interdimensional_zombie')
+        // Transformed into a 3-cost zombie
+        const transformedCard = getCardById(transformRes.updatedState.lanes[1].zombieMinion!.cardId)
+        expect(transformedCard?.cost).toBe(3)
+        expect(transformRes.events.some(e => e.includes('Interdimensional Zombie'))).toBe(true)
+      })
+    })
   })
 })

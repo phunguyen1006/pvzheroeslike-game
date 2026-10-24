@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { MinionSlot } from './MinionSlot'
+import { LaneEnvironmentFX } from './LaneEnvironmentFX'
 import type { LaneState, Card as CardType, Minion as MinionType } from '../../engine/types'
 
 export interface LaneProps {
@@ -171,6 +172,9 @@ export const Lane: React.FC<LaneProps> = ({
           <span className="lane-type-chip water-chip">🌊 WATER</span>
         ) : null}
       </div>
+
+      {/* Living Lane Environment FX (Heights Wind & Water Ripples & Gravestones) */}
+      <LaneEnvironmentFX lane={lane} />
 
       {/* 3. Active Environment Lane Surface VFX */}
       {lane.environment && (

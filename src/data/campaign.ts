@@ -4,7 +4,7 @@
  * 5 Epic Boss Missions against iconic Zombie Heroes
  */
 
-import type { CampaignMission, CampaignProgress, LaneState, Side, Minion } from '../engine/types'
+import type { CampaignMission, CampaignProgress, LaneState, Side, Minion, Card as EngineCard, SavedDeck } from '../engine/types'
 import { createInitialLanes, convertCardDataToCard } from '../engine/reducer'
 import { getCardById } from './cards'
 
@@ -238,6 +238,12 @@ export const CHAPTER_2_MISSIONS: CampaignMission[] = [
       unlocksNext: true,
       title: 'Thợ Phá Giáp Cơ Giới',
     },
+    comicDialogue: {
+      issueTitle: 'CHIẾN CƠ HỦY DIỆT Z-MECH!',
+      issueTagline: 'Robot chiến tranh tối tân Laser Base Alpha xung trận',
+      zombieHeroQuote: 'Cơ giáp Z-Mech kích hoạt hỏa lực toàn diện! Laser Base Alpha sẽ bốc hơi mọi lá chắn cản đường!',
+      plantHeroQuote: 'Một cỗ máy to xác nhưng người lái là chú Imp vụng về? Bãi chông Spikeweed sẽ làm đứt xích xe tăng của ngươi!',
+    },
   },
   {
     id: 'mission_7',
@@ -273,6 +279,12 @@ export const CHAPTER_2_MISSIONS: CampaignMission[] = [
       gems: 200,
       unlocksNext: true,
       title: 'Thợ Săn Phù Thủy',
+    },
+    comicDialogue: {
+      issueTitle: 'HẮC MA THUẬT NGUYỆT THỰC!',
+      issueTagline: 'Immorticia cùng bầy dơi đen che khuất vầng dương',
+      zombieHeroQuote: 'Bóng tối Total Eclipse và bầy dơi đêm sẽ biến sân vườn thành nghĩa địa vĩnh cửu!',
+      plantHeroQuote: 'Mặt trời có thể bị che khuất tạm thời, nhưng hạt giống hy vọng sẽ bừng sáng thiêu rụi ma thuật đen của ngươi!',
     },
   },
   {
@@ -310,6 +322,12 @@ export const CHAPTER_2_MISSIONS: CampaignMission[] = [
       unlocksNext: true,
       title: 'Ngọn Lửa Băng Giá',
     },
+    comicDialogue: {
+      issueTitle: 'BÃO BĂNG TỬ THẦN BẮC CỰC!',
+      issueTagline: 'Brain Freeze mang mùa đông vĩnh cửu đến Area 22',
+      zombieHeroQuote: 'Graaaagh! Đóng băng mọi mạch nhựa sống! Area 22 trao cho bầy quái thú cơn cuồng nộ Frenzy bất tận!',
+      plantHeroQuote: 'Lửa nhiệt huyết của loài cây sẽ làm tan chảy lớp băng tuyết! Đậu tuyết Snow Pea, hãy cùng ta phản công!',
+    },
   },
   {
     id: 'mission_9',
@@ -342,6 +360,12 @@ export const CHAPTER_2_MISSIONS: CampaignMission[] = [
       gems: 300,
       unlocksNext: true,
       title: 'Vua Vũ Trường',
+    },
+    comicDialogue: {
+      issueTitle: 'VŨ TRƯỜNG SẤM SÉT TỬ THẦN!',
+      issueTagline: 'Electric Boogaloo khai hỏa trạm phát sóng Moon Base Z',
+      zombieHeroQuote: 'Nhịp điệu sấm chớp cuồng loạn! Moon Base Z sẽ bắn phá trực diện vào Hero các ngươi mỗi nhịp nhảy!',
+      plantHeroQuote: 'Vũ hội của ngươi đến lúc hạ màn rồi, Boogaloo! Năng lượng mặt trời dồi dào sẽ ngắt nguồn âm thanh của ngươi!',
     },
   },
   {
@@ -376,6 +400,12 @@ export const CHAPTER_2_MISSIONS: CampaignMission[] = [
       gems: 600,
       unlocksNext: false,
       title: 'Chúa Tể Đô Thị (Metropolis Hero)',
+    },
+    comicDialogue: {
+      issueTitle: 'TRẬN QUYẾT ĐẤU METROPOLIS!',
+      issueTagline: 'Rustbolt Tối Thượng với mạng lưới năng lượng vô tận',
+      zombieHeroQuote: 'Medulla Nebula cung cấp trí não bất tận! Thành phố Metropolis này giờ là đế chế của Zombie!',
+      plantHeroQuote: 'Đây là trận chiến cuối cùng bảo vệ tương lai! Planet of the Grapes tiếp tế vô hạn, quyết chiến đến cùng!',
     },
   },
 ]
@@ -420,13 +450,19 @@ export const ZOMBIE_CHAPTER_1_MISSIONS: CampaignMission[] = [
       unlocksNext: true,
       title: 'Tân Binh Zomboss',
     },
+    comicDialogue: {
+      issueTitle: 'BẮN TỈA TRONG ĐÊM PHẢN KÍCH!',
+      issueTagline: 'Super Brainz dẫn đầu binh đoàn đột kích sân sau của Dave',
+      plantHeroQuote: 'Dừng lại đó, bầy thây ma! Làn giữa là tử địa với phát bắn Precision Blast bách phát bách trúng của ta!',
+      zombieHeroQuote: 'Hahaha! Siêu anh hùng Super Brainz với +1 Brains sẽ đấm vỡ sự tự tin của cô em đậu xanh!',
+    },
   },
   {
     id: 'zombie_mission_2',
     chapter: 1,
     missionNumber: 2,
     faction: 'zombies',
-    playerHeroId: 'hero_super_brainz',
+    playerHeroId: 'hero_the_smash',
     title: 'Nhiệm Vụ 2: Mặt Trời Thiêu Đốt',
     subtitle: 'Đối đầu Solar Flare - Cơn bão ánh sáng',
     storyIntro:
@@ -456,13 +492,19 @@ export const ZOMBIE_CHAPTER_1_MISSIONS: CampaignMission[] = [
       unlocksNext: true,
       title: 'Dập Tắt Mặt Trời',
     },
+    comicDialogue: {
+      issueTitle: 'MẶT TRỜI THIÊU ĐỐT CHIẾN HÀO!',
+      issueTagline: 'Solar Flare đốt cháy chiến trường bằng bão ánh sáng',
+      plantHeroQuote: 'Mặt trời rực lửa và đóa hướng dương Sunflower sẽ thiêu rụi bầy zombie của các ngươi thành tro bụi!',
+      zombieHeroQuote: 'Lửa hả? Thủy quân Swabbie từ làn nước sẽ tập kích bất ngờ và dập tắt ngọn đuốc của ngươi trong nháy mắt!',
+    },
   },
   {
     id: 'zombie_mission_3',
     chapter: 1,
     missionNumber: 3,
     faction: 'zombies',
-    playerHeroId: 'hero_super_brainz',
+    playerHeroId: 'hero_impfinity',
     title: 'Nhiệm Vụ 3: Pháo Đài Quả Hạch',
     subtitle: 'Đối đầu Wall-Knight tại Vực Nón Bảo Vệ',
     storyIntro:
@@ -494,13 +536,19 @@ export const ZOMBIE_CHAPTER_1_MISSIONS: CampaignMission[] = [
       unlocksNext: true,
       title: 'Kẻ Phá Thành',
     },
+    comicDialogue: {
+      issueTitle: 'PHÁO ĐÀI QUẢ HẠCH BẤT HOẠI!',
+      issueTagline: 'Wall-Knight dựng phòng tuyến vỏ cứng kiên cố',
+      plantHeroQuote: 'Phòng tuyến quả hạch kiên cố nhất lịch sử! Ngươi không tài nào xuyên thủng được lớp vỏ dày này đâu!',
+      zombieHeroQuote: 'Nhìn xem đây, Zomboss đã đặt sẵn Cone Zone tăng 3 Máu cho bọn ta! Thành lũy của ngươi sẽ sụp đổ!',
+    },
   },
   {
     id: 'zombie_mission_4',
     chapter: 1,
     missionNumber: 4,
     faction: 'zombies',
-    playerHeroId: 'hero_super_brainz',
+    playerHeroId: 'hero_rustbolt',
     title: 'Nhiệm Vụ 4: Củ Khoai Nổ Chậm',
     subtitle: 'Đối đầu Spudow - Bãi mìn chông gai',
     storyIntro:
@@ -530,13 +578,19 @@ export const ZOMBIE_CHAPTER_1_MISSIONS: CampaignMission[] = [
       unlocksNext: true,
       title: 'Chuyên Gia Tháo Ngòi',
     },
+    comicDialogue: {
+      issueTitle: 'BÃI MÌN CHÔNG GAI SPUDOW!',
+      issueTagline: 'Spudow rải bãi mìn Spikeweed Sector khắp mặt đất',
+      plantHeroQuote: 'Cẩn thận bước chân đấy! Bãi mìn Spikeweed Sector của ta sẽ nổ tung bất cứ kẻ nào dám bén mảng!',
+      zombieHeroQuote: 'Laser Base Alpha của ta có Deadly & Strikethrough! Đòn đánh này xuyên thẳng qua bãi mìn vào thẳng đầu ngươi!',
+    },
   },
   {
     id: 'zombie_mission_5',
     chapter: 1,
     missionNumber: 5,
     faction: 'zombies',
-    playerHeroId: 'hero_super_brainz',
+    playerHeroId: 'hero_electric_boogaloo',
     title: 'Nhiệm Vụ 5: Đại Chiến Hàm Răng Thao Túng',
     subtitle: 'ĐẠI CHIẾN BOSS CUỐI CHAPTER 1 ZOMBIE: Chompzilla Cuồng Nộ',
     storyIntro:
@@ -565,6 +619,12 @@ export const ZOMBIE_CHAPTER_1_MISSIONS: CampaignMission[] = [
       gems: 500,
       unlocksNext: false,
       title: 'Chỉ Huy Chiến Dịch Zomboss',
+    },
+    comicDialogue: {
+      issueTitle: 'ĐẠI CHIẾN HÀM RĂNG CUỒNG NỘ!',
+      issueTagline: 'Chompzilla há miệng nuốt chửng mọi đội hình Thây Ma',
+      plantHeroQuote: 'GRRR... NGOẠM NGOẠM! Một phát cắn nuốt trọn cả binh đoàn Zombie! Khu vườn sẽ được thanh trừng!',
+      zombieHeroQuote: 'Với 2 Năng lượng tiếp tế và Medulla Nebula, binh đoàn Zombie sẽ áp đảo trước khi ngươi kịp há mồm!',
     },
   },
 ]
@@ -807,3 +867,188 @@ export function calculateMissionStars(
 
   return Math.min(3, stars)
 }
+
+export interface CampaignStarMilestone {
+  requiredStars: number
+  gems: number
+  badge: string
+  description: string
+}
+
+export const CAMPAIGN_CLAIMED_MILESTONES_KEY = 'pvz_campaign_claimed_milestones_v1'
+export const DECK_STORAGE_KEY = 'pvz_heroes_saved_decks_v1'
+
+export const CAMPAIGN_STAR_MILESTONES: CampaignStarMilestone[] = [
+  {
+    requiredStars: 5,
+    gems: 100,
+    badge: 'Chiến Binh Khởi Động',
+    description: 'Thu thập 5 sao chiến dịch: Bắt đầu hành trình bảo vệ hoặc chinh phục',
+  },
+  {
+    requiredStars: 15,
+    gems: 250,
+    badge: 'Vệ Binh Ngoại Ô',
+    description: 'Thu thập 15 sao chiến dịch: Làm chủ chiến trường ngoại ô',
+  },
+  {
+    requiredStars: 25,
+    gems: 400,
+    badge: 'Đại Tướng Chiến Lũy',
+    description: 'Thu thập 25 sao chiến dịch: Đột phá pháo đài công nghệ cao',
+  },
+  {
+    requiredStars: 35,
+    gems: 600,
+    badge: 'Chúa Tể Chiến Dịch',
+    description: 'Thu thập 35 sao chiến dịch: Bản lĩnh chỉ huy quân đoàn tối thượng',
+  },
+  {
+    requiredStars: 45,
+    gems: 1000,
+    badge: 'Huyền Thoại Vũ Trụ',
+    description: 'Thu thập toàn bộ 45 sao chiến dịch: Hoàn thành tuyệt đối mọi thử thách Plants & Zombies',
+  },
+]
+
+/**
+ * Loads claimed milestone star counts from localStorage
+ */
+export function loadClaimedMilestones(): number[] {
+  try {
+    if (typeof localStorage === 'undefined') return []
+    const stored = localStorage.getItem(CAMPAIGN_CLAIMED_MILESTONES_KEY)
+    if (!stored) return []
+    const parsed = JSON.parse(stored)
+    return Array.isArray(parsed) ? parsed : []
+  } catch (err) {
+    console.error('Failed to load claimed milestones:', err)
+    return []
+  }
+}
+
+/**
+ * Saves claimed milestone star counts to localStorage
+ */
+export function saveClaimedMilestones(claimed: number[]): void {
+  try {
+    if (typeof localStorage === 'undefined') return
+    localStorage.setItem(CAMPAIGN_CLAIMED_MILESTONES_KEY, JSON.stringify(claimed))
+  } catch (err) {
+    console.error('Failed to save claimed milestones:', err)
+  }
+}
+
+/**
+ * Claims a milestone reward and returns whether it succeeded
+ */
+export function claimMilestoneReward(
+  requiredStars: number,
+  currentTotalStars: number
+): { success: boolean; gemsAwarded: number; badge: string; error?: string } {
+  const milestone = CAMPAIGN_STAR_MILESTONES.find((m) => m.requiredStars === requiredStars)
+  if (!milestone) {
+    return { success: false, gemsAwarded: 0, badge: '', error: 'Mốc phần thưởng không tồn tại.' }
+  }
+
+  if (currentTotalStars < requiredStars) {
+    return {
+      success: false,
+      gemsAwarded: 0,
+      badge: '',
+      error: `Bạn cần ${requiredStars} sao (hiện có ${currentTotalStars} sao) để nhận thưởng này.`,
+    }
+  }
+
+  const claimed = loadClaimedMilestones()
+  if (claimed.includes(requiredStars)) {
+    return { success: false, gemsAwarded: 0, badge: '', error: 'Bạn đã nhận phần thưởng mốc này rồi.' }
+  }
+
+  claimed.push(requiredStars)
+  saveClaimedMilestones(claimed)
+
+  // Persist gems to player wallet if available
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const currentGems = parseInt(localStorage.getItem('pvz_player_gems') || '0', 10)
+      localStorage.setItem('pvz_player_gems', (currentGems + milestone.gems).toString())
+    }
+  } catch (e) {
+    console.error('Failed to update player gems', e)
+  }
+
+  return {
+    success: true,
+    gemsAwarded: milestone.gems,
+    badge: milestone.badge,
+  }
+}
+
+/**
+ * Calculates total stars gathered across Plant and Zombie campaigns
+ */
+export function getTotalCampaignStars(
+  plantProgress?: CampaignProgress,
+  zombieProgress?: CampaignProgress
+): { plantStars: number; zombieStars: number; totalStars: number } {
+  const pProg = plantProgress || loadCampaignProgress()
+  const zProg = zombieProgress || loadZombieCampaignProgress()
+
+  let plantStars = 0
+  for (const missionKey of Object.keys(pProg.completedMissions)) {
+    plantStars += pProg.completedMissions[missionKey]?.stars || 0
+  }
+
+  let zombieStars = 0
+  for (const missionKey of Object.keys(zProg.completedMissions)) {
+    zombieStars += zProg.completedMissions[missionKey]?.stars || 0
+  }
+
+  return {
+    plantStars,
+    zombieStars,
+    totalStars: plantStars + zombieStars,
+  }
+}
+
+/**
+ * Loads player saved decks filtered by faction
+ */
+export function loadSavedDecks(side?: Side): SavedDeck[] {
+  try {
+    if (typeof localStorage === 'undefined') return []
+    const stored = localStorage.getItem(DECK_STORAGE_KEY)
+    if (!stored) return []
+    const parsed: SavedDeck[] = JSON.parse(stored)
+    if (!Array.isArray(parsed)) return []
+    if (!side) return parsed
+    return parsed.filter((d) => d.side === side)
+  } catch (err) {
+    console.error('Failed to load saved decks:', err)
+    return []
+  }
+}
+
+/**
+ * Builds an EngineCard array from a cardId -> count mapping
+ */
+export function buildEngineDeckFromMap(
+  deckMap: Record<string, number>,
+  side: Side
+): EngineCard[] {
+  const result: EngineCard[] = []
+  for (const [cardId, count] of Object.entries(deckMap)) {
+    const cardData = getCardById(cardId)
+    if (!cardData) continue
+    const engineCard = convertCardDataToCard(cardData, side)
+    for (let i = 0; i < count; i++) {
+      result.push({
+        ...engineCard,
+        id: `${engineCard.id}_${i}`,
+      })
+    }
+  }
+  return result
+}
+

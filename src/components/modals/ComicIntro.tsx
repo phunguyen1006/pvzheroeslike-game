@@ -1,11 +1,18 @@
 import React, { useEffect } from 'react'
 import { soundManager } from '../../audio/SoundManager'
+import type { ComicStoryDialogue } from '../../engine/types'
 
 export interface ComicIntroProps {
   plantHeroName?: string
   zombieHeroName?: string
   plantHeroAvatar?: string
   zombieHeroAvatar?: string
+  comicDialogue?: ComicStoryDialogue
+  issueTitle?: string
+  issueTagline?: string
+  plantQuote?: string
+  zombieQuote?: string
+  issueNumber?: number | string
   onStartBattle: () => void
   onSkip?: () => void
 }
@@ -13,7 +20,7 @@ export interface ComicIntroProps {
 /**
  * ComicIntro (Màn hình Cốt truyện Comic Đối đầu trước trận)
  * - Khung tranh comic góc cạnh phong cách PvZ Heroes
- * - Bong bóng lời thoại (speech bubbles) đối đầu giữa Plant Hero và Zombie Hero
+ * - Bong bóng lời thoại (speech bubbles) đối đầu giữa Plant Hero và Zombie Hero tùy biến theo cốt truyện từng Boss
  * - Phù hiệu VS sấm sét 3D ở trung tâm
  * - Nút "BẮT ĐẦU CHIẾN ĐẤU! (FIGHT!)" và "BỎ QUA (SKIP)"
  * - Âm thanh Web Audio API soundManager
@@ -23,12 +30,29 @@ export const ComicIntro: React.FC<ComicIntroProps> = ({
   zombieHeroName = 'Super Brainz',
   plantHeroAvatar = '/assets/heroes/plants/Green Shadow.png',
   zombieHeroAvatar = '/assets/heroes/zombies/Super Brainz.png',
+  comicDialogue,
+  issueTitle,
+  issueTagline,
+  plantQuote,
+  zombieQuote,
+  issueNumber = 1,
   onStartBattle,
   onSkip,
 }) => {
   useEffect(() => {
     soundManager.playFightHorn()
   }, [])
+
+  const displayTitle = issueTitle || comicDialogue?.issueTitle || 'ĐẠI CHIẾN KHỞI TRANH!'
+  const displayTagline = issueTagline || comicDialogue?.issueTagline || 'Cuộc chạm trán nảy lửa định đoạt số phận Khu Vườn'
+  const displayZombieQuote =
+    zombieQuote ||
+    comicDialogue?.zombieHeroQuote ||
+    'Ngươi nghĩ mấy nhánh cây xanh đó cản được ta sao? Não tươi thơm ngon đang vẫy gọi ta rồi, hahaha!'
+  const displayPlantQuote =
+    plantQuote ||
+    comicDialogue?.plantHeroQuote ||
+    'Không phải hôm nay đâu, Brainz! Chuẩn bị nếm mùi mưa đậu thần công lý của ta đi!'
 
   const handleStart = () => {
     soundManager.playCardPickup()
@@ -51,10 +75,10 @@ export const ComicIntro: React.FC<ComicIntroProps> = ({
         {/* Top Comic Header Banner */}
         <div className="comic-issue-header">
           <div className="comic-issue-badge">
-            <span className="issue-label">PVZ HEROES ISSUE #1</span>
+            <span className="issue-label">PVZ HEROES ISSUE #{issueNumber}</span>
           </div>
-          <h1 className="comic-clash-title">ĐẠI CHIẾN KHỞI TRANH!</h1>
-          <p className="comic-issue-tagline">Cuộc chạm trán nảy lửa định đoạt số phận Khu Vườn</p>
+          <h1 className="comic-clash-title">{displayTitle}</h1>
+          <p className="comic-issue-tagline">{displayTagline}</p>
         </div>
 
         {/* Comic Split Panels Arena */}
@@ -81,7 +105,7 @@ export const ComicIntro: React.FC<ComicIntroProps> = ({
             <div className="comic-speech-bubble zombie-speech-bubble">
               <div className="bubble-tail zombie-tail" />
               <p className="bubble-quote">
-                "Ngươi nghĩ mấy nhánh cây xanh đó cản được ta sao? Não tươi thơm ngon đang vẫy gọi ta rồi, hahaha!"
+                "{displayZombieQuote}"
               </p>
             </div>
           </div>
@@ -104,7 +128,7 @@ export const ComicIntro: React.FC<ComicIntroProps> = ({
             <div className="comic-speech-bubble plant-speech-bubble">
               <div className="bubble-tail plant-tail" />
               <p className="bubble-quote">
-                "Không phải hôm nay đâu, Brainz! Chuẩn bị nếm mùi mưa đậu thần công lý của ta đi!"
+                "{displayPlantQuote}"
               </p>
             </div>
 

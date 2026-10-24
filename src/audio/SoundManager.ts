@@ -860,6 +860,157 @@ class SoundManager {
     subOsc.start(now)
     subOsc.stop(now + 0.55)
   }
+
+  // 18. Turn Rope / Fuse Timer Ticking (tactile clock tick with urgency pitch boost)
+  playTimerTick(isUrgent: boolean = false) {
+    const dest = this.getSFXDestination()
+    if (!dest || !this.ctx) return
+    const now = this.ctx.currentTime
+
+    const baseFreq = isUrgent ? 1600 : 920
+    const endFreq = isUrgent ? 700 : 380
+    const duration = isUrgent ? 0.04 : 0.035
+    const volume = isUrgent ? 0.32 : 0.18
+
+    // Primary wooden tick osc
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    osc.type = isUrgent ? 'sawtooth' : 'triangle'
+    osc.frequency.setValueAtTime(baseFreq, now)
+    osc.frequency.exponentialRampToValueAtTime(endFreq, now + duration)
+    gain.gain.setValueAtTime(volume, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration)
+    osc.connect(gain)
+    gain.connect(dest)
+    osc.start(now)
+    osc.stop(now + duration)
+
+    if (isUrgent) {
+      // High harmonic stress beep accent
+      const accent = this.ctx.createOscillator()
+      const accentGain = this.ctx.createGain()
+      accent.type = 'sine'
+      accent.frequency.setValueAtTime(2400, now)
+      accentGain.gain.setValueAtTime(0.12, now)
+      accentGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03)
+      accent.connect(accentGain)
+      accentGain.connect(dest)
+      accent.start(now)
+      accent.stop(now + 0.03)
+    }
+  }
+
+  // 19. Turn Rope Fuse Sizzle (crackling burning gunpowder fuse)
+  playFuseSizzle() {
+    const dest = this.getSFXDestination()
+    if (!dest || !this.ctx) return
+    const now = this.ctx.currentTime
+
+    // Sizzling burst
+    const sizzleCount = 4
+    for (let i = 0; i < sizzleCount; i++) {
+      const delay = i * 0.025
+      const osc = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+      osc.type = 'sawtooth'
+      osc.frequency.setValueAtTime(3200 + Math.random() * 1600, now + delay)
+      osc.frequency.exponentialRampToValueAtTime(1200 + Math.random() * 800, now + delay + 0.02)
+      gain.gain.setValueAtTime(0.08, now + delay)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.025)
+      osc.connect(gain)
+      gain.connect(dest)
+      osc.start(now + delay)
+      osc.stop(now + delay + 0.025)
+    }
+  }
+
+  // 20. Comic Impact Action SFX (POW, BAM, CRUNCH, ZAP, BLOCKED, DEADLY, STRIKE)
+  playComicImpact(actionWord: string = 'POW') {
+    const dest = this.getSFXDestination()
+    if (!dest || !this.ctx) return
+    const now = this.ctx.currentTime
+    const word = actionWord.toUpperCase()
+
+    if (word.includes('ZAP')) {
+      // Electric laser frequency descent
+      const osc = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+      osc.type = 'sawtooth'
+      osc.frequency.setValueAtTime(1800, now)
+      osc.frequency.exponentialRampToValueAtTime(160, now + 0.18)
+      gain.gain.setValueAtTime(0.35, now)
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.2)
+      osc.connect(gain)
+      gain.connect(dest)
+      osc.start(now)
+      osc.stop(now + 0.2)
+    } else if (word.includes('CRUNCH')) {
+      // Heavy crunchy stone fracture
+      const osc = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(340, now)
+      osc.frequency.exponentialRampToValueAtTime(50, now + 0.16)
+      gain.gain.setValueAtTime(0.42, now)
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.18)
+      osc.connect(gain)
+      gain.connect(dest)
+      osc.start(now)
+      osc.stop(now + 0.18)
+    } else if (word.includes('BLOCK')) {
+      // Metallic shield clang
+      const osc = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(980, now)
+      osc.frequency.exponentialRampToValueAtTime(520, now + 0.22)
+      gain.gain.setValueAtTime(0.4, now)
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25)
+      osc.connect(gain)
+      gain.connect(dest)
+      osc.start(now)
+      osc.stop(now + 0.25)
+    } else if (word.includes('DEADLY')) {
+      // Venomous low drone plunge
+      const osc = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+      osc.type = 'sawtooth'
+      osc.frequency.setValueAtTime(220, now)
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.3)
+      gain.gain.setValueAtTime(0.38, now)
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.32)
+      osc.connect(gain)
+      gain.connect(dest)
+      osc.start(now)
+      osc.stop(now + 0.32)
+    } else {
+      // Classic punchy POW / BAM / STRIKE
+      const osc = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(460, now)
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.14)
+      gain.gain.setValueAtTime(0.45, now)
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.15)
+      osc.connect(gain)
+      gain.connect(dest)
+      osc.start(now)
+      osc.stop(now + 0.15)
+
+      // Slap noise
+      const slapOsc = this.ctx.createOscillator()
+      const slapGain = this.ctx.createGain()
+      slapOsc.type = 'sawtooth'
+      slapOsc.frequency.setValueAtTime(1100, now)
+      slapOsc.frequency.exponentialRampToValueAtTime(250, now + 0.06)
+      slapGain.gain.setValueAtTime(0.25, now)
+      slapGain.gain.linearRampToValueAtTime(0.01, now + 0.07)
+      slapOsc.connect(slapGain)
+      slapGain.connect(dest)
+      slapOsc.start(now)
+      slapOsc.stop(now + 0.07)
+    }
+  }
 }
 
 export const soundManager = new SoundManager()

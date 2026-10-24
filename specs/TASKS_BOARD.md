@@ -33,7 +33,7 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
   - **Freeze Synergies & Thawing**: Helper `freezeMinion(state, laneIndex, side)` gán `isFrozen: true`; Snowdrop nhận +2/+2 khi Zombie bị đóng băng; Winter Squash tiêu diệt tức thì Zombie bị đóng băng; cơ chế Tan Băng (Thawing) tự động bỏ qua lượt đánh và chuyển `isFrozen` về false trong combat phase (cả minion thường và Team-Up).
   - **Untrickable Trait**: Bổ sung `untrickable` vào `Trait`, `Card`, `Minion`, `HeroState`; helper `isUntrickable(unit)` chặn toàn bộ Tricks và Superpowers sát thương/removal của đối thủ (Squash, Berry Blast, Shamrocket, Spring Bean, Locust Swarm, Bungee Plumber, Rocket Science, Final Mission, Precision Blast, Goatify, Devour, Slammin Smash, Cut Down to Size, Shrink Ray, Stayin Alive, Frozen Tundra, Missile Madness), bảo lưu buff đồng minh và miễn nhiễm sát thương lan diện rộng (Weed Spray, Cherry Bomb).
   - **Transform Mechanics**: Helper `transformMinion(state, laneIndex, side, newCard)` tái cấu trúc minion sạch sẽ, giữ nguyên vị trí làn, reset buffs/damage, kế thừa traits, áp dụng hiệu ứng môi trường liên tục (Laser Base Alpha, Cone Zone, Bog of Sunken Hope) và kích hoạt When Played abilities.
-  - **Test Suite**: Viết bộ test chuyên sâu `src/__tests__/frenzy_freeze_transform.test.ts` (28 test cases), nâng tổng số test lên **219/219 tests passed 100%**, build production sạch sẽ không lỗi TypeScript (`tsc -b && vite build`).
+- [x] [ĐỢT 8] Hoàn thiện Tribal Synergy Triggers (Sports Zombie Coach invulnerability, Gadget Scientist bonus attacks, Buff-Shroom spores, Astro-Shroom bullseye reactions, Podfather Pea buffs), Interdimensional Zombie Science Transform trigger, Banana Launcher start-of-turn Banana Bomb conjure, Captain Cucumber Legendary conjure discount, và Mid-Combat Lethal Termination.
 
 ### 🎨 UI Bot (`feature/ui`)
 - [x] Hiển thị huy hiệu chân Minion chân thực: Bullseye target reticle và Armored metal shield
@@ -45,7 +45,8 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] [ĐỢT 3] Thiết kế khối Bia Mộ (Gravestone) 3D đá Granite có vết nứt, huy hiệu ẩn danh `🪦 ? / ?` và animation nứt vỡ lúc Zombie Tricks kèm SFX Web Audio `playGravestoneReveal`
 - [x] [ĐỢT 4] Superpower Choice Modal khi Super-Block nổ (Play Now vs Keep in Hand, 360° rotating radiant sunburst, golden sheen sweep & emerald button, Web Audio fanfare) và Hiệu ứng Địa hình Môi trường đa tầng trên 5 làn đấu (Lane Environment Visuals: Spikeweed undulating thorns, Laser Base Alpha sci-fi neon scanning grid, Bog of Doom swamp mist & bubbles, Solar Winds sunbeams, Total Eclipse lunar shadow)
 - [x] [ĐỢT 5] Giao diện Mulligan (MulliganScreen 4 lá khởi đầu + 1 Superpower cố định, hiệu ứng 3D Card Flip khi đổi bài, toggle dấu chéo đỏ ❌ "Đổi lá này", nút xác nhận animation sáng quét và Web Audio API soundManager.playCardPickup) & Comic Phase Banner trượt ngang màn hình (Typography 3D viền đen dày, nghiêng phong cách comic, màu sắc và hiệu ứng tia tốc độ riêng biệt cho 4 phases, tự động kích hoạt soundManager.playFightHorn khi sang phase FIGHT)
-- [x] [ĐỢT 6] Màn hình Comic Intro đối thoại kịch tính trước trận (Comic split panels, speech bubbles phong cách truyện tranh PvZ Heroes giữa Green Shadow & Super Brainz, phù hiệu VS sấm sét 3D, nút FIGHT và SKIP) & Màn hình GameOverModal chuẩn vinh quang / thất bại (Victory pháo hoa, vương miện vàng 3D, hiệu ứng confetti streamers rực rỡ; Defeat mưa u ám, bia mộ nứt vỡ; Bảng thống kê chi tiết Số hiệp đấu, Tổng sát thương, Số quân tiêu diệt; Nút Tái đấu, Đổi Hero, Về Menu Chính kèm Web Audio API soundManager). Build và 219 tests pass 100%.
+- [x] [ĐỢT 6] Màn hình Comic Intro đối thoại kịch tính trước trận (Comic split panels, speech bubbles phong cách truyện tranh PvZ Heroes giữa Green Shadow & Super Brainz, phù hiệu VS sấm sét 3D, nút FIGHT và SKIP) & Màn hình GameOverModal chuẩn vinh quang / thất bại (Victory pháo hoa, vương miện vàng 3D, hiệu ứng confetti streamers rực rỡ; Defeat mưa u ám, bia mộ nứt vỡ; Bảng thống kê chi tiết Số hiệp đấu, Tổng sát thương, Số quân tiêu diệt; Nút Tái đấu, Đổi Hero, Về Menu Chính kèm Web Audio API soundManager).
+- [x] [ĐỢT 8] Sound Settings Modal (`SoundSettingsModal.tsx`) với Master/BGM/SFX sliders và procedural dynamic BGM; Hero Emotes Bar (`HeroEmotesBar.tsx` & `ComicSpeechBubble.tsx`) tích hợp trên cả Player và Boss Arena.
 
 ### 🃏 Cards Bot (`feature/cards`)
 - [x] Bổ sung các thẻ bài thiếu: `zombie_browncoat`, `zombie_knight_living_dead`, `zombie_football_zombie`
@@ -56,6 +57,7 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] [ĐỢT 5] Thêm Brainana (Legendary Banana) và Dark Matter Dragonfruit (Legendary Dragon)
 - [x] [ĐỢT 6] Bổ sung Dino-Roar (Bananasaurus Rex, Raiding Raptor, Aloeosaurus) & Evolution (Gatling Pea, Warlord)
 - [x] [ĐỢT 7] Hoàn thiện bộ bài Galactic Gardens & Synergy Suite: Pineclone (đồng hóa 3/3), Quickdraw Con Man (1/3 Bullseye bắn trả khi Plant rút bài), Going Viral (buff toàn thể +1/+1 Frenzy + rút bài + thêm 3 bản sao vào bộ bài), Galacta-Cactus (nổ diện rộng 1 dame), Lily of the Valley (buff +2/+2 trên Đồi Heights), Dr. Spacetime (Conjure giảm 1 Não khi đánh trúng Hero).
+- [x] [ĐỢT 8] Weekly Event Card Catalog: Blooming Heart (Event Flower/Plant), Regifting Zombie (Event Party/Zombie), Spyris (Event Root/Amphibious), Banana Bomb (Banana Trick).
 
 ### 🧪 QA Bot (`feature/qa`)
 - [x] Thêm helper kiểm tra trait (`hasCardTrait`) và fixtures fallback cho thẻ bài AI
@@ -64,18 +66,19 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] [ĐỢT 4] Mở rộng kiểm thử trí tuệ nhân tạo (AI Engine Tests) & Tích hợp Superpower / Environment Suite (155/155 tests pass)
 - [x] [ĐỢT 5 & 6] Bộ test chuyên sâu `20. Iconic Legendary & Super-Rare Powerhouses Suite` (Bananasaurus Rex Dino-Roar + Double Strike, Trickster Cost Reduction + Bonus Attack, Valkyrie Attack Scaling on-death, Dark Matter Dragonfruit Trick Surtax + Splash Damage 6, Brainana Brain-Drain, Zombot 1000 Board Wipe) nâng tổng test lên **173/173 tests pass 100%**!
 - [x] [ĐỢT 7] Hoàn thiện bộ test Campaign Mode & Deck Builder (`campaign_deck.test.ts`), Synergy Suite (`cards.test.ts`), AI Tactics (`ai_tactics.test.ts`), Conjure & Terrain Coordination (`terrain_conjure.test.ts`), nâng tổng số test lên **340/340 tests pass 100%**!
-- [ ] [ĐỢT 8] Đang triển khai bộ test mô phỏng trận đấu tự động toàn diện AI vs AI (`match_simulation.test.ts`) và stress test bão hòa bàn đấu 5 làn.
+- [x] [ĐỢT 8] Triển khai bộ test mô phỏng trận đấu tự động toàn diện AI vs AI (`match_simulation.test.ts`), Weekly Event tickets progression (`event_tickets.test.ts`), Sound Settings & Emotes (`sound_settings_emotes.test.ts`), nâng tổng số test lên **395/395 tests pass 100%**!
 
 ### 🗺️ Campaign & Deck Bot (`feature/campaign`)
 - [x] Triển khai Campaign Chapter 1 "Suburban Crisis" với 5 màn boss (Super Brainz, Impfinity, The Smash, Rustbolt, Professor Brainstorm).
 - [x] Hệ thống luật chơi đặc biệt: pre-placed minions, environments, starting sun/brains bonus.
 - [x] Hệ thống tính điểm 1-3 sao và lưu trữ tiến độ game qua LocalStorage.
 - [x] Giao diện 40-Card Deck Builder với biểu đồ phân bố cost (mana curve) và thống kê tribes.
-- [ ] [ĐỢT 8] Triển khai Chapter 2 "Zombie Metropolis" và tính năng Import/Export mã JSON bộ bài.
+- [x] [ĐỢT 8] Triển khai Chapter 2 "Zombie Metropolis" (5 màn mới: Z-Mech, Immorticia, Brain Freeze, Electric Boogaloo, Rustbolt Ultimate) & Zombie Campaign Chapter 1 "Zombie Onslaught" (5 màn phản diện Zomboss: Green Shadow, Solar Flare, Wall-Knight, Spudow, Chompzilla) với Dual-Faction Switcher.
+- [x] [ĐỢT 8] Hội thoại truyện tranh Comic Story Dialogue cho tất cả các Boss Chapter 1.
 
 ### 🧠 AI Bot (`feature/ai`)
 - [x] Hoàn thiện 3 phong cách AI: Aggro (tấn công trực diện làn trống), Control (bảo lưu Não cho Tricks removal), Tempo (kiểm soát bàn cân bằng).
 - [x] Ma trận quyết định Superpower và cây quyết định Mulligan thông minh.
 - [x] Tích hợp AI Tactics vào hệ thống chiến đấu tự động.
 - [x] [ĐỢT 7] Cơ chế ghi đè Môi trường đối thủ và tính toán Lethal Face Damage với Tricks (Brute Strength, Lurch for Lunch, Going Viral, Area 22, Laser Base Alpha).
-- [ ] [ĐỢT 8] Mở rộng ma trận quyết định cho 20 Signature Superpowers và hệ thống thoại tương tác chiến thuật (Dynamic Boss Dialogue Triggers).
+- [x] [ĐỢT 8] Mở rộng ma trận quyết định cho 20 Signature Superpowers, Dynamic Boss Dialogue Triggers theo diễn biến bàn đấu và tối ưu hoá hành vi lethal trick lines.

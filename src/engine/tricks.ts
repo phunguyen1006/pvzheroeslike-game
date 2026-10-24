@@ -12,11 +12,17 @@ export interface TrickResult {
 export function executeTrick(
   state: GameState,
   card: Card,
-  side: Side,
-  targetLaneIndex?: number,
+  sideOrLaneIndex?: Side | number,
+  targetLaneIndexParam?: number,
   _targetMinionSide?: Side,
   targetHero?: boolean
 ): TrickResult {
+  const side: Side =
+    typeof sideOrLaneIndex === 'string'
+      ? sideOrLaneIndex
+      : (card.side || (card as any).team || 'plants')
+  const targetLaneIndex: number | undefined =
+    typeof sideOrLaneIndex === 'number' ? sideOrLaneIndex : targetLaneIndexParam
   // Untrickable check for enemy targeted tricks
   if (side === 'plants') {
     if (targetHero && isUntrickable(state.zombieHero)) {
@@ -28,8 +34,8 @@ export function executeTrick(
     }
     if (targetLaneIndex !== undefined && state.lanes[targetLaneIndex]?.zombieMinion) {
       const targetZombie = state.lanes[targetLaneIndex].zombieMinion!
-      const offensivePlantTricks = ['plant_berry_blast', 'plant_squash', 'plant_shamrocket', 'plant_spring_bean']
-      if (offensivePlantTricks.includes(card.id) && isUntrickable(targetZombie)) {
+      const offensivePlantTricks = ['plant_berry_blast', 'plant_squash', 'plant_shamrocket', 'plant_spring_bean', 'plant_banana_bomb']
+      if ((offensivePlantTricks.includes(card.id) || card.id.startsWith('plant_banana_bomb')) && isUntrickable(targetZombie)) {
         return {
           updatedState: state,
           success: false,
@@ -229,15 +235,19 @@ export function executeTrick(
       } else if (targetLaneIndex !== undefined) {
         const lane = updatedLanes[targetLaneIndex]
         if (lane.plantMinion) {
-          lane.plantMinion = {
-            ...lane.plantMinion,
-            currentHealth: Math.max(0, lane.plantMinion.currentHealth - 2),
-          }
-          if (lane.plantMinion.currentHealth <= 0) {
-            message = `Bungee Plumber tiêu diệt ${lane.plantMinion.name}!`
-            lane.plantMinion = null
+          if (lane.plantMinion.isInvulnerable || lane.plantMinion.invulnerableThisTurn) {
+            message = `${lane.plantMinion.name} Miễn thương (Invulnerable) nên không nhận sát thương từ Bungee Plumber!`
           } else {
-            message = `Bungee Plumber gây 2 sát thương lên ${lane.plantMinion.name}.`
+            lane.plantMinion = {
+              ...lane.plantMinion,
+              currentHealth: Math.max(0, lane.plantMinion.currentHealth - 2),
+            }
+            if (lane.plantMinion.currentHealth <= 0) {
+              message = `Bungee Plumber tiêu diệt ${lane.plantMinion.name}!`
+              lane.plantMinion = null
+            } else {
+              message = `Bungee Plumber gây 2 sát thương lên ${lane.plantMinion.name}.`
+            }
           }
         }
       }
@@ -315,9 +325,13 @@ export function executeTrick(
           message = `Final Mission: Hi sinh ${deadZombie.name} phóng tên lửa 4 dmg vào Plant Hero!`
         } else if (targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.plantMinion) {
           const p = updatedLanes[targetLaneIndex].plantMinion!
-          p.currentHealth = Math.max(0, p.currentHealth - 4)
-          if (p.currentHealth <= 0) updatedLanes[targetLaneIndex].plantMinion = null
-          message = `Final Mission: Hi sinh ${deadZombie.name} tiêu diệt ${p.name} với 4 dmg!`
+          if (p.isInvulnerable || p.invulnerableThisTurn) {
+            message = `Final Mission: Hi sinh ${deadZombie.name} phóng tên lửa nhưng ${p.name} Miễn thương (Invulnerable)!`
+          } else {
+            p.currentHealth = Math.max(0, p.currentHealth - 4)
+            if (p.currentHealth <= 0) updatedLanes[targetLaneIndex].plantMinion = null
+            message = `Final Mission: Hi sinh ${deadZombie.name} tiêu diệt ${p.name} với 4 dmg!`
+          }
         } else {
           const dmg = applyHeroDamage(updatedState.plantHero, 4, false)
           updatedState.plantHero = dmg.updatedHero

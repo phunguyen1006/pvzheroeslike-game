@@ -170,6 +170,13 @@ const RARITY_CONFIG: Record<
     glow: '0 0 20px rgba(6, 182, 212, 0.8)',
     gemIcon: '✨',
   },
+  Token: {
+    label: 'Thẻ Token tạo ra (Token)',
+    color: '#a1a1aa',
+    bgGradient: 'linear-gradient(135deg, #f4f4f5 0%, #71717a 100%)',
+    glow: '0 0 15px rgba(161, 161, 170, 0.6)',
+    gemIcon: '🪙',
+  },
 }
 
 export const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, minion, onClose }) => {

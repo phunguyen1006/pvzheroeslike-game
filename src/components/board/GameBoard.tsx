@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { Lane } from './Lane'
 import { CombatVFXLayer, type Projectile, type FloatingTextItem, type ShockwaveItem } from './CombatVFXLayer'
+import { CombatActionPopups, type CombatPopupItem } from './CombatActionPopups'
+import { TurnRopeTimer, type TurnRopeTimerProps } from './TurnRopeTimer'
 import type { LaneState, Card as CardType, Minion as MinionType } from '../../engine/types'
 import { ASSET_MANIFEST } from '../../data/assetsManifest'
 
@@ -13,6 +15,8 @@ export interface GameBoardProps {
   projectiles?: Projectile[]
   floatingTexts?: FloatingTextItem[]
   shockwaves?: ShockwaveItem[]
+  combatPopups?: CombatPopupItem[]
+  turnRope?: TurnRopeTimerProps
   onSelectLane: (laneIndex: number) => void
   onDropCardToLane?: (laneIndex: number, cardId: string) => void
   onInspectMinion?: (minion: MinionType) => void
@@ -28,6 +32,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   projectiles = [],
   floatingTexts = [],
   shockwaves = [],
+  combatPopups = [],
+  turnRope,
   onSelectLane,
   onDropCardToLane,
   onInspectMinion,
@@ -78,6 +84,19 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         floatingTexts={floatingTexts}
         shockwaves={shockwaves}
       />
+
+      {/* Comic Action Words & Damage Popups (POW/BAM/CRUNCH/ZAP/BLOCKED) */}
+      <CombatActionPopups popups={combatPopups} />
+
+      {/* Turn Rope / Fuse Countdown Timer */}
+      {turnRope && (
+        <TurnRopeTimer
+          timeLeft={turnRope.timeLeft}
+          maxTime={turnRope.maxTime}
+          isActive={turnRope.isActive}
+          onTimeout={turnRope.onTimeout}
+        />
+      )}
     </div>
   )
 }

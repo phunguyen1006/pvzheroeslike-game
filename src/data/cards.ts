@@ -9,7 +9,7 @@ export type CardType = 'plant' | 'zombie' | 'trick' | 'environment' | 'superpowe
 export type PlantClass = 'Guardian' | 'Kabloom' | 'Mega-Grow' | 'Smarty' | 'Solar'
 export type ZombieClass = 'Beastly' | 'Brainy' | 'Crazy' | 'Hearty' | 'Sneaky'
 export type HeroClass = PlantClass | ZombieClass
-export type Rarity = 'Common' | 'Uncommon' | 'Rare' | 'Super-Rare' | 'Legendary' | 'Event'
+export type Rarity = 'Common' | 'Uncommon' | 'Rare' | 'Super-Rare' | 'Legendary' | 'Event' | 'Token'
 
 export interface CardData {
  id: string
@@ -897,7 +897,7 @@ export const PLANT_CARDS: CardData[] = [
  hp: 0,
  health: 0,
  traits: [],
- rarity: 'Common',
+ rarity: 'Token',
  tribe: 'Banana Trick',
  assetPath: '/assets/cards/plants/Peashooter.png',
  image: '/assets/cards/plants/Peashooter.png',

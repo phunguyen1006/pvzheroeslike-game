@@ -13,55 +13,82 @@ export interface AbilityTriggerResult {
 }
 
 export function isSportsZombie(minion: Minion): boolean {
+  if (minion.side && minion.side !== 'zombies') return false
   const tribe = (minion.tribe || '').toLowerCase()
   const id = minion.cardId.toLowerCase()
   const name = minion.name.toLowerCase()
-  return (
+  if (
     tribe.includes('sports') ||
+    id.includes('sports') ||
     id.includes('football') ||
     id.includes('coach') ||
     id.includes('all_star') ||
     id.includes('arm_wrestler') ||
     name.includes('coach') ||
     name.includes('football')
-  )
+  ) {
+    return true
+  }
+  const card = ZOMBIE_CARDS.find((c) => c.id === minion.cardId)
+  return Boolean(card?.tribe?.toLowerCase().includes('sports'))
 }
 
 export function isScienceZombie(minion: Minion): boolean {
+  if (minion.side && minion.side !== 'zombies') return false
   const tribe = (minion.tribe || '').toLowerCase()
   const id = minion.cardId.toLowerCase()
   const name = minion.name.toLowerCase()
-  return (
+  if (
     tribe.includes('science') ||
+    id.includes('science') ||
     id.includes('scientist') ||
     id.includes('drone') ||
     id.includes('spacetime') ||
     id.includes('interdimensional') ||
-    name.includes('scientist')
-  )
+    id.includes('zombot') ||
+    name.includes('scientist') ||
+    name.includes('science')
+  ) {
+    return true
+  }
+  const card = ZOMBIE_CARDS.find((c) => c.id === minion.cardId)
+  return Boolean(card?.tribe?.toLowerCase().includes('science'))
 }
 
 export function isMushroomPlant(minion: Minion): boolean {
+  if (minion.side && minion.side !== 'plants') return false
   const tribe = (minion.tribe || '').toLowerCase()
   const id = minion.cardId.toLowerCase()
   const name = minion.name.toLowerCase()
-  return (
+  if (
     tribe.includes('mushroom') ||
     id.includes('shroom') ||
+    id.includes('mushroom') ||
     name.includes('shroom') ||
     name.includes('mushroom')
-  )
+  ) {
+    return true
+  }
+  const card = ALL_CARDS.find((c) => c.id === minion.cardId)
+  return Boolean(card?.tribe?.toLowerCase().includes('mushroom'))
 }
 
 export function isPeaPlant(minion: Minion): boolean {
+  if (minion.side && minion.side !== 'plants') return false
   const tribe = (minion.tribe || '').toLowerCase()
   const id = minion.cardId.toLowerCase()
   const name = minion.name.toLowerCase()
-  return (
+  if (
     tribe.includes('pea') ||
     id.includes('pea') ||
-    name.includes('pea')
-  )
+    id.includes('podfather') ||
+    name.includes('pea') ||
+    name.includes('podfather')
+  ) {
+    return true
+  }
+  const card = ALL_CARDS.find((c) => c.id === minion.cardId)
+  return Boolean(card?.tribe?.toLowerCase().includes('pea'))
 }
 
 /**
@@ -530,7 +557,7 @@ export function triggerWhenPlayed(
     }
 
     // The Podfather: "When you play another Pea, that Pea gets +2/+2"
-    const isPea = minion.name.toLowerCase().includes('pea') || minion.cardId.includes('pea')
+    const isPea = isPeaPlant(minion)
     if (isPea) {
       let podfatherCount = 0
       updatedState.lanes.forEach(l => {

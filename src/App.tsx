@@ -138,7 +138,7 @@ export function App() {
   }
 
   // Start PvE Campaign Mission with custom rules, initial lanes & energy bonuses
-  const handleStartCampaignMission = (mission: CampaignMission) => {
+  const handleStartCampaignMission = (mission: CampaignMission, customDeck?: CardType[]) => {
     setActiveCampaignMission(mission)
     setCampaignStarsWon(undefined)
     setMatchTicketsEarned(undefined)
@@ -161,13 +161,20 @@ export function App() {
           : 'easy'
     setAiDifficulty(diff)
 
+    const effectivePlantDeck = isZombieFaction
+      ? customPlantDeck
+      : (customDeck && customDeck.length > 0 ? customDeck : customPlantDeck)
+    const effectiveZombieDeck = isZombieFaction
+      ? (customDeck && customDeck.length > 0 ? customDeck : customZombieDeck)
+      : customZombieDeck
+
     const missionLanes = buildMissionLanes(mission)
     dispatch({
       type: 'START_MATCH',
       plantHeroId: pId,
       zombieHeroId: zId,
-      plantDeck: customPlantDeck,
-      zombieDeck: customZombieDeck,
+      plantDeck: effectivePlantDeck,
+      zombieDeck: effectiveZombieDeck,
       initialLanes: missionLanes,
       startingSunBonus: mission.rule.startingSunBonus || 0,
       startingBrainsBonus: mission.rule.startingBrainsBonus || 0,
@@ -945,6 +952,18 @@ export function App() {
           zombieHeroName={gameState.zombieHero.name}
           plantHeroAvatar={gameState.plantHero.avatar}
           zombieHeroAvatar={gameState.zombieHero.avatar}
+          comicDialogue={activeCampaignMission?.comicDialogue}
+          issueTitle={
+            activeCampaignMission?.comicDialogue?.issueTitle ||
+            (activeCampaignMission ? activeCampaignMission.title : undefined)
+          }
+          issueTagline={
+            activeCampaignMission?.comicDialogue?.issueTagline ||
+            activeCampaignMission?.subtitle
+          }
+          plantQuote={activeCampaignMission?.comicDialogue?.plantHeroQuote}
+          zombieQuote={activeCampaignMission?.comicDialogue?.zombieHeroQuote}
+          issueNumber={activeCampaignMission?.missionNumber}
           onStartBattle={() => setShowComicIntro(false)}
           onSkip={() => setShowComicIntro(false)}
         />
