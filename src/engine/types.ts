@@ -190,7 +190,16 @@ export interface GameState {
 }
 
 export type GameAction =
-  | { type: 'START_MATCH'; plantDeck?: Card[]; zombieDeck?: Card[]; plantHeroId?: string; zombieHeroId?: string }
+  | {
+      type: 'START_MATCH'
+      plantDeck?: Card[]
+      zombieDeck?: Card[]
+      plantHeroId?: string
+      zombieHeroId?: string
+      initialLanes?: LaneState[]
+      startingSunBonus?: number
+      startingBrainsBonus?: number
+    }
   | { type: 'MULLIGAN_SWAP'; side: Side; cardIndices: number[] }
   | { type: 'FINISH_MULLIGAN'; side: Side }
   | { type: 'PLAY_CARD'; side: Side; cardId: string; laneIndex: number; targetMinionId?: string; targetHero?: boolean }
@@ -201,3 +210,49 @@ export type GameAction =
   | { type: 'STEP_COMBAT_LANE'; laneIndex: number }
   | { type: 'DRAW_CARD'; side: Side }
   | { type: 'RESET_GAME' }
+
+export interface MissionRule {
+  id: string
+  name: string
+  description: string
+  startingSunBonus?: number
+  startingBrainsBonus?: number
+  initialEnvironments?: { laneIndex: number; environmentCardId: string }[]
+  initialMinions?: { laneIndex: number; cardId: string; side: Side }[]
+}
+
+export interface CampaignMission {
+  id: string
+  missionNumber: number
+  title: string
+  subtitle: string
+  storyIntro: string
+  bossHeroId: string
+  bossHeroName: string
+  bossHeroAvatar: string
+  playerHeroId?: string
+  difficulty: 'easy' | 'normal' | 'hard' | 'boss'
+  rule: MissionRule
+  starObjectives: [string, string, string]
+  rewards: {
+    gems: number
+    unlocksNext?: boolean
+    title?: string
+  }
+}
+
+export interface CampaignProgress {
+  unlockedMissionNumber: number
+  completedMissions: Record<string, { stars: number; completedAt: string }>
+}
+
+export interface SavedDeck {
+  id: string
+  name: string
+  side: Side
+  heroClass?: string
+  heroId?: string
+  cardIds: Record<string, number> // cardId -> quantity (1-4)
+  createdAt: string
+  updatedAt: string
+}

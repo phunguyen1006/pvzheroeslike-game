@@ -139,10 +139,22 @@ export function createInitialGameState(
   plantHeroId?: string,
   zombieHeroId?: string,
   customPlantDeck?: Card[],
-  customZombieDeck?: Card[]
+  customZombieDeck?: Card[],
+  initialLanes?: LaneState[],
+  startingSunBonus: number = 0,
+  startingBrainsBonus: number = 0
 ): GameState {
   const plantHero = createInitialHero('plants', plantHeroId)
   const zombieHero = createInitialHero('zombies', zombieHeroId)
+
+  if (startingSunBonus > 0) {
+    plantHero.sun += startingSunBonus
+    plantHero.maxSun += startingSunBonus
+  }
+  if (startingBrainsBonus > 0) {
+    zombieHero.brains += startingBrainsBonus
+    zombieHero.maxBrains += startingBrainsBonus
+  }
 
   // Load starter decks
   const rawPlantDeck = customPlantDeck || getStarterDeck('plants').map((c: CardData) => convertCardDataToCard(c, 'plants'))
@@ -166,7 +178,7 @@ export function createInitialGameState(
     phase: 'ZOMBIE_PLAY',
     plantHero,
     zombieHero,
-    lanes: createInitialLanes(),
+    lanes: initialLanes ? initialLanes.map(l => ({ ...l })) : createInitialLanes(),
     plantDeck: remainingPlantDeck,
     zombieDeck: remainingZombieDeck,
     plantHand: [...initialPlantHand, plantSP],
@@ -271,7 +283,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
   switch (action.type) {
     case 'START_MATCH': {
-      return createInitialGameState(action.plantHeroId, action.zombieHeroId, action.plantDeck, action.zombieDeck)
+      return createInitialGameState(
+        action.plantHeroId,
+        action.zombieHeroId,
+        action.plantDeck,
+        action.zombieDeck,
+        action.initialLanes,
+        action.startingSunBonus ?? 0,
+        action.startingBrainsBonus ?? 0
+      )
     }
 
     case 'MULLIGAN_SWAP': {
@@ -571,8 +591,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           ? [`${isPlant ? 'Plant' : 'Zombie'} rút lá [${drawRes.drawnCard.name}].`, ...state.combatLog]
           : state.combatLog,
       }
-      if (isPlant && drawRes.drawnCard) {
-        const dinoRes = triggerDinoRoar(nextState, 'plants')
+      if (drawRes.drawnCard) {
+        const dinoRes = triggerDinoRoar(nextState, side)
         nextState = dinoRes.updatedState
         if (dinoRes.events.length > 0) {
           nextState.combatLog = [...dinoRes.events, ...nextState.combatLog]
@@ -624,12 +644,19 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           ],
         }
 
-        // 3. Dino-Roar trigger for plants on card draw (Bananasaurus Rex)
+        // 3. Dino-Roar trigger on card draw (Bananasaurus Rex, Aloesaurus, Raiding Raptor)
         if (plantDraw.drawnCard) {
           const dinoRes = triggerDinoRoar(curState, 'plants')
           curState = dinoRes.updatedState
           if (dinoRes.events.length > 0) {
             curState.combatLog = [...dinoRes.events, ...curState.combatLog]
+          }
+        }
+        if (zombieDraw.drawnCard) {
+          const dinoZombieRes = triggerDinoRoar(curState, 'zombies')
+          curState = dinoZombieRes.updatedState
+          if (dinoZombieRes.events.length > 0) {
+            curState.combatLog = [...dinoZombieRes.events, ...curState.combatLog]
           }
         }
 
