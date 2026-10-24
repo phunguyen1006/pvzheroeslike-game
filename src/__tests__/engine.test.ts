@@ -1879,4 +1879,104 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
       expect(updatedState.lanes[1].zombieMinion?.name).toBe('Standard Zombie')
     })
   })
+
+  // ==========================================================
+  // 13. ROUND 2 NEW CARDS CATALOG AUDIT (Cards Bot)
+  // ==========================================================
+  describe('13. Round 2 New Cards Catalog Audit & Trait Validation', () => {
+    it('verifies Plant cards: Cabbage-Pult, Repeater, Snowdrop have authentic stats and traits', () => {
+      // 1. Cabbage-Pult
+      const cabbage = getCardById('plant_cabbage_pult')
+      expect(cabbage).toBeDefined()
+      expect(cabbage?.name).toBe('Cabbage-Pult')
+      expect(cabbage?.cost).toBe(2)
+      expect(cabbage?.attack).toBe(1)
+      expect(cabbage?.hp).toBe(3)
+      expect(cabbage?.rarity).toBe('Uncommon')
+      expect(cabbage?.tribe).toBe('Leafy Cabbage Plant')
+      expect(cabbage?.heroClass).toBe('Mega-Grow')
+      expect(cabbage?.laneRequirement).toBe('ground')
+
+      // 2. Repeater
+      const repeater = getCardById('plant_repeater')
+      expect(repeater).toBeDefined()
+      expect(repeater?.name).toBe('Repeater')
+      expect(repeater?.cost).toBe(3)
+      expect(repeater?.attack).toBe(2)
+      expect(repeater?.hp).toBe(2)
+      expect(repeater?.doubleStrike).toBe(true)
+      expect(repeater?.traits).toContain('Double Strike')
+      expect(repeater?.tribe).toBe('Pea Plant')
+      expect(repeater?.heroClass).toBe('Mega-Grow')
+
+      // 3. Snowdrop
+      const snowdrop = getCardById('plant_snowdrop')
+      expect(snowdrop).toBeDefined()
+      expect(snowdrop?.name).toBe('Snowdrop')
+      expect(snowdrop?.cost).toBe(1)
+      expect(snowdrop?.attack).toBe(1)
+      expect(snowdrop?.hp).toBe(2)
+      expect(snowdrop?.rarity).toBe('Uncommon')
+      expect(snowdrop?.tribe).toBe('Flower Plant')
+      expect(snowdrop?.heroClass).toBe('Smarty')
+    })
+
+    it('verifies Zombie cards: Conehead Zombie, Buckethead Zombie, Stealthy Imp have authentic stats and traits', () => {
+      // 1. Conehead Zombie
+      const conehead = getCardById('zombie_conehead')
+      expect(conehead).toBeDefined()
+      expect(conehead?.name).toBe('Conehead Zombie')
+      expect(conehead?.cost).toBe(2)
+      expect(conehead?.attack).toBe(2)
+      expect(conehead?.hp).toBe(2)
+      expect(conehead?.armored).toBe(1)
+      expect(conehead?.traits).toContain('Armored 1')
+      expect(conehead?.rarity).toBe('Common')
+      expect(conehead?.tribe).toBe('Professional Zombie')
+      expect(conehead?.heroClass).toBe('Hearty')
+
+      // 2. Buckethead Zombie
+      const buckethead = getCardById('zombie_buckethead')
+      expect(buckethead).toBeDefined()
+      expect(buckethead?.name).toBe('Buckethead Zombie')
+      expect(buckethead?.cost).toBe(4)
+      expect(buckethead?.attack).toBe(3)
+      expect(buckethead?.hp).toBe(4)
+      expect(buckethead?.armored).toBe(1)
+      expect(buckethead?.traits).toContain('Armored 1')
+      expect(buckethead?.rarity).toBe('Uncommon')
+      expect(buckethead?.tribe).toBe('Professional Zombie')
+      expect(buckethead?.heroClass).toBe('Hearty')
+
+      // 3. Stealthy Imp
+      const stealthyImp = getCardById('zombie_stealthy_imp')
+      expect(stealthyImp).toBeDefined()
+      expect(stealthyImp?.name).toBe('Stealthy Imp')
+      expect(stealthyImp?.cost).toBe(3)
+      expect(stealthyImp?.attack).toBe(2)
+      expect(stealthyImp?.hp).toBe(2)
+      expect(stealthyImp?.antiHero).toBe(4)
+      expect(stealthyImp?.gravestone).toBe(true)
+      expect(stealthyImp?.traits).toContain('Anti-Hero 4')
+      expect(stealthyImp?.traits).toContain('Gravestone')
+      expect(stealthyImp?.rarity).toBe('Rare')
+      expect(stealthyImp?.tribe).toBe('Pirate Imp Zombie')
+      expect(stealthyImp?.heroClass).toBe('Sneaky')
+    })
+
+    it('verifies complete pool totals and data consistency across both teams', () => {
+      expect(PLANT_CARDS.length).toBeGreaterThanOrEqual(25)
+      expect(ZOMBIE_CARDS.length).toBeGreaterThanOrEqual(28)
+      const totalCards = PLANT_CARDS.length + ZOMBIE_CARDS.length
+      expect(totalCards).toBeGreaterThanOrEqual(53)
+
+      // All cards must have valid id, name, team, cost >= 0, and non-empty assetPath/image
+      for (const card of [...PLANT_CARDS, ...ZOMBIE_CARDS]) {
+        expect(card.id).toBeTruthy()
+        expect(card.name).toBeTruthy()
+        expect(card.cost).toBeGreaterThanOrEqual(0)
+        expect(card.image || card.assetPath).toBeTruthy()
+      }
+    })
+  })
 })
