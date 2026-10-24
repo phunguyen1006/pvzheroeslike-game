@@ -192,8 +192,13 @@ export function App() {
   }, [gameState.winner])
 
   const handleSelectCard = (card: CardType) => {
-    setSelectedCard(card.id === selectedCard?.id ? null : card)
-    soundManager.playCardSelect()
+    const isUnselecting = card.id === selectedCard?.id
+    setSelectedCard(isUnselecting ? null : card)
+    if (isUnselecting) {
+      soundManager.playCardSelect()
+    } else {
+      soundManager.playCardPickup()
+    }
   }
 
   const handleSelectLane = (laneIndex: number) => {
@@ -209,7 +214,7 @@ export function App() {
       if (selectedCard.type === 'trick') {
         soundManager.playAttackHit()
       } else {
-        soundManager.playCardDrop()
+        soundManager.playCardPlace()
       }
       setSelectedCard(null)
     }
@@ -227,7 +232,7 @@ export function App() {
       if (card.type === 'trick') {
         soundManager.playAttackHit()
       } else {
-        soundManager.playCardDrop()
+        soundManager.playCardPlace()
       }
       setSelectedCard(null)
       setSelectedLaneIndex(undefined)
@@ -245,7 +250,7 @@ export function App() {
   const handleStartCombat = () => {
     if (isCombatResolving) return
     setIsCombatResolving(true)
-    soundManager.playPhaseChange()
+    soundManager.playFightHorn()
 
     const executeLane = (idx: number) => {
       if (idx >= 5) {
@@ -601,6 +606,10 @@ export function App() {
                   selectedCardId={selectedCard?.id}
                   isPlayerTurn={isPlayerPlantTurn}
                   onSelectCard={handleSelectCard}
+                  onDragStartCard={(card) => {
+                    setSelectedCard(card)
+                    soundManager.playCardPickup()
+                  }}
                   side="plants"
                 />
               </div>

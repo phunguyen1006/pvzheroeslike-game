@@ -33,6 +33,7 @@ export interface CardData {
  deadly?: boolean
  strikethrough?: boolean
  freeze?: boolean
+ gravestone?: boolean
  assetPath: string
  image: string
  description: string
@@ -452,6 +453,61 @@ export const PLANT_CARDS: CardData[] = [
  image: '/assets/cards/plants/Wall-Nut.png',
  description: 'Team-Up (Đồng đội). Tấm lá chắn hạt dẻ kiên cố bảo vệ đồng đội phía sau với lượng máu dồi dào.',
  heroClass: 'Guardian',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'plant_cabbage_pult',
+ name: 'Cabbage-Pult',
+ team: 'plants',
+ type: 'plant',
+ cost: 2,
+ attack: 1,
+ hp: 3,
+ health: 3,
+ traits: [],
+ rarity: 'Uncommon',
+ tribe: 'Leafy Cabbage Plant',
+ assetPath: '/assets/cards/plants/Bonk Choy.png',
+ image: '/assets/cards/plants/Bonk Choy.png',
+ description: 'Khi đặt trên làn Trên cao (Heights): Cây bắp cải bắn đá nhận ngay +1 Tấn công và +1 Máu (+1/+1).',
+ heroClass: 'Mega-Grow',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'plant_repeater',
+ name: 'Repeater',
+ team: 'plants',
+ type: 'plant',
+ cost: 3,
+ attack: 2,
+ hp: 2,
+ health: 2,
+ traits: ['Double Strike'],
+ rarity: 'Uncommon',
+ tribe: 'Pea Plant',
+ doubleStrike: true,
+ assetPath: '/assets/cards/plants/Peashooter.png',
+ image: '/assets/cards/plants/Peashooter.png',
+ description: 'Double Strike (Đánh đúp 2 lần). Bắn 2 phát đậu liên tiếp trong mỗi lượt giao tranh.',
+ heroClass: 'Mega-Grow',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'plant_snowdrop',
+ name: 'Snowdrop',
+ team: 'plants',
+ type: 'plant',
+ cost: 1,
+ attack: 1,
+ hp: 2,
+ health: 2,
+ traits: [],
+ rarity: 'Uncommon',
+ tribe: 'Flower Plant',
+ assetPath: '/assets/cards/plants/Snow Pea.png',
+ image: '/assets/cards/plants/Snow Pea.png',
+ description: 'Hoa tuyết: Mỗi khi một Zombie bị Đóng băng (Frozen), Snowdrop nhận ngay +2 Tấn công và +2 Máu (+2/+2).',
+ heroClass: 'Smarty',
  laneRequirement: 'ground'
  }
 ];
@@ -904,6 +960,64 @@ export const ZOMBIE_CARDS: CardData[] = [
  image: '/assets/cards/zombies/Disco Zombie.png',
  description: 'Armored 1, Frenzy (Cuồng nộ). Ngôi sao bóng bầu dục dũng mãnh, giảm 1 sát thương và đánh tiếp khi hạ gục Plant.',
  heroClass: 'Hearty',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'zombie_conehead',
+ name: 'Conehead Zombie',
+ team: 'zombies',
+ type: 'zombie',
+ cost: 2,
+ attack: 2,
+ hp: 2,
+ health: 2,
+ traits: ['Armored 1'],
+ rarity: 'Common',
+ tribe: 'Professional Zombie',
+ armored: 1,
+ assetPath: '/assets/cards/zombies/Arm Wrestler.png',
+ image: '/assets/cards/zombies/Arm Wrestler.png',
+ description: 'Armored 1 (Bọc giáp 1). Nón giao thông bảo vệ giúp giảm 1 sát thương nhận vào từ mọi nguồn.',
+ heroClass: 'Hearty',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'zombie_buckethead',
+ name: 'Buckethead Zombie',
+ team: 'zombies',
+ type: 'zombie',
+ cost: 4,
+ attack: 3,
+ hp: 4,
+ health: 4,
+ traits: ['Armored 1'],
+ rarity: 'Uncommon',
+ tribe: 'Professional Zombie',
+ armored: 1,
+ assetPath: '/assets/cards/zombies/Arm Wrestler.png',
+ image: '/assets/cards/zombies/Arm Wrestler.png',
+ description: 'Armored 1 (Bọc giáp 1). Chiếc xô sắt cực kỳ bền bỉ giúp giảm 1 sát thương nhận vào từ mọi nguồn.',
+ heroClass: 'Hearty',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'zombie_stealthy_imp',
+ name: 'Stealthy Imp',
+ team: 'zombies',
+ type: 'zombie',
+ cost: 3,
+ attack: 2,
+ hp: 2,
+ health: 2,
+ traits: ['Anti-Hero 4', 'Gravestone'],
+ rarity: 'Rare',
+ tribe: 'Pirate Imp Zombie',
+ antiHero: 4,
+ gravestone: true,
+ assetPath: '/assets/cards/zombies/Swabbie.png',
+ image: '/assets/cards/zombies/Swabbie.png',
+ description: 'Gravestone (Bia mộ), Anti-Hero 4. Ẩn mình dưới bia mộ; nhận thêm +4 Tấn công (thành 6 ATK) khi làn đối diện không có Plant!',
+ heroClass: 'Sneaky',
  laneRequirement: 'ground'
  }
 ];

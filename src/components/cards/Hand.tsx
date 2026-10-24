@@ -9,6 +9,7 @@ export interface HandProps {
   isPlayerTurn: boolean
   onSelectCard: (card: CardType) => void
   onDragStartCard?: (card: CardType) => void
+  onDragEndCard?: () => void
   side?: 'plants' | 'zombies'
 }
 
@@ -19,6 +20,7 @@ export const Hand: React.FC<HandProps> = ({
   isPlayerTurn,
   onSelectCard,
   onDragStartCard,
+  onDragEndCard,
   side = 'plants',
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
@@ -73,6 +75,9 @@ export const Hand: React.FC<HandProps> = ({
                   e.dataTransfer.effectAllowed = 'move'
                   onDragStartCard?.(card)
                 }
+              }}
+              onDragEnd={() => {
+                onDragEndCard?.()
               }}
             >
               <Card

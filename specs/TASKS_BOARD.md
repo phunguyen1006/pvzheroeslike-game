@@ -26,7 +26,7 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] Tích hợp 8-segment Super-Block Dial cho cả Zombie Hero (Opponent) và Plant Hero
 - [x] Cải thiện visual feedback nạp 1-3 vạch nảy số (`+1`, `+2`, `+3` bounce badge, flashing pips/nubs, audio dings)
 - [x] Tích hợp kinetic shockwave VFX và âm thanh (Web Audio API) khi minion tấn công / Hero mất máu
-- [ ] Hoàn thiện animation kéo thả thẻ bài vào làn phù hợp (Height, Ground, Water)
+- [x] Hoàn thiện hệ thống kéo thả (Drag & Drop) thẻ bài: viền Glowing Pulse Ring động tại các làn hợp lệ, dimming 0.4 làn không thể đặt, hiệu ứng tiếp đất Card Drop Thud và âm thanh Web Audio (`playCardPickup`, `playCardPlace`, `playFightHorn`)
 
 ### 🃏 Cards Bot (`feature/cards`)
 - [x] Bổ sung các thẻ bài thiếu: `zombie_browncoat`, `zombie_knight_living_dead`, `zombie_football_zombie`

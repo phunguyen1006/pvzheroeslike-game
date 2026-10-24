@@ -9,6 +9,7 @@ export interface MinionSlotProps {
   isActiveLane?: boolean
   isEligibleTarget?: boolean
   unmetReason?: string
+  isLanding?: boolean
   onClick?: () => void
   onDropCard?: (cardId: string) => void
 }
@@ -20,6 +21,7 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
   isActiveLane = false,
   isEligibleTarget = false,
   unmetReason,
+  isLanding = false,
   onClick,
   onDropCard,
 }) => {
@@ -66,8 +68,13 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
       >
         {/* Glowing Drop Target Ring (Only visible when card can be played here) */}
         {isEligibleTarget && (
-          <div className={`board-drop-target-ring ${isPlant ? 'plant-drop-ring' : 'zombie-drop-ring'}`}>
+          <div
+            className={`board-drop-target-ring ${isPlant ? 'plant-drop-ring' : 'zombie-drop-ring'} ${
+              isDragOver ? 'ring-drag-over-boost' : ''
+            }`}
+          >
             <div className="ring-pulse-halo" />
+            <div className="ring-rotating-border" />
             <span className="ring-center-icon">{isPlant ? '🌱' : '🧟'}</span>
           </div>
         )}
@@ -110,7 +117,7 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
         isTeamUp ? 'teamup-slot' : ''
       } ${minion.isFrozen ? 'is-frozen-slot' : ''} ${minion.isHit ? 'is-hit-pulse' : ''} ${
         minion.isAttacking ? 'is-attacking-lunge' : ''
-      }`}
+      } ${isLanding ? 'is-minion-landing' : ''}`}
       onClick={onClick}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -118,15 +125,15 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
       title={`${minion.name} (${minion.currentAttack} Công / ${minion.currentHealth} Máu)`}
     >
       {/* Minion Character Stand: Free-standing with ground shadow */}
-      <div className="minion-character-wrapper">
+      <div className={`minion-character-wrapper ${isLanding ? 'landing-character-bounce' : ''}`}>
         {/* Ground Oval Shadow under character's feet */}
-        <div className="minion-ground-shadow" />
+        <div className={`minion-ground-shadow ${isLanding ? 'shadow-landing-flare' : ''}`} />
 
         {/* Character Sprite Cutout */}
         <img
           src={portraitSrc}
           alt={minion.name}
-          className="minion-character-sprite"
+          className={`minion-character-sprite ${isLanding ? 'sprite-landing-squash' : ''}`}
           onError={() => setImgError(true)}
         />
 

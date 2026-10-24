@@ -4347,5 +4347,382 @@
   }
 }
 
+/* ========================================================
+   LANE DRAG & DROP SYSTEM (GLOWING PULSE RINGS & DIMMING)
+   ======================================================== */
+
+/* 1. Ineligible Lane Dimming: Clearly dims invalid lanes to 0.4 opacity */
+.pvz-lane.is-ineligible-lane {
+  opacity: 0.38 !important;
+  filter: grayscale(45%) contrast(0.85) brightness(0.7) !important;
+  cursor: not-allowed !important;
+  pointer-events: auto;
+  transition: opacity 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.25s ease;
+}
+
+.pvz-lane.is-ineligible-lane:hover {
+  background: rgba(239, 68, 68, 0.12) !important;
+}
+
+/* 2. Eligible Lane Base & Pulse Ring */
+.pvz-lane.is-eligible-lane {
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: visible;
+}
+
+.pvz-lane.is-eligible-lane:hover,
+.pvz-lane.is-lane-drag-over {
+  background: rgba(34, 197, 94, 0.22) !important;
+  transform: scale(1.015);
+  z-index: 20;
+}
+
+/* Full-height dynamic glowing pulse border */
+.lane-valid-pulse-border {
+  position: absolute;
+  inset: -2px;
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 25;
+  border: 2.5px solid #22c55e;
+  box-shadow:
+    inset 0 0 16px rgba(34, 197, 94, 0.55),
+    0 0 20px rgba(34, 197, 94, 0.7);
+  animation: validLanePulseGlow 1.2s ease-in-out infinite alternate;
+}
+
+/* Sheen sweep animation */
+.pulse-border-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: linear-gradient(
+    135deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 80%
+  );
+  background-size: 200% 200%;
+  animation: laneSheenSweep 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Lane Destination Pill at Top of Eligible Lane */
+.lane-destination-tag {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.64rem;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #fff;
+  border: 1.5px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  z-index: 30;
+  animation: tagBounceIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+/* Height Lane Eligible Specifics (Golden Warm Amber) */
+.lane-valid-pulse-border.heights-valid-border {
+  border-color: #facc15;
+  box-shadow:
+    inset 0 0 20px rgba(250, 204, 21, 0.6),
+    0 0 24px rgba(234, 179, 8, 0.85);
+  animation: heightsPulseGlow 1.1s ease-in-out infinite alternate;
+}
+
+.lane-valid-pulse-border.heights-valid-border .lane-destination-tag {
+  border-color: #fef08a;
+  background: rgba(69, 26, 3, 0.92);
+  color: #fef08a;
+}
+
+/* Water Lane Eligible Specifics (Cerulean Cyan for Amphibious) */
+.lane-valid-pulse-border.water-valid-border {
+  border-color: #38bdf8;
+  box-shadow:
+    inset 0 0 20px rgba(56, 189, 248, 0.6),
+    0 0 24px rgba(14, 165, 233, 0.85);
+  animation: waterPulseGlow 1.1s ease-in-out infinite alternate;
+}
+
+.lane-valid-pulse-border.water-valid-border .lane-destination-tag {
+  border-color: #bae6fd;
+  background: rgba(8, 47, 73, 0.92);
+  color: #7dd3fc;
+}
+
+/* Ground Lane Eligible Specifics (Lush Emerald Grass) */
+.lane-valid-pulse-border.ground-valid-border {
+  border-color: #4ade80;
+  box-shadow:
+    inset 0 0 18px rgba(74, 222, 128, 0.55),
+    0 0 20px rgba(34, 197, 94, 0.8);
+}
+
+.lane-valid-pulse-border.ground-valid-border .lane-destination-tag {
+  border-color: #bbf7d0;
+  background: rgba(20, 83, 45, 0.92);
+  color: #86efac;
+}
+
+/* Zombie Faction Eligible Border (Eerie Violet) */
+.lane-valid-pulse-border.zombie-valid-border {
+  border-color: #c084fc;
+  box-shadow:
+    inset 0 0 18px rgba(192, 132, 252, 0.6),
+    0 0 22px rgba(168, 85, 247, 0.85);
+}
+
+.lane-valid-pulse-border.zombie-valid-border .lane-destination-tag {
+  border-color: #f5d0fe;
+  background: rgba(59, 7, 100, 0.92);
+  color: #d8b4fe;
+}
+
+/* When card is hovering directly over the lane */
+.border-drag-over-boost {
+  border-width: 3.5px !important;
+  transform: scale(1.02);
+  filter: brightness(1.3) !important;
+}
+
+/* Rotating dashed outline inside the empty minion slot ring */
+.ring-rotating-border {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.8);
+  animation: rotateRingBorder 3s linear infinite;
+  pointer-events: none;
+}
+
+.ring-drag-over-boost {
+  transform: scale(1.22) !important;
+  box-shadow: 0 0 26px #4ade80, inset 0 0 14px #22c55e !important;
+  filter: brightness(1.25);
+}
+
+/* ========================================================
+   CARD DROP LANDING THUD VFX & MINION IMPACT ANIMATION
+   ======================================================== */
+
+.card-drop-landing-vfx {
+  position: absolute;
+  bottom: 22%;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 0;
+  height: 0;
+}
+
+/* Expanding Ground Dust Ring */
+.landing-dust-ring {
+  position: absolute;
+  width: 90px;
+  height: 38px;
+  border-radius: 50%;
+  border: 3px solid rgba(134, 239, 172, 0.85);
+  box-shadow: 0 0 16px rgba(74, 222, 128, 0.8), inset 0 0 10px rgba(34, 197, 94, 0.5);
+  animation: dustRingExpand 0.6s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+}
+
+/* Impact Starburst Flash */
+.landing-impact-flash {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 20%, #fef08a 60%, transparent 100%);
+  box-shadow: 0 0 22px rgba(254, 240, 138, 1), 0 0 35px rgba(234, 179, 8, 0.8);
+  animation: impactFlashBurst 0.35s ease-out forwards;
+}
+
+/* Ground Ripple */
+.landing-ground-ripple {
+  position: absolute;
+  width: 120px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.6);
+  animation: groundRippleExpand 0.5s ease-out forwards;
+}
+
+/* Minion Character Landing Squash & Bounce */
+.landing-character-bounce {
+  animation: minionLandingBounce 0.68s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+.sprite-landing-squash {
+  animation: minionSpriteSquash 0.68s ease-out forwards;
+}
+
+.shadow-landing-flare {
+  animation: shadowLandingPop 0.68s ease-out forwards;
+}
+
+/* ========================================================
+   KEYFRAME ANIMATIONS FOR LANE DRAG & DROP
+   ======================================================== */
+
+@keyframes validLanePulseGlow {
+  0% {
+    box-shadow:
+      inset 0 0 12px rgba(34, 197, 94, 0.45),
+      0 0 14px rgba(34, 197, 94, 0.55);
+    border-color: #22c55e;
+  }
+  100% {
+    box-shadow:
+      inset 0 0 22px rgba(74, 222, 128, 0.75),
+      0 0 28px rgba(34, 197, 94, 0.95);
+    border-color: #86efac;
+  }
+}
+
+@keyframes heightsPulseGlow {
+  0% {
+    box-shadow:
+      inset 0 0 14px rgba(250, 204, 21, 0.5),
+      0 0 16px rgba(234, 179, 8, 0.6);
+  }
+  100% {
+    box-shadow:
+      inset 0 0 26px rgba(254, 240, 138, 0.85),
+      0 0 32px rgba(250, 204, 21, 1);
+  }
+}
+
+@keyframes waterPulseGlow {
+  0% {
+    box-shadow:
+      inset 0 0 14px rgba(56, 189, 248, 0.5),
+      0 0 16px rgba(14, 165, 233, 0.6);
+  }
+  100% {
+    box-shadow:
+      inset 0 0 26px rgba(186, 230, 253, 0.85),
+      0 0 32px rgba(56, 189, 248, 1);
+  }
+}
+
+@keyframes laneSheenSweep {
+  0% { background-position: -200% -200%; }
+  100% { background-position: 200% 200%; }
+}
+
+@keyframes tagBounceIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px) scale(0.6);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes rotateRingBorder {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes dustRingExpand {
+  0% {
+    transform: scale(0.15);
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes impactFlashBurst {
+  0% {
+    transform: scale(0.2);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+@keyframes groundRippleExpand {
+  0% {
+    transform: scale(0.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+@keyframes minionLandingBounce {
+  0% {
+    transform: translateY(-44px) scale(0.7, 1.35);
+    opacity: 0.7;
+  }
+  55% {
+    transform: translateY(4px) scale(1.22, 0.8);
+    opacity: 1;
+  }
+  75% {
+    transform: translateY(-6px) scale(0.94, 1.06);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+    opacity: 1;
+  }
+}
+
+@keyframes minionSpriteSquash {
+  0% {
+    filter: brightness(1.4) drop-shadow(0 0 10px #fef08a);
+  }
+  60% {
+    filter: brightness(1.1);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+@keyframes shadowLandingPop {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.2;
+  }
+  55% {
+    transform: scale(1.4);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+}
+
 
 

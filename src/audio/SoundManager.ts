@@ -317,6 +317,112 @@ class SoundManager {
       osc.stop(now + idx * 0.18 + 0.35)
     })
   }
+
+  // 13. Card Pickup / Draw (tactile sliding whoosh with crisp tick)
+  playCardPickup() {
+    this.initContext()
+    if (!this.ctx || this.isMuted) return
+    const now = this.ctx.currentTime
+
+    // Rising friction swoosh
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    osc.type = 'triangle'
+    osc.frequency.setValueAtTime(420, now)
+    osc.frequency.exponentialRampToValueAtTime(820, now + 0.08)
+    gain.gain.setValueAtTime(0.22, now)
+    gain.gain.linearRampToValueAtTime(0.01, now + 0.09)
+    osc.connect(gain)
+    gain.connect(this.ctx.destination)
+    osc.start(now)
+    osc.stop(now + 0.09)
+
+    // Harmonic snap
+    const snapOsc = this.ctx.createOscillator()
+    const snapGain = this.ctx.createGain()
+    snapOsc.type = 'sine'
+    snapOsc.frequency.setValueAtTime(1100, now)
+    snapOsc.frequency.exponentialRampToValueAtTime(1500, now + 0.04)
+    snapGain.gain.setValueAtTime(0.12, now)
+    snapGain.gain.linearRampToValueAtTime(0.01, now + 0.05)
+    snapOsc.connect(snapGain)
+    snapGain.connect(this.ctx.destination)
+    snapOsc.start(now)
+    snapOsc.stop(now + 0.05)
+  }
+
+  // 14. Card Placement / Minion Landing (resonant leafy earth thud)
+  playCardPlace() {
+    this.initContext()
+    if (!this.ctx || this.isMuted) return
+    const now = this.ctx.currentTime
+
+    // Deep grassy thud
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    osc.type = 'triangle'
+    osc.frequency.setValueAtTime(260, now)
+    osc.frequency.exponentialRampToValueAtTime(60, now + 0.14)
+    gain.gain.setValueAtTime(0.35, now)
+    gain.gain.linearRampToValueAtTime(0.01, now + 0.15)
+    osc.connect(gain)
+    gain.connect(this.ctx.destination)
+    osc.start(now)
+    osc.stop(now + 0.15)
+
+    // Organic landing snap
+    const snapOsc = this.ctx.createOscillator()
+    const snapGain = this.ctx.createGain()
+    snapOsc.type = 'sawtooth'
+    snapOsc.frequency.setValueAtTime(450, now)
+    snapOsc.frequency.exponentialRampToValueAtTime(120, now + 0.06)
+    snapGain.gain.setValueAtTime(0.18, now)
+    snapGain.gain.linearRampToValueAtTime(0.01, now + 0.07)
+    snapOsc.connect(snapGain)
+    snapGain.connect(this.ctx.destination)
+    snapOsc.start(now)
+    snapOsc.stop(now + 0.07)
+  }
+
+  // 15. Fight Phase Battle Horn (heroic brassy combat fanfare flourish)
+  playFightHorn() {
+    this.initContext()
+    if (!this.ctx || this.isMuted) return
+    const now = this.ctx.currentTime
+
+    // Two-tone brass flourish: A3 (220Hz) -> E4 (329.63Hz) -> A4 (440Hz)
+    const tones = [
+      { freq: 220, start: 0, dur: 0.12 },
+      { freq: 329.63, start: 0.10, dur: 0.14 },
+      { freq: 440, start: 0.22, dur: 0.35 },
+    ]
+
+    tones.forEach((tone) => {
+      if (!this.ctx) return
+      const osc = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+      osc.type = 'sawtooth'
+      osc.frequency.setValueAtTime(tone.freq, now + tone.start)
+      gain.gain.setValueAtTime(0.28, now + tone.start)
+      gain.gain.exponentialRampToValueAtTime(0.01, now + tone.start + tone.dur)
+      osc.connect(gain)
+      gain.connect(this.ctx.destination)
+      osc.start(now + tone.start)
+      osc.stop(now + tone.start + tone.dur)
+
+      // Harmonics support for brass warmth
+      const sub = this.ctx.createOscillator()
+      const subGain = this.ctx.createGain()
+      sub.type = 'triangle'
+      sub.frequency.setValueAtTime(tone.freq * 0.5, now + tone.start)
+      subGain.gain.setValueAtTime(0.2, now + tone.start)
+      subGain.gain.linearRampToValueAtTime(0.01, now + tone.start + tone.dur)
+      sub.connect(subGain)
+      subGain.connect(this.ctx.destination)
+      sub.start(now + tone.start)
+      sub.stop(now + tone.start + tone.dur)
+    })
+  }
 }
 
 export const soundManager = new SoundManager()

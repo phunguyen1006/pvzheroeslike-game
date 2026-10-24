@@ -89,7 +89,10 @@ export const ASSET_MANIFEST = {
       "Squash": "/assets/cards/plants/Squash.png",
       "Sunflower": "/assets/cards/plants/Sunflower.png",
       "The Great Zucchini": "/assets/cards/plants/The Great Zucchini.png",
-      "Wall-Nut": "/assets/cards/plants/Wall-Nut.png"
+      "Wall-Nut": "/assets/cards/plants/Wall-Nut.png",
+      "Cabbage-Pult": "/assets/cards/plants/Bonk Choy.png",
+      "Repeater": "/assets/cards/plants/Peashooter.png",
+      "Snowdrop": "/assets/cards/plants/Snow Pea.png"
     },
     "zombies": {
       "Area 22": "/assets/cards/zombies/Area 22.png",
@@ -113,7 +116,10 @@ export const ASSET_MANIFEST = {
       "Trickster": "/assets/cards/zombies/Trickster.png",
       "Valkyrie": "/assets/cards/zombies/Valkyrie.png",
       "Weed Spray": "/assets/cards/zombies/Weed Spray.png",
-      "Zombot 1000": "/assets/cards/zombies/Zombot 1000.png"
+      "Zombot 1000": "/assets/cards/zombies/Zombot 1000.png",
+      "Conehead Zombie": "/assets/cards/zombies/Arm Wrestler.png",
+      "Buckethead Zombie": "/assets/cards/zombies/Arm Wrestler.png",
+      "Stealthy Imp": "/assets/cards/zombies/Swabbie.png"
     }
   },
   "traits": {
