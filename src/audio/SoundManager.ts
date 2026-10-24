@@ -423,6 +423,73 @@ class SoundManager {
       sub.stop(now + tone.start + tone.dur)
     })
   }
+
+  // 16. Gravestone Reveal (heavy stone crack & shatter with mysterious zombie guttural awakening groan)
+  playGravestoneReveal() {
+    this.initContext()
+    if (!this.ctx || this.isMuted) return
+    const now = this.ctx.currentTime
+
+    // Layer A: Deep Subterranean Stone Crack & Crumble Impact (sawtooth drop)
+    const stoneOsc = this.ctx.createOscillator()
+    const stoneGain = this.ctx.createGain()
+    stoneOsc.type = 'sawtooth'
+    stoneOsc.frequency.setValueAtTime(160, now)
+    stoneOsc.frequency.exponentialRampToValueAtTime(32, now + 0.38)
+    stoneGain.gain.setValueAtTime(0.42, now)
+    stoneGain.gain.exponentialRampToValueAtTime(0.01, now + 0.42)
+    stoneOsc.connect(stoneGain)
+    stoneGain.connect(this.ctx.destination)
+    stoneOsc.start(now)
+    stoneOsc.stop(now + 0.42)
+
+    // Layer B: Granite Cracking Snaps (sharp rock fracture bursts)
+    const crackTimes = [0.03, 0.11, 0.19, 0.28]
+    crackTimes.forEach((delay, idx) => {
+      if (!this.ctx) return
+      const crackOsc = this.ctx.createOscillator()
+      const crackGain = this.ctx.createGain()
+      crackOsc.type = 'triangle'
+      crackOsc.frequency.setValueAtTime(480 - idx * 60, now + delay)
+      crackOsc.frequency.exponentialRampToValueAtTime(80, now + delay + 0.06)
+      crackGain.gain.setValueAtTime(0.3, now + delay)
+      crackGain.gain.linearRampToValueAtTime(0.01, now + delay + 0.07)
+      crackOsc.connect(crackGain)
+      crackGain.connect(this.ctx.destination)
+      crackOsc.start(now + delay)
+      crackOsc.stop(now + delay + 0.07)
+    })
+
+    // Layer C: Mysterious Guttural Undead Awakening Groan (resonant FM groan)
+    const groanOsc = this.ctx.createOscillator()
+    const groanGain = this.ctx.createGain()
+    groanOsc.type = 'sawtooth'
+    // Pitch rises slowly then falls: 85Hz -> 125Hz -> 65Hz
+    groanOsc.frequency.setValueAtTime(85, now + 0.12)
+    groanOsc.frequency.linearRampToValueAtTime(130, now + 0.35)
+    groanOsc.frequency.exponentialRampToValueAtTime(62, now + 0.72)
+
+    groanGain.gain.setValueAtTime(0.01, now + 0.12)
+    groanGain.gain.linearRampToValueAtTime(0.24, now + 0.28)
+    groanGain.gain.exponentialRampToValueAtTime(0.01, now + 0.75)
+    groanOsc.connect(groanGain)
+    groanGain.connect(this.ctx.destination)
+    groanOsc.start(now + 0.12)
+    groanOsc.stop(now + 0.75)
+
+    // Layer D: Eerie Sub-Bass Resonance
+    const subOsc = this.ctx.createOscillator()
+    const subGain = this.ctx.createGain()
+    subOsc.type = 'sine'
+    subOsc.frequency.setValueAtTime(55, now)
+    subOsc.frequency.exponentialRampToValueAtTime(28, now + 0.5)
+    subGain.gain.setValueAtTime(0.35, now)
+    subGain.gain.linearRampToValueAtTime(0.01, now + 0.55)
+    subOsc.connect(subGain)
+    subGain.connect(this.ctx.destination)
+    subOsc.start(now)
+    subOsc.stop(now + 0.55)
+  }
 }
 
 export const soundManager = new SoundManager()

@@ -446,7 +446,7 @@ export const PLANT_CARDS: CardData[] = [
  hp: 6,
  health: 6,
  traits: ['Team-Up'],
- rarity: 'Common',
+ rarity: 'Uncommon',
  tribe: 'Nut Plant',
  teamUp: true,
  assetPath: '/assets/cards/plants/Wall-Nut.png',
@@ -509,6 +509,42 @@ export const PLANT_CARDS: CardData[] = [
  description: 'Hoa tuyết: Mỗi khi một Zombie bị Đóng băng (Frozen), Snowdrop nhận ngay +2 Tấn công và +2 Máu (+2/+2).',
  heroClass: 'Smarty',
  laneRequirement: 'ground'
+ },
+ {
+ id: 'plant_briar_rose',
+ name: 'Briar Rose',
+ team: 'plants',
+ type: 'plant',
+ cost: 4,
+ attack: 3,
+ hp: 4,
+ health: 4,
+ traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'Flower Plant',
+ assetPath: '/assets/heroes/plants/Rose.png',
+ image: '/assets/heroes/plants/Rose.png',
+ description: 'Gai hoa hồng: Khi một Zombie gây sát thương lên bất kỳ Flower nào (kể cả chính nó): Tiêu diệt ngay lập tức Zombie đó!',
+ heroClass: 'Solar',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'plant_cornucopia',
+ name: 'Cornucopia',
+ team: 'plants',
+ type: 'plant',
+ cost: 10,
+ attack: 6,
+ hp: 6,
+ health: 6,
+ traits: [],
+ rarity: 'Legendary',
+ tribe: 'Corn Plant',
+ assetPath: '/assets/cards/plants/Kernel Corn.png',
+ image: '/assets/cards/plants/Kernel Corn.png',
+ description: 'Sừng dê thịnh vượng: Khi xuất trận: Tạo ra một Plant ngẫu nhiên trên mỗi làn đấu khác còn trống (chiếm lĩnh toàn bộ bàn cờ)!',
+ heroClass: 'Solar',
+ laneRequirement: 'ground'
  }
 ];
 
@@ -561,7 +597,7 @@ export const ZOMBIE_CARDS: CardData[] = [
  health: 0,
  traits: [],
  rarity: 'Super-Rare',
- tribe: 'Trick',
+ tribe: 'Party Trick',
  assetPath: '/assets/cards/zombies/Bad Moon Rising.png',
  image: '/assets/cards/zombies/Bad Moon Rising.png',
  description: 'Trăng máu trỗi dậy: Biến đổi tất cả Zombie trên sân thành các quái vật ngẫu nhiên có giá từ 5 Não (Brain) trở lên.',
@@ -1018,6 +1054,25 @@ export const ZOMBIE_CARDS: CardData[] = [
  image: '/assets/cards/zombies/Swabbie.png',
  description: 'Gravestone (Bia mộ), Anti-Hero 4. Ẩn mình dưới bia mộ; nhận thêm +4 Tấn công (thành 6 ATK) khi làn đối diện không có Plant!',
  heroClass: 'Sneaky',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'zombie_disco_tron_3000',
+ name: 'Disco-Tron 3000',
+ team: 'zombies',
+ type: 'zombie',
+ cost: 6,
+ attack: 4,
+ hp: 4,
+ health: 4,
+ traits: ['Gravestone'],
+ rarity: 'Super-Rare',
+ tribe: 'Science Zombie',
+ gravestone: true,
+ assetPath: '/assets/cards/zombies/Disco Zombie.png',
+ image: '/assets/cards/zombies/Disco Zombie.png',
+ description: 'Gravestone (Bia mộ). Cỗ máy Disco tương lai: Khi lộ diện: Tạo thêm một Disco Zombie 3/1 nhảy múa hỗ trợ ở một làn bên cạnh.',
+ heroClass: 'Crazy',
  laneRequirement: 'ground'
  }
 ];

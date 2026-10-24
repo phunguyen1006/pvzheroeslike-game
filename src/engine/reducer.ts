@@ -317,9 +317,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (side === 'zombies' && state.phase === 'ZOMBIE_TRICKS') {
         const card = state.zombieHand.find(c => c.id === cardId)
         if (card && card.type === 'minion') {
-          return {
-            ...state,
-            combatLog: [`[Cảnh báo] Không thể đặt Zombie Minion trong phase Tricks (trừ Teleport)!`, ...state.combatLog],
+          if (!state.teleportActive) {
+            return {
+              ...state,
+              combatLog: [`[Cảnh báo] Không thể đặt Zombie Minion trong phase Tricks (trừ khi dùng Teleport)!`, ...state.combatLog],
+            }
           }
         }
       }
@@ -439,9 +441,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       const updatedHand = hand.filter(c => c.id !== cardId)
 
+      const isTeleported = side === 'zombies' && state.phase === 'ZOMBIE_TRICKS' && Boolean(state.teleportActive)
+
       const playLog = minion.isGravestone
         ? `Zombie đặt một Bia Mộ bí ẩn (Gravestone) vào ${lane.name}.`
-        : `${side === 'plants' ? 'Plant' : 'Zombie'} đặt ${minion.name} (${minion.currentAttack}/${minion.currentHealth}) vào ${lane.name}.`
+        : isTeleported
+          ? `⚡ Teleport! Zombie dịch chuyển ${minion.name} (${minion.currentAttack}/${minion.currentHealth}) vào ${lane.name} ngay trong phase Tricks!`
+          : `${side === 'plants' ? 'Plant' : 'Zombie'} đặt ${minion.name} (${minion.currentAttack}/${minion.currentHealth}) vào ${lane.name}.`
 
       let nextState: GameState = {
         ...state,
@@ -450,6 +456,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         zombieHero: side === 'zombies' ? updatedHero : state.zombieHero,
         plantHand: side === 'plants' ? updatedHand : state.plantHand,
         zombieHand: side === 'zombies' ? updatedHand : state.zombieHand,
+        teleportActive: isTeleported ? false : state.teleportActive,
         combatLog: [playLog, ...state.combatLog],
       }
 

@@ -166,6 +166,8 @@ export interface GameState {
   plantGraveyard: Card[]
   zombieGraveyard: Card[]
   winner: Side | null
+  // Teleport trick active flag: allows playing 1 zombie minion during ZOMBIE_TRICKS phase
+  teleportActive?: boolean
   // Pending Superpower after a Super-Block trigger
   pendingSuperBlock?: {
     side: Side
