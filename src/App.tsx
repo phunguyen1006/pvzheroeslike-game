@@ -16,18 +16,20 @@ import { GameOverModal } from './components/ui/GameOverModal'
 import { SuperBlockModal } from './components/ui/SuperBlockModal'
 import { MulliganModal } from './components/ui/MulliganModal'
 import { ComicIntro } from './components/modals/ComicIntro'
+import { CardDetailModal } from './components/modals/CardDetailModal'
 import { PhaseBanner } from './components/ui/PhaseBanner'
 import { MainMenu } from './components/screens/MainMenu'
 import { HeroSelect } from './components/screens/HeroSelect'
 import { DeckBuilder } from './components/screens/DeckBuilder'
 import { CampaignMap } from './components/campaign/CampaignMap'
+import { getCardById } from './data/cards'
 import {
   buildMissionLanes,
   calculateMissionStars,
   loadCampaignProgress,
   saveCampaignProgress,
 } from './data/campaign'
-import type { CampaignMission } from './engine/types'
+import type { CampaignMission, Minion as MinionType } from './engine/types'
 import type { Projectile, FloatingTextItem, ShockwaveItem } from './components/board/CombatVFXLayer'
 import { soundManager } from './audio/SoundManager'
 import './App.css'
@@ -36,6 +38,11 @@ export function App() {
   const [currentScreen, setCurrentScreen] = useState<'menu' | 'hero_select' | 'deck_builder' | 'campaign' | 'battle'>('menu')
   const [activeCampaignMission, setActiveCampaignMission] = useState<CampaignMission | null>(null)
   const [campaignStarsWon, setCampaignStarsWon] = useState<number | undefined>(undefined)
+  const [inspectModalData, setInspectModalData] = useState<{
+    card?: CardType
+    minion?: MinionType
+    cardId?: string
+  } | null>(null)
   const [selectedHeroes, setSelectedHeroes] = useState<{ plant: string; zombie: string }>({
     plant: 'hero_green_shadow',
     zombie: 'hero_super_brainz',
@@ -683,6 +690,8 @@ export function App() {
               shockwaves={shockwaves}
               onSelectLane={handleSelectLane}
               onDropCardToLane={handleDropCardToLane}
+              onInspectMinion={(minion) => setInspectModalData({ minion })}
+              onInspectEnvironment={(cardId) => setInspectModalData({ cardId })}
             />
           </div>
 
@@ -730,6 +739,7 @@ export function App() {
                     soundManager.playCardPickup()
                   }}
                   side="plants"
+                  onInspectCard={(card) => setInspectModalData({ card })}
                 />
               </div>
 
@@ -894,6 +904,15 @@ export function App() {
             setCurrentScreen('hero_select')
             handleRematch()
           }}
+        />
+      )}
+
+      {/* Card & Minion Lore Detail Inspection Modal */}
+      {inspectModalData && (
+        <CardDetailModal
+          card={inspectModalData.card || (inspectModalData.cardId ? getCardById(inspectModalData.cardId) : null)}
+          minion={inspectModalData.minion}
+          onClose={() => setInspectModalData(null)}
         />
       )}
     </div>

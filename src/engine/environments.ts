@@ -305,7 +305,8 @@ export function coordinateTerrainAndLaneBuffs(
   state: GameState,
   minion: Minion,
   laneIndex: number,
-  side: Side
+  side: Side,
+  options?: { skipEnemyReactions?: boolean }
 ): TerrainCoordinationResult {
   let updatedMinion: Minion = { ...minion }
   let updatedState: GameState = {
@@ -354,7 +355,7 @@ export function coordinateTerrainAndLaneBuffs(
   }
 
   // 3. Enemy Reaction: Arm Wrestler (+1/+1 when a Plant enters its lane)
-  if (side === 'plants' && targetLane.zombieMinion?.cardId === 'zombie_arm_wrestler') {
+  if (!options?.skipEnemyReactions && side === 'plants' && targetLane.zombieMinion?.cardId === 'zombie_arm_wrestler') {
     targetLane.zombieMinion = {
       ...targetLane.zombieMinion,
       currentAttack: targetLane.zombieMinion.currentAttack + 1,

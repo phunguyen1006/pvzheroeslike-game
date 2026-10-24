@@ -8,7 +8,6 @@ import { applyHeroDamage } from './combat'
 import { drawCard } from './reducer'
 import { isUntrickable } from './abilities'
 import { conjureCard } from './conjure'
-import { ALL_CARDS } from '../data/cards'
 
 export interface SuperpowerResult {
   updatedState: GameState

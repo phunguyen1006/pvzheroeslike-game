@@ -22,6 +22,7 @@ import {
   playEnvironment,
   applyEnvironmentOnPlay,
   applyEnvironmentEndOfTurn,
+  coordinateTerrainAndLaneBuffs,
 } from './environments'
 import { executeTrick } from './tricks'
 import { executeSuperpower } from './superpowers'
@@ -96,6 +97,9 @@ export function convertCardDataToCard(cardData: any, side: Side): Card {
     antiHero: cardData.antiHero ?? (cardData.traits?.some((t: string) => t.toLowerCase().includes('antihero') || t.toLowerCase().includes('anti-hero')) ? 2 : undefined),
     doubleStrike: Boolean(cardData.doubleStrike || cardData.traits?.some((t: string) => t.toLowerCase().includes('double strike') || t.toLowerCase().includes('doublestrike'))),
     gravestone: Boolean(cardData.gravestone || cardData.traits?.some((t: string) => t.toLowerCase().includes('gravestone'))),
+    tribe: cardData.tribe,
+    set: cardData.set,
+    rarity: cardData.rarity,
     description: cardData.description,
     heroClass: cardData.heroClass,
     laneRequirement: cardData.laneRequirement,
@@ -485,25 +489,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         }
       }
 
-      minion = applyLaneRulesOnPlay(minion, lane)
-
-      let lilyBuffed = false
-      if (side === 'plants' && (lane.type === 'heights' || laneIndex === 0)) {
-        const hasLily = state.lanes.some(l =>
-          (l.plantMinion && l.plantMinion.cardId === 'plant_lily_of_the_valley') ||
-          (l.plantTeamUpMinion && l.plantTeamUpMinion.cardId === 'plant_lily_of_the_valley')
-        )
-        if (hasLily) {
-          minion = {
-            ...minion,
-            currentAttack: minion.currentAttack + 2,
-            baseAttack: minion.baseAttack + 2,
-            currentHealth: minion.currentHealth + 2,
-            maxHealth: minion.maxHealth + 2,
-          }
-          lilyBuffed = true
-        }
-      }
+      // Coordinate terrain and lane buffs (Heights base rule +1/+1 and Lily of the Valley +2/+2)
+      const terrainCoord = coordinateTerrainAndLaneBuffs(state, minion, laneIndex, side, { skipEnemyReactions: true })
+      minion = terrainCoord.updatedMinion
+      state = terrainCoord.updatedState
+      const lilyBuffed = terrainCoord.events.some(e => e.includes('Lily of the Valley'))
 
       const updatedLanes = state.lanes.map((l, idx) => {
         if (idx !== laneIndex) return l
