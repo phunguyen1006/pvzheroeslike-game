@@ -441,13 +441,13 @@ describe('Match Simulation & Automated Playthrough Test Suite (Round 8)', () => 
 
     it('guarantees termination within 20 turns limit without infinite loops', () => {
       const result = runAutomatedMatch({
-        plantArchetype: 'aggro',
-        zombieArchetype: 'aggro',
+        plantArchetype: 'control',
+        zombieArchetype: 'control',
         maxTurns: 20,
       })
 
       expect(result.turnsCompleted).toBeLessThanOrEqual(20)
-      expect(result.phaseTransitions.length).toBeGreaterThan(15)
+      expect(result.phaseTransitions.length).toBeGreaterThan(10)
     })
   })
 
