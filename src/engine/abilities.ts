@@ -459,6 +459,15 @@ export function triggerDinoRoar(state: GameState, side: Side): AbilityTriggerRes
         }
         events.push(`🦖 Bananasaurus Rex gầm vang (Dino-Roar): Nhận +1/+1 (hiện là ${l.plantMinion.currentAttack}/${l.plantMinion.currentHealth})!`)
       }
+      if (l.plantTeamUpMinion && l.plantTeamUpMinion.cardId === 'plant_bananasaurus_rex') {
+        l.plantTeamUpMinion = {
+          ...l.plantTeamUpMinion,
+          currentAttack: l.plantTeamUpMinion.currentAttack + 1,
+          currentHealth: l.plantTeamUpMinion.currentHealth + 1,
+          maxHealth: l.plantTeamUpMinion.maxHealth + 1,
+        }
+        events.push(`🦖 Bananasaurus Rex Team-Up gầm vang (Dino-Roar): Nhận +1/+1 (hiện là ${l.plantTeamUpMinion.currentAttack}/${l.plantTeamUpMinion.currentHealth})!`)
+      }
     })
   }
 

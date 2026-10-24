@@ -71,6 +71,7 @@ export const ASSET_MANIFEST = {
       "Admiral Navy Bean": "/assets/cards/plants/Admiral Navy Bean.png",
       "Astro-Shroom": "/assets/cards/plants/Astro-Shroom.png",
       "Bananasaurus Rex": "/assets/cards/plants/Bananasaurus Rex.png",
+      "Brainana": "/assets/cards/plants/Bananasaurus Rex.png",
       "Berry Blast": "/assets/cards/plants/Berry Blast.png",
       "Black-Eyed Pea": "/assets/cards/plants/Black-Eyed Pea.png",
       "Bonk Choy": "/assets/cards/plants/Bonk Choy.png",
