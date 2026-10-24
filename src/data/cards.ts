@@ -1859,7 +1859,7 @@ export const ZOMBIE_CARDS: CardData[] = [
  traits: ['Strikethrough'],
  strikethrough: true,
  rarity: 'Legendary',
- tribe: 'Pirate Science Monster Zombie',
+ tribe: 'Pet Imp Zombie',
  assetPath: '/assets/cards/zombies/Swabbie.png',
  image: '/assets/cards/zombies/Swabbie.png',
  gravestone: false,

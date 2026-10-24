@@ -849,6 +849,413 @@ export function getAISuperpowerDecision(
     }
   }
 
+  // 18. Devour (Chompzilla - Destroy a Zombie with the lowest Health)
+  if (spId.includes('devour')) {
+    const targetZombies = lanes
+      .map((l, idx) => ({ l, idx }))
+      .filter((x) => x.l.zombieMinion && !isUntrickable(x.l.zombieMinion))
+
+    if (targetZombies.length > 0) {
+      // Sort by lowest health; if tied, sort by highest attack
+      targetZombies.sort((a, b) => {
+        const hpDiff = a.l.zombieMinion!.currentHealth - b.l.zombieMinion!.currentHealth
+        if (hpDiff !== 0) return hpDiff
+        return b.l.zombieMinion!.currentAttack - a.l.zombieMinion!.currentAttack
+      })
+      const target = targetZombies[0]
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: target.idx,
+        reason: `Devour destroys lowest-health zombie ${target.l.zombieMinion!.name} (${target.l.zombieMinion!.currentHealth} HP) in lane ${target.idx + 1}`,
+      }
+    }
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Devour until enemy zombies are deployed',
+    }
+  }
+
+  // 19. Tater Toss (Spudow - Make a 0/1 Hothead with Team-Up that deals 6 damage when destroyed)
+  if (spId.includes('tater_toss')) {
+    // Optimal placement: Lane facing dangerous enemy zombie (>= 2 ATK) to absorb damage and retaliate for 6 dmg
+    const dangerousZombieLanes = lanes
+      .map((l, idx) => ({ l, idx }))
+      .filter((x) => x.l.zombieMinion && x.l.zombieMinion.currentAttack >= 2 && !x.l.plantMinion)
+      .sort((a, b) => b.l.zombieMinion!.currentAttack - a.l.zombieMinion!.currentAttack)
+
+    if (dangerousZombieLanes.length > 0) {
+      const target = dangerousZombieLanes[0]
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: target.idx,
+        reason: `Tater Toss deploys Hothead in lane ${target.idx + 1} to absorb ${target.l.zombieMinion!.name} and retaliate for 6 damage`,
+      }
+    }
+
+    const openLaneIdx = lanes.findIndex((l) => !l.plantMinion)
+    if (openLaneIdx !== -1) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: openLaneIdx,
+        reason: `Tater Toss places defensive Hothead in lane ${openLaneIdx + 1}`,
+      }
+    }
+
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Tater Toss until a lane opens for planting Hothead',
+    }
+  }
+
+  // 20. Peel Shield (Citron - Plants cannot be hurt this turn. Draw a card)
+  if (spId.includes('peel_shield')) {
+    const friendlyPlants = lanes.filter((l) => l.plantMinion)
+    const plantsInCombat = lanes.filter(
+      (l) => l.plantMinion && l.zombieMinion && !l.zombieMinion.isFrozen && l.zombieMinion.currentAttack > 0
+    )
+    const hand = isZombie ? state.zombieHand : state.plantHand
+
+    if (plantsInCombat.length >= 1 || friendlyPlants.length >= 2 || (friendlyPlants.length >= 1 && hand.length <= 8)) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: `Peel Shield grants invulnerability to ${friendlyPlants.length} plants and draws a card`,
+      }
+    }
+
+    if (friendlyPlants.length === 0 && hand.length <= 7) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: 'Peel Shield cycles a card to maintain card advantage',
+      }
+    }
+
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Peel Shield for a turn when multiple plants are in danger',
+    }
+  }
+
+  // 21. Power Pummel (Grass Knuckles - Attack for 2 damage in each Ground lane: 1, 2, 3)
+  if (spId.includes('power_pummel')) {
+    const groundLanes = [lanes[1], lanes[2], lanes[3]]
+    const groundZombies = groundLanes.filter((l) => l.zombieMinion)
+    const killableZombies = groundZombies.filter((l) => l.zombieMinion!.currentHealth <= 2)
+    const openGroundLanes = groundLanes.filter((l) => !l.zombieMinion)
+
+    if (groundZombies.length >= 1 || openGroundLanes.length >= 2 || archetype === 'aggro') {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: `Power Pummel attacks across all 3 ground lanes (affecting ${groundZombies.length} zombies, ${killableZombies.length} lethal kills)`,
+      }
+    }
+
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Power Pummel until enemy zombies or aggressive face opportunities emerge on ground lanes',
+    }
+  }
+
+  // 22. Mush-Boom (Nightcap - Make 1/1 Poison Mushroom with Anti-Hero 2. Do 2 damage to a Zombie here)
+  if (spId.includes('mush_boom')) {
+    const availableLanes = lanes.map((l, idx) => ({ l, idx })).filter((x) => !x.l.plantMinion)
+
+    // Priority 1: Clean kill on zombie with <= 2 HP
+    const killTarget = availableLanes.find(
+      (x) => x.l.zombieMinion && x.l.zombieMinion.currentHealth <= 2 && !isUntrickable(x.l.zombieMinion)
+    )
+    if (killTarget) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: killTarget.idx,
+        reason: `Mush-Boom deals 2 lethal damage to ${killTarget.l.zombieMinion!.name} in lane ${killTarget.idx + 1} and spawns Poison Mushroom`,
+      }
+    }
+
+    // Priority 2: Damage any opposing zombie
+    const damageTarget = availableLanes.find(
+      (x) => x.l.zombieMinion && !isUntrickable(x.l.zombieMinion)
+    )
+    if (damageTarget) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: damageTarget.idx,
+        reason: `Mush-Boom deals 2 damage to ${damageTarget.l.zombieMinion!.name} in lane ${damageTarget.idx + 1}`,
+      }
+    }
+
+    // Priority 3: Open lane for Anti-Hero 2 face burst (3 damage)
+    const openTarget = availableLanes.find((x) => !x.l.zombieMinion)
+    if (openTarget) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: openTarget.idx,
+        reason: `Mush-Boom summons Poison Mushroom in open lane ${openTarget.idx + 1} for 3 Anti-Hero face damage`,
+      }
+    }
+
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Mush-Boom until a plant slot opens',
+    }
+  }
+
+  // 23. Goatify (Rose - Transform Zombie with highest Attack into a 1/1 Goat)
+  if (spId.includes('goatify')) {
+    const targetZombies = lanes
+      .map((l, idx) => ({ l, idx }))
+      .filter((x) => x.l.zombieMinion && !isUntrickable(x.l.zombieMinion))
+
+    if (targetZombies.length > 0) {
+      targetZombies.sort((a, b) => b.l.zombieMinion!.currentAttack - a.l.zombieMinion!.currentAttack)
+      const highestAtkZombie = targetZombies[0]
+
+      if (highestAtkZombie.l.zombieMinion!.currentAttack >= 3 || evaluateMinionThreat(highestAtkZombie.l, 'zombies') >= 5) {
+        return {
+          action: 'PLAY_SUPERPOWER',
+          superpowerId: superpower.id,
+          targetLaneIndex: highestAtkZombie.idx,
+          reason: `Goatify transforms highest attack zombie ${highestAtkZombie.l.zombieMinion!.name} (${highestAtkZombie.l.zombieMinion!.currentAttack} ATK) into a 1/1 Goat`,
+        }
+      }
+
+      return {
+        action: 'SAVE_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: `Save Goatify for stronger threats (highest current zombie ATK is only ${highestAtkZombie.l.zombieMinion!.currentAttack})`,
+      }
+    }
+
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Goatify until enemy zombies are deployed',
+    }
+  }
+
+  // 24. Blazing Bark (Captain Combustible - A Plant gets +4 Attack)
+  if (spId.includes('blazing_bark')) {
+    const friendlyPlantLanes = lanes
+      .map((l, idx) => ({ l, idx }))
+      .filter((x) => x.l.plantMinion && !x.l.plantMinion.isFrozen)
+
+    if (friendlyPlantLanes.length > 0) {
+      // Priority 1: Unblocked plant (direct face burst)
+      const unblocked = friendlyPlantLanes.find((x) => !x.l.zombieMinion)
+      if (unblocked) {
+        return {
+          action: 'PLAY_SUPERPOWER',
+          superpowerId: superpower.id,
+          targetLaneIndex: unblocked.idx,
+          reason: `Blazing Bark grants +4 Attack to unblocked ${unblocked.l.plantMinion!.name} in lane ${unblocked.idx + 1} for face burst`,
+        }
+      }
+
+      // Priority 2: Plant that can trade favorably or eliminate opposing zombie
+      const trading = friendlyPlantLanes.find(
+        (x) => x.l.zombieMinion && x.l.plantMinion!.currentAttack + 4 >= x.l.zombieMinion.currentHealth
+      )
+      const target = trading || friendlyPlantLanes[0]
+
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: target.idx,
+        reason: `Blazing Bark buffs ${target.l.plantMinion!.name} in lane ${target.idx + 1} with +4 Attack`,
+      }
+    }
+
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Blazing Bark until friendly plants are deployed',
+    }
+  }
+
+  // 25. Stayin' Alive (Electric Boogaloo - Do 3 damage to a Plant. Heal your Hero for 3)
+  if (spId.includes('stayin_alive')) {
+    const targetPlants = lanes
+      .map((l, idx) => ({ l, idx }))
+      .filter((x) => x.l.plantMinion && !isUntrickable(x.l.plantMinion))
+
+    if (targetPlants.length > 0) {
+      const killTarget = targetPlants.find((x) => x.l.plantMinion!.currentHealth <= 3)
+      const threatTarget = targetPlants.sort(
+        (a, b) => evaluateMinionThreat(b.l, 'plants') - evaluateMinionThreat(a.l, 'plants')
+      )[0]
+      const target = killTarget || threatTarget
+
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: target.idx,
+        reason: `Stayin' Alive deals 3 damage to ${target.l.plantMinion!.name} in lane ${target.idx + 1} and heals Zombie Hero for 3 HP`,
+      }
+    }
+
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Stayin\' Alive until enemy plants are deployed',
+    }
+  }
+
+  // 26. Frozen Tundra (Brain Freeze - Freeze all Plants on the Ground)
+  if (spId.includes('frozen_tundra')) {
+    const groundLanes = [lanes[1], lanes[2], lanes[3]]
+    const unfrozenPlants = groundLanes.filter(
+      (l) => l.plantMinion && !l.plantMinion.isFrozen && !isUntrickable(l.plantMinion)
+    )
+
+    if (unfrozenPlants.length >= 1) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: `Frozen Tundra freezes ${unfrozenPlants.length} plants on ground lanes to nullify enemy combat`,
+      }
+    }
+
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Frozen Tundra until plants occupy ground lanes',
+    }
+  }
+
+  // 27. Witch's Familiar (Immorticia - Make a 2/1 Zombat with Amphibious that draws a card when it hurts a Plant)
+  if (spId.includes('witchs_familiar')) {
+    const availableLanes = lanes.map((l, idx) => ({ l, idx })).filter((x) => !x.l.zombieMinion)
+
+    if (availableLanes.length > 0) {
+      // Priority 1: Water lane (lane 4 / amphibious)
+      const waterLane = availableLanes.find((x) => x.idx === 4)
+      // Priority 2: Lane facing a 1-2 HP plant to kill and draw card immediately
+      const tradeLane = availableLanes.find(
+        (x) => x.l.plantMinion && x.l.plantMinion.currentHealth <= 2
+      )
+      const target = waterLane || tradeLane || availableLanes[0]
+
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: target.idx,
+        reason: `Witch's Familiar summons 2/1 Amphibious Zombat in lane ${target.idx + 1}`,
+      }
+    }
+
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Witch\'s Familiar until a lane opens for zombie deployment',
+    }
+  }
+
+  // 28. Octo-Pult (Neptuna - Make a 3/2 Octo-Pet with Amphibious)
+  if (spId.includes('octo_pult')) {
+    const availableLanes = lanes.map((l, idx) => ({ l, idx })).filter((x) => !x.l.zombieMinion)
+
+    if (availableLanes.length > 0) {
+      const waterLane = availableLanes.find((x) => x.idx === 4)
+      const tradeLane = availableLanes.find(
+        (x) => x.l.plantMinion && x.l.plantMinion.currentHealth <= 3
+      )
+      const target = waterLane || tradeLane || availableLanes[0]
+
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: target.idx,
+        reason: `Octo-Pult launches 3/2 Amphibious Octo-Pet in lane ${target.idx + 1}`,
+      }
+    }
+
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Octo-Pult until a lane opens for zombie deployment',
+    }
+  }
+
+  // 29. Genetic Amplification (Beta-Carrotina - Conjure 1-cost Plant with +1/+1, Amphibious, Team-Up)
+  if (spId.includes('genetic_amplification')) {
+    const hand = isZombie ? state.zombieHand : state.plantHand
+    if (hand.length <= 9) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: 'Genetic Amplification conjures an enhanced +1/+1 Amphibious Team-Up 1-cost plant',
+      }
+    }
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Genetic Amplification to avoid hand overflow',
+    }
+  }
+
+  // 30. Terror-Former 10,000 (Huge-Gigantacus - All cards cost 1 less, conjure environment)
+  if (spId.includes('terror_former')) {
+    return {
+      action: 'PLAY_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Terror-Former 10,000 reduces the cost of all cards in hand by 1 and conjures an environment',
+    }
+  }
+
+  // 31. Embiggen (A Plant gets +2/+2)
+  if (spId.includes('embiggen')) {
+    const friendlyPlants = lanes
+      .map((l, idx) => ({ l, idx }))
+      .filter((x) => x.l.plantMinion && !x.l.plantMinion.isFrozen)
+
+    if (friendlyPlants.length > 0) {
+      const bestTarget = friendlyPlants.sort(
+        (a, b) => b.l.plantMinion!.currentAttack - a.l.plantMinion!.currentAttack
+      )[0]
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetLaneIndex: bestTarget.idx,
+        reason: `Embiggen buffs ${bestTarget.l.plantMinion!.name} in lane ${bestTarget.idx + 1} with +2/+2`,
+      }
+    }
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Embiggen until friendly plants are deployed',
+    }
+  }
+
+  // 32. Dance Off (Summon two 1/1 Backup Dancers)
+  if (spId.includes('dance_off')) {
+    const openLanesCount = lanes.filter((l) => !l.zombieMinion).length
+    if (openLanesCount >= 1) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        reason: 'Dance Off summons two 1/1 Backup Dancers across open lanes',
+      }
+    }
+    return {
+      action: 'SAVE_SUPERPOWER',
+      superpowerId: superpower.id,
+      reason: 'Save Dance Off until lanes open up for zombie dancers',
+    }
+  }
+
   // 18. Default heuristic: If immediate board advantage is available, play; otherwise save
   const hasEnemyMinions = lanes.some((l) => (isZombie ? l.plantMinion : l.zombieMinion))
   if (hasEnemyMinions || archetype === 'aggro') {
