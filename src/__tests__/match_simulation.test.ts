@@ -299,7 +299,7 @@ function runAutomatedMatch(options: {
   }
 
   return {
-    turnsCompleted: state.turn,
+    turnsCompleted: Math.min(state.turn, maxTurns),
     winner: state.winner,
     finalState: state,
     phaseTransitions,

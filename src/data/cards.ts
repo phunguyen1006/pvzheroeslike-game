@@ -1856,16 +1856,17 @@ export const ZOMBIE_CARDS: CardData[] = [
  attack: 3,
  hp: 5,
  health: 5,
- traits: ['Strikethrough'],
+ traits: ['Strikethrough', 'Amphibious'],
+ amphibious: true,
  strikethrough: true,
  rarity: 'Legendary',
  tribe: 'Pet Imp Zombie',
  assetPath: '/assets/cards/zombies/Swabbie.png',
  image: '/assets/cards/zombies/Swabbie.png',
  gravestone: false,
- description: 'Xuyên thấu (Strikethrough). Khi gây sát thương lên Plant Hero: Di chuyển sang làn bên phải và tung đòn tấn công tiếp theo!',
+ description: 'Xuyên thấu (Strikethrough), Đổ bộ nước (Amphibious). Khi gây sát thương lên Plant Hero: Tự động di chuyển sang làn bên phải (nếu làn đó chưa có Zombie)!',
  heroClass: 'Sneaky',
- laneRequirement: 'ground'
+ laneRequirement: 'any'
  }
 ];
 

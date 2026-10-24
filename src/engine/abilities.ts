@@ -531,6 +531,46 @@ export function triggerWhenPlayed(
       events.push(`🍄 Buff-Shroom giải phóng bào tử: Tăng +1/+1 cho ${mushroomCount} Mushroom trên sân!`)
       break
     }
+
+    case 'plant_cob_cannon': {
+      // Cob Cannon (Corn Evolution: Destroy a Zombie, and deal 1 splash damage to adjacent lanes)
+      const isEvolved = (minion as any).isEvolved ?? true
+      if (isEvolved) {
+        events.push(`🌽 Cob Cannon đại bác ngô khai hỏa (Corn Evolution): Tiêu diệt một Zombie và bắn tung tóe 1 sát thương lan sang các làn bên cạnh!`)
+        // Target opposing zombie if present, else first available zombie
+        let targetLaneIdx = laneIndex
+        if (!updatedState.lanes[targetLaneIdx]?.zombieMinion) {
+          const found = updatedState.lanes.findIndex(l => l.zombieMinion)
+          if (found !== -1) targetLaneIdx = found
+        }
+
+        const targetLane = updatedState.lanes[targetLaneIdx]
+        if (targetLane && targetLane.zombieMinion) {
+          events.push(`🌽 Cob Cannon bắn hạ mục tiêu chính: Tiêu diệt ${targetLane.zombieMinion.name} tại làn ${targetLaneIdx}!`)
+          targetLane.zombieMinion = null
+        }
+
+        // Deal 1 splash damage to adjacent lanes (targetLaneIdx - 1, targetLaneIdx + 1)
+        const splashIndices = [targetLaneIdx - 1, targetLaneIdx + 1].filter(idx => idx >= 0 && idx < updatedState.lanes.length)
+        splashIndices.forEach(adjIdx => {
+          const adjLane = updatedState.lanes[adjIdx]
+          if (adjLane.zombieMinion) {
+            const armor = adjLane.zombieMinion.armored || (adjLane.zombieMinion.traits?.includes('armored') ? 1 : 0)
+            const dmg = Math.max(0, 1 - armor)
+            adjLane.zombieMinion = {
+              ...adjLane.zombieMinion,
+              currentHealth: Math.max(0, adjLane.zombieMinion.currentHealth - dmg),
+            }
+            events.push(`🌽 Sát thương lan từ Cob Cannon: Gây 1 sát thương lên ${adjLane.zombieMinion.name} tại làn ${adjIdx}!`)
+            if (adjLane.zombieMinion.currentHealth <= 0) {
+              events.push(`💥 ${adjLane.zombieMinion.name} bị sát thương lan từ Cob Cannon tiêu diệt!`)
+              adjLane.zombieMinion = null
+            }
+          }
+        })
+      }
+      break
+    }
   }
 
   // 2. React to other minions on board
@@ -775,6 +815,85 @@ export function triggerStartOfTurn(state: GameState, side: Side): AbilityTrigger
           }
           plantHand.push(bananaBombCard)
           events.push('🍌 Banana Launcher nạp đạn: Tạo 1 lá Chuối Pháo (Banana Bomb) vào tay bạn!')
+        }
+      }
+      updatedState.plantHand = plantHand
+    }
+
+    // 4. Astrocado Pit: Transforms into Astrocado (5/3, Strikethrough)
+    const isAstrocadoPit = (m: Minion) =>
+      m.cardId === 'plant_astrocado_pit' ||
+      m.cardId.startsWith('plant_astrocado_pit') ||
+      m.name.toLowerCase().includes('astrocado pit')
+
+    updatedState.lanes.forEach(l => {
+      if (l.plantMinion && isAstrocadoPit(l.plantMinion)) {
+        l.plantMinion = {
+          ...l.plantMinion,
+          cardId: 'plant_astrocado',
+          name: 'Astrocado',
+          currentAttack: 5,
+          baseAttack: 5,
+          currentHealth: 3,
+          maxHealth: 3,
+          strikethrough: true,
+          traits: ['strikethrough'],
+          tribe: 'Fruit Plant',
+          image: '/assets/cards/plants/Sunflower.png',
+        }
+        events.push(`🥑 Hạt Bơ (Astrocado Pit) nảy mầm: Biến hình (Transform) thành [Astrocado] (5/3) Xuyên thấu!`)
+      }
+      if (l.plantTeamUpMinion && isAstrocadoPit(l.plantTeamUpMinion)) {
+        l.plantTeamUpMinion = {
+          ...l.plantTeamUpMinion,
+          cardId: 'plant_astrocado',
+          name: 'Astrocado',
+          currentAttack: 5,
+          baseAttack: 5,
+          currentHealth: 3,
+          maxHealth: 3,
+          strikethrough: true,
+          traits: ['strikethrough'],
+          tribe: 'Fruit Plant',
+          image: '/assets/cards/plants/Sunflower.png',
+        }
+        events.push(`🥑 Hạt Bơ (Astrocado Pit) nảy mầm: Biến hình (Transform) thành [Astrocado] (5/3) Xuyên thấu!`)
+      }
+    })
+
+    // 5. Bird of Paradise: Start of Turn: Conjure a random Superpower into hand
+    const isBirdOfParadise = (m: Minion) =>
+      m.cardId === 'plant_bird_of_paradise' ||
+      m.name.toLowerCase().includes('bird of paradise') ||
+      m.cardId.toLowerCase().includes('bird_of_paradise')
+
+    let birdCount = 0
+    updatedState.lanes.forEach(l => {
+      if (l.plantMinion && isBirdOfParadise(l.plantMinion)) birdCount++
+      if (l.plantTeamUpMinion && isBirdOfParadise(l.plantTeamUpMinion)) birdCount++
+    })
+
+    if (birdCount > 0) {
+      const superpowerPool = ALL_CARDS.filter(c => c.type === 'superpower' && c.team === 'plants')
+      const plantHand = [...updatedState.plantHand]
+      for (let b = 0; b < birdCount; b++) {
+        if (plantHand.length < 10 && superpowerPool.length > 0) {
+          const chosen = superpowerPool[Math.floor(Math.random() * superpowerPool.length)]
+          const spCard: Card = {
+            id: `${chosen.id}_conjured_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            name: chosen.name,
+            side: 'plants',
+            cost: chosen.cost,
+            attack: chosen.attack ?? 0,
+            health: chosen.hp ?? (chosen as any).health ?? 0,
+            type: 'superpower',
+            image: chosen.image || chosen.assetPath || '',
+            traits: chosen.traits || [],
+            tribe: chosen.tribe,
+            description: chosen.description,
+          }
+          plantHand.push(spCard)
+          events.push(`🪶 Bird of Paradise triệu hồi (Conjure) Siêu năng lực [${chosen.name}] vào tay!`)
         }
       }
       updatedState.plantHand = plantHand

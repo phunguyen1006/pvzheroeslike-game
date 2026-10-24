@@ -2372,3 +2372,553 @@ export function getAITurnPlan(
 
   return plan
 }
+
+// ========================================================
+// 4. DYNAMIC BOSS & HERO DIALOGUE TRIGGERS
+// ========================================================
+
+export type DialogueTriggerType =
+  | 'SIGNATURE_SUPERPOWER'
+  | 'LOW_HP'
+  | 'DESTROY_KEY_MINION'
+  | 'TAUNT_VICTORY'
+
+export interface DialogueContext {
+  superpowerId?: string
+  superpowerName?: string
+  heroHp?: number
+  destroyedMinionName?: string
+  laneIndex?: number
+}
+
+export interface AIDialogueOutput {
+  text: string
+  emoji: string
+  trigger: DialogueTriggerType
+  heroId: string
+}
+
+export interface HeroDialogueSet {
+  superpower: { text: string; emoji: string }
+  lowHp: { text: string; emoji: string }
+  destroyMinion: { text: string; emoji: string }
+  victoryTaunt?: { text: string; emoji: string }
+}
+
+/**
+ * Authentic personality dialogues for all 20 PvZ Heroes (10 Plants, 10 Zombies)
+ * plus Beta-Carrotina and Huge-Gigantacus.
+ */
+export const HERO_DYNAMIC_DIALOGUES: Record<string, HeroDialogueSet> = {
+  // --- 10 PLANT HEROES ---
+  hero_green_shadow: {
+    superpower: {
+      text: 'Tia đạn Precision Blast chuẩn xác vào hồng tâm! Đừng hòng trốn thoát!',
+      emoji: '🎯',
+    },
+    lowHp: {
+      text: 'Lá chắn rách nhưng ý chí xạ thủ không lùi bước! Một phát bắn nữa là định đoạt!',
+      emoji: '🏹',
+    },
+    destroyMinion: {
+      text: 'Hạ gục mục tiêu nguy hiểm! Chiến tuyến thảo mộc đã an toàn trở lại.',
+      emoji: '🌿',
+    },
+    victoryTaunt: {
+      text: 'Bắn tỉa bách phát bách trúng. Công lý luôn thuộc về thảo mộc!',
+      emoji: '🏆',
+    },
+  },
+
+  hero_solar_flare: {
+    superpower: {
+      text: 'Cháy rực rỡ nào! Tia nắng Sunburn thiêu đốt và tiếp thêm ánh dương vĩnh cửu!',
+      emoji: '☀️',
+    },
+    lowHp: {
+      text: 'Nóng thế này mà đã bỏ cuộc sao? Bão mặt trời sắp bùng nổ rồi đấy!',
+      emoji: '🔥',
+    },
+    destroyMinion: {
+      text: 'Bùm! Biến thành tro bụi trước sức nóng của ánh mặt trời nhé cưng!',
+      emoji: '💥',
+    },
+    victoryTaunt: {
+      text: 'Mặt trời luôn chiếu sáng rực rỡ nhất sau cơn bão lửa!',
+      emoji: '🌻',
+    },
+  },
+
+  hero_wall_knight: {
+    superpower: {
+      text: 'Bất khả xâm phạm! Lớp vỏ Uncrackable này đao thương bất nhập!',
+      emoji: '🛡️',
+    },
+    lowHp: {
+      text: 'Vỏ có nứt nhưng ruột quả hạch vẫn cứng như thép! Đố đập vỡ được ta!',
+      emoji: '🌰',
+    },
+    destroyMinion: {
+      text: 'Một cú lăn nghiền nát! Không ai vượt qua được bức tường kiên cố này.',
+      emoji: '🧱',
+    },
+    victoryTaunt: {
+      text: 'Kiên cố như tường thành ngàn năm! Cố thêm chút nữa xem nào.',
+      emoji: '🏰',
+    },
+  },
+
+  hero_chompzilla: {
+    superpower: {
+      text: 'Ngoạm một phát nuốt chửng! Devour không chừa lại một mẩu xương nào!',
+      emoji: '🦖',
+    },
+    lowHp: {
+      text: 'Grrrr... Càng đói bụng thì cú cắn của Chompzilla lại càng hung dữ!',
+      emoji: '🦷',
+    },
+    destroyMinion: {
+      text: 'Ngon tuyệt cú mèo! Cảm ơn vì bữa trưa giàu đạm nhé Zombie!',
+      emoji: '🍽️',
+    },
+    victoryTaunt: {
+      text: 'Ục ục... No nê cả bụng! Sân vườn này là địa bàn săn mồi của ta!',
+      emoji: '🍖',
+    },
+  },
+
+  hero_spudow: {
+    superpower: {
+      text: 'Củ khoai tây Hothead nổ tanh bành! Ai dám chạm vào là lãnh đủ 6 sát thương!',
+      emoji: '🥔',
+    },
+    lowHp: {
+      text: 'Sắp nổ tung rồi! Nhưng củ khoai này sẽ kéo theo cả nghĩa địa xuống mồ!',
+      emoji: '💣',
+    },
+    destroyMinion: {
+      text: 'KABOOM! Củ khoai phát nổ và mục tiêu biến mất không dấu vết!',
+      emoji: '💥',
+    },
+    victoryTaunt: {
+      text: 'Nổ to thế mới đã tai chứ! Khoai tây củ bự bất khả chiến bại!',
+      emoji: '🎆',
+    },
+  },
+
+  hero_citron: {
+    superpower: {
+      text: 'Kích hoạt Peel Shield tương lai! Toàn bộ đội hình thảo mộc bất tử!',
+      emoji: '🍊',
+    },
+    lowHp: {
+      text: 'Hệ thống phòng thủ báo động đỏ! Khởi động giao thức phản công lượng tử!',
+      emoji: '⚡',
+    },
+    destroyMinion: {
+      text: 'Vũ khí công nghệ cao đã vô hiệu hóa mối đe dọa sinh học!',
+      emoji: '🛸',
+    },
+    victoryTaunt: {
+      text: 'Nhiệm vụ bảo vệ dòng thời gian thành công tốt đẹp!',
+      emoji: '🚀',
+    },
+  },
+
+  hero_grass_knuckles: {
+    superpower: {
+      text: 'Nắm đấm Power Pummel chấn động cả 3 làn đất! Đỡ đòn này xem!',
+      emoji: '👊',
+    },
+    lowHp: {
+      text: 'Cơ bắp này chưa biết đầu hàng là gì! Hiệp cuối cùng mới là lúc ta đấm hăng nhất!',
+      emoji: '🥊',
+    },
+    destroyMinion: {
+      text: 'Knockout một phát đo ván! Cỏ cơ bắp không có đối thủ trên võ đài!',
+      emoji: '🏆',
+    },
+    victoryTaunt: {
+      text: 'Một hai ba đếm lùi! Nhà vô địch tuyệt đối của sàn đấu!',
+      emoji: '🥇',
+    },
+  },
+
+  hero_nightcap: {
+    superpower: {
+      text: 'Từ trong bóng tối, Mush-Boom trỗi dậy và phun chất độc hạ gục kẻ địch!',
+      emoji: '🍄',
+    },
+    lowHp: {
+      text: 'Ninja ẩn mình trong bóng đêm... Ngươi tưởng thấy ta nhưng ngươi đã lầm!',
+      emoji: '🥷',
+    },
+    destroyMinion: {
+      text: 'Một đòn chí mạng thầm lặng. Kẻ thù ngã xuống mà không kịp kêu lên một tiếng.',
+      emoji: '🗡️',
+    },
+    victoryTaunt: {
+      text: 'Bóng đêm đã nuốt chửng tất cả. Nghệ thuật nhẫn giả là bất bại.',
+      emoji: '🌑',
+    },
+  },
+
+  hero_rose: {
+    superpower: {
+      text: 'Úm ba la! Goatify biến quái vật to xác thành chú dê con be he ngốc nghếch!',
+      emoji: '🐐',
+    },
+    lowHp: {
+      text: 'Cánh hoa có rơi rụng nhưng gai nhọn ma thuật vẫn sẽ cào nát đối thủ!',
+      emoji: '🌹',
+    },
+    destroyMinion: {
+      text: 'Phép thuật cổ xưa thanh tẩy chiến trường! Quá dễ dàng cho quý cô Rose.',
+      emoji: '✨',
+    },
+    victoryTaunt: {
+      text: 'Một kết cục quý phái và thanh lịch. Không ai cưỡng lại được phép màu!',
+      emoji: '👑',
+    },
+  },
+
+  hero_captain_combustible: {
+    superpower: {
+      text: 'Bùng cháy lên! Blazing Bark gia tăng +4 sức mạnh công phá hủy diệt!',
+      emoji: '🪵',
+    },
+    lowHp: {
+      text: 'NGỌN LỬA CUỒNG NỘ BÙNG CHÁY! Thân gỗ này sẽ thiêu rụi toàn bộ kẻ thù!',
+      emoji: '🔥',
+    },
+    destroyMinion: {
+      text: 'THIÊU CHÁY THÀNH TRO! Không gì cản nổi sức mạnh của ngọn lửa!',
+      emoji: '🌋',
+    },
+    victoryTaunt: {
+      text: 'HỎA NGỤC THIÊU RỤI TẤT CẢ! Thuyền trưởng luôn là ngọn đuốc sáng nhất!',
+      emoji: '🎇',
+    },
+  },
+
+  // --- 10 ZOMBIE HEROES ---
+  hero_super_brainz: {
+    superpower: {
+      text: 'Vút bay trên không trung! Carried Away mang Zombie đến thẳng mặt đối thủ và tung cú đấm bất ngờ!',
+      emoji: '🦸‍♂️',
+    },
+    lowHp: {
+      text: 'Tóc vuốt keo của ta có thể rối, nhưng nụ cười anh hùng này không bao giờ vụt tắt!',
+      emoji: '✨',
+    },
+    destroyMinion: {
+      text: 'Cú đấm siêu anh hùng! Ngắm nhìn cơ bắp cuồn cuộn này mà học tập đi lũ cây cỏ!',
+      emoji: '💪',
+    },
+    victoryTaunt: {
+      text: 'Chiến thắng hoàn hảo không một vết ố trên áo choàng!',
+      emoji: '🦸‍♂️',
+    },
+  },
+
+  hero_the_smash: {
+    superpower: {
+      text: 'SMASH ĐẬP BẸP! Slammin\' Smash nghiền nát cây cỏ dưới gót chân khổng lồ!',
+      emoji: '🤼',
+    },
+    lowHp: {
+      text: 'The Smash đang NỔI ĐIÊN! Ai dám làm trầy da nhà vô địch đô vật?',
+      emoji: '😡',
+    },
+    destroyMinion: {
+      text: 'Bẹp như bánh tráng! Không một ngọn cỏ nào chịu nổi một cú đè của ta!',
+      emoji: '💥',
+    },
+    victoryTaunt: {
+      text: 'THE SMASH LÀ SỐ MỘT! ĐẬP NÁT MỌI THỨ!',
+      emoji: '🥇',
+    },
+  },
+
+  hero_impfinity: {
+    superpower: {
+      text: 'Hehehe! Triple Threat nhân bản thành binh đoàn tí hon quậy phá khắp các làn!',
+      emoji: '😈',
+    },
+    lowHp: {
+      text: 'Tụi tao đông như kiến! Ngươi đập một con, mười con khác sẽ nhảy vào cắn xé!',
+      emoji: '🏃',
+    },
+    destroyMinion: {
+      text: 'Lũ cây to xác ngã rồi! Tí hon nhưng đấm hơi bị đau đấy nhé!',
+      emoji: '🎉',
+    },
+    victoryTaunt: {
+      text: 'Nhìn quanh mà xem! Đâu đâu cũng là bản sao quậy phá của Impfinity!',
+      emoji: '🤡',
+    },
+  },
+
+  hero_rustbolt: {
+    superpower: {
+      text: 'Kích hoạt tia Shrink Ray! Thu nhỏ sức mạnh và sạc thêm dữ liệu khoa học!',
+      emoji: '🤖',
+    },
+    lowHp: {
+      text: 'Bộ giáp sắt rỉ sét nhưng lõi năng lượng vẫn hoạt động 100%! Bắt đầu phản công!',
+      emoji: '⚙️',
+    },
+    destroyMinion: {
+      text: 'Khoa học Zombie chính xác tuyệt đối! Mối đe dọa thực vật đã bị triệt tiêu.',
+      emoji: '🧪',
+    },
+    victoryTaunt: {
+      text: 'Phương trình đã giải xong. Kết quả duy nhất: Chiến thắng tuyệt đối!',
+      emoji: '🔋',
+    },
+  },
+
+  hero_electric_boogaloo: {
+    superpower: {
+      text: 'Stayin\' Alive! Giật điện 3 sát thương và nhảy múa hồi phục 3 máu cực sung!',
+      emoji: '🕺',
+    },
+    lowHp: {
+      text: 'Nhạc chưa tàn thì sàn nhảy chưa dừng! Hãy xem điệu nhảy lật kèo của Boogaloo!',
+      emoji: '⚡',
+    },
+    destroyMinion: {
+      text: 'Một cú giật điện tê tái! Cháy đen thành than trên sàn nhảy Disco rồi nhé!',
+      emoji: '🪩',
+    },
+    victoryTaunt: {
+      text: 'Disco thập niên 70 bất tử! Vỗ tay cho ông hoàng sàn nhảy nào!',
+      emoji: '🕺',
+    },
+  },
+
+  hero_brain_freeze: {
+    superpower: {
+      text: 'Cơn bão tuyết Frozen Tundra đóng băng toàn bộ cây cỏ trên các làn đất!',
+      emoji: '❄️',
+    },
+    lowHp: {
+      text: 'Hàn khí ngàn năm sắp bùng phát! Một khối băng vĩnh cửu không dễ tan chảy đâu!',
+      emoji: '🥶',
+    },
+    destroyMinion: {
+      text: 'Đóng băng và vỡ vụn! Mùa đông bất tận đã chôn vùi đối thủ.',
+      emoji: '🧊',
+    },
+    victoryTaunt: {
+      text: 'Kỷ Băng Hà đã bao trùm sân cỏ. Lạnh lẽo và cô độc!',
+      emoji: '🌨️',
+    },
+  },
+
+  hero_professor_brainstorm: {
+    superpower: {
+      text: 'EUREKA! Bộ não thiên tài phát minh ra 3 bảo bối khoa học đỉnh cao!',
+      emoji: '🧠',
+    },
+    lowHp: {
+      text: 'Tỉ lệ sống sót còn 5%? Đúng theo tính toán của ta, thời khắc lật ngược thế cờ đã tới!',
+      emoji: '🔬',
+    },
+    destroyMinion: {
+      text: 'Thí nghiệm thành công mĩ mãn! Cây cỏ không có cửa đọ trí thông minh với ta.',
+      emoji: '💡',
+    },
+    victoryTaunt: {
+      text: 'Khoa học luôn luôn chiến thắng mê tín dị đoan và rau cỏ!',
+      emoji: '⚗️',
+    },
+  },
+
+  hero_immorticia: {
+    superpower: {
+      text: 'Bay đi dơi đêm Zombat! Witch\'s Familiar rình rập và hút cạn chất xám của đối thủ!',
+      emoji: '🧙‍♀️',
+    },
+    lowHp: {
+      text: 'Hắc ma thuật cổ đại đang trỗi dậy từ cõi chết! Ngươi chưa thắng được ta đâu!',
+      emoji: '🦇',
+    },
+    destroyMinion: {
+      text: 'Một linh hồn nữa về với nghĩa địa. Lời nguyền của Immorticia đã ứng nghiệm!',
+      emoji: '🔮',
+    },
+    victoryTaunt: {
+      text: 'Đêm nay thuộc về phù thủy tối thượng. Trăng máu muôn năm!',
+      emoji: '🌙',
+    },
+  },
+
+  hero_z_mech: {
+    superpower: {
+      text: 'Phóng toàn bộ hỏa lực Missile Madness! Mưa tên lửa hủy diệt mọi mục tiêu!',
+      emoji: '🚀',
+    },
+    lowHp: {
+      text: 'Hệ thống giáp cảnh báo nguy cấp! Tự động chuyển sang chế độ đồ sát liều mạng!',
+      emoji: '⚠️',
+    },
+    destroyMinion: {
+      text: 'Mục tiêu bị xóa sổ hoàn toàn! Đừng bao giờ đùa với hỏa lực hạng nặng của Z-Mech!',
+      emoji: '💥',
+    },
+    victoryTaunt: {
+      text: 'Mọi chướng ngại vật đã bị nghiền nát dưới bánh xích thép!',
+      emoji: '🤖',
+    },
+  },
+
+  hero_neptuna: {
+    superpower: {
+      text: 'Bạch tuộc Octo-Pult xuất kích! Chiếm lĩnh làn nước và siết chặt chiến trường!',
+      emoji: '🐙',
+    },
+    lowHp: {
+      text: 'Sóng ngầm biển sâu đang cuộn trào! Cơn thịnh nộ của nữ hoàng đại dương sắp giáng xuống!',
+      emoji: '🌊',
+    },
+    destroyMinion: {
+      text: 'Bị xúc tu kéo xuống đáy biển sâu! Làn nước thuộc về quyền năng của Neptuna.',
+      emoji: '🔱',
+    },
+    victoryTaunt: {
+      text: 'Toàn bộ thế giới đã bị chìm trong thủy cung bất tận!',
+      emoji: '🐚',
+    },
+  },
+
+  // --- BONUS HEROES ---
+  hero_beta_carrotina: {
+    superpower: {
+      text: 'Khuếch đại gen Genetic Amplification! Chiến binh tí hon sẵn sàng cứu rỗi thiên hà!',
+      emoji: '🥕',
+    },
+    lowHp: {
+      text: 'Bảo vệ hạm đội đến hơi thở cuối cùng! Ánh sáng công lý sẽ không bao giờ tắt!',
+      emoji: '🚀',
+    },
+    destroyMinion: {
+      text: 'Quét sạch mục tiêu xâm lăng! Thiên hà xanh lại yên bình.',
+      emoji: '🌟',
+    },
+    victoryTaunt: {
+      text: 'Hạm đội Beta-Carrotina đã hoàn thành sứ mệnh ngân hà!',
+      emoji: '🛸',
+    },
+  },
+
+  hero_huge_gigantacus: {
+    superpower: {
+      text: 'Terror-Former 10,000 kích hoạt! Toàn bộ công nghệ tối thượng giảm giá sập sàn!',
+      emoji: '👾',
+    },
+    lowHp: {
+      text: 'Chúa tể tí hon chưa bao giờ chịu khuất phục! Cỗ máy ngày tận thế sắp khai hỏa!',
+      emoji: '🛸',
+    },
+    destroyMinion: {
+      text: 'Tiêu diệt chướng ngại vật! Thành phố này sắp hoàn toàn thuộc về ta!',
+      emoji: '🏙️',
+    },
+    victoryTaunt: {
+      text: 'Ngước nhìn lên đi! Huge-Gigantacus là kẻ thống trị vĩ đại nhất!',
+      emoji: '👑',
+    },
+  },
+}
+
+/**
+ * Returns dynamic dialogue bubble content for an AI Hero or Boss based on game events:
+ * 1. SIGNATURE_SUPERPOWER: When activating their signature superpower
+ * 2. LOW_HP: When Hero HP drops to <= 5 (critical survival condition)
+ * 3. DESTROY_KEY_MINION: When eliminating an enemy minion of high threat
+ * 4. TAUNT_VICTORY: Optional victory/taunt emote
+ */
+export function getAIDynamicDialogue(
+  heroId: string,
+  trigger: DialogueTriggerType,
+  context?: DialogueContext
+): AIDialogueOutput {
+  // Normalize hero ID (e.g., 'hero_green_shadow', 'green_shadow', 'Green Shadow')
+  const cleanId = heroId.toLowerCase().replace(/[\s-]/g, '_')
+  const standardKey = cleanId.startsWith('hero_') ? cleanId : `hero_${cleanId}`
+
+  const heroQuotes = HERO_DYNAMIC_DIALOGUES[standardKey] || HERO_DYNAMIC_DIALOGUES[cleanId]
+
+  if (heroQuotes) {
+    switch (trigger) {
+      case 'SIGNATURE_SUPERPOWER':
+        return {
+          text: heroQuotes.superpower.text,
+          emoji: heroQuotes.superpower.emoji,
+          trigger,
+          heroId,
+        }
+      case 'LOW_HP':
+        return {
+          text: heroQuotes.lowHp.text,
+          emoji: heroQuotes.lowHp.emoji,
+          trigger,
+          heroId,
+        }
+      case 'DESTROY_KEY_MINION': {
+        const text = context?.destroyedMinionName
+          ? `${context.destroyedMinionName} đã bị tiêu diệt! ${heroQuotes.destroyMinion.text}`
+          : heroQuotes.destroyMinion.text
+        return {
+          text,
+          emoji: heroQuotes.destroyMinion.emoji,
+          trigger,
+          heroId,
+        }
+      }
+      case 'TAUNT_VICTORY':
+        return {
+          text: heroQuotes.victoryTaunt?.text || 'Chiến thắng không thể chối cãi!',
+          emoji: heroQuotes.victoryTaunt?.emoji || '🏆',
+          trigger,
+          heroId,
+        }
+    }
+  }
+
+  // Thematic fallback if hero is custom or not in database
+  switch (trigger) {
+    case 'SIGNATURE_SUPERPOWER':
+      return {
+        text: 'Khai hỏa Siêu Năng Lực tối thượng! Hãy xem sức mạnh thực sự của ta!',
+        emoji: '⚡',
+        trigger,
+        heroId,
+      }
+    case 'LOW_HP':
+      return {
+        text: 'Máu sắp cạn nhưng tinh thần chiến đấu vẫn rực cháy! Lật kèo nào!',
+        emoji: '💥',
+        trigger,
+        heroId,
+      }
+    case 'DESTROY_KEY_MINION':
+      return {
+        text: context?.destroyedMinionName
+          ? `Mục tiêu ${context.destroyedMinionName} đã bị hạ gục không thương tiếc!`
+          : 'Một mục tiêu then chốt đã ngã gục! Chiến thắng đang trong tầm tay!',
+        emoji: '🎯',
+        trigger,
+        heroId,
+      }
+    case 'TAUNT_VICTORY':
+      return {
+        text: 'Không ai có thể đánh bại được ta trên đấu trường này!',
+        emoji: '🏆',
+        trigger,
+        heroId,
+      }
+  }
+}
+
