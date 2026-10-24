@@ -172,7 +172,7 @@ export function resolveSingleLaneCombat(
   let updatedPlantHand = [...gameState.plantHand]
   let updatedZombieHand = [...gameState.zombieHand]
   let pendingSuperBlock = gameState.pendingSuperBlock || null
-  const updatedLanes = gameState.lanes.map((l, idx) => (idx === laneIndex ? { ...l } : l))
+  const updatedLanes = gameState.lanes.map(l => ({ ...l }))
   const lane = updatedLanes[laneIndex]
   let plant = lane.plantMinion ? { ...lane.plantMinion } : null
   let plantTeamUp = lane.plantTeamUpMinion ? { ...lane.plantTeamUpMinion } : null
@@ -615,6 +615,9 @@ export function resolveSingleLaneCombat(
     if (zombieHasStrikethrough && zombieCanAttack) {
       const res = applyHeroDamage(currentPlantHero, zombie.currentAttack, zombieHasBullseye)
       currentPlantHero = res.updatedHero
+      if (res.actualDamage > 0) {
+        zombieHurtPlantHero = true
+      }
       events.push({
         laneIndex,
         attackerSide: 'zombies',
@@ -983,6 +986,9 @@ export function resolveSingleLaneCombat(
       const totalAttack = zombie.currentAttack + zombieAntiHero
       const res = applyHeroDamage(currentPlantHero, totalAttack, zombieHasBullseye)
       currentPlantHero = res.updatedHero
+      if (res.actualDamage > 0) {
+        zombieHurtPlantHero = true
+      }
       events.push({
         laneIndex,
         attackerSide: 'zombies',
@@ -1038,10 +1044,45 @@ export function resolveSingleLaneCombat(
     deadUnits.push({ minion: zombie, laneIndex })
   }
 
+  // Space Cowboy Strikethrough Move: When Space Cowboy damages Plant Hero, moves to right lane if unoccupied
+  const isSpaceCowboy = Boolean(
+    zombie && (
+      zombie.cardId === 'zombie_space_cowboy' ||
+      zombie.name.toLowerCase().includes('space cowboy') ||
+      zombie.cardId.toLowerCase().includes('space_cowboy')
+    )
+  )
+
+  let cowboyMoved = false
+  if (isSpaceCowboy && zombieHurtPlantHero && zombie && zombie.currentHealth > 0) {
+    const nextLaneIdx = laneIndex + 1
+    if (nextLaneIdx < updatedLanes.length && !updatedLanes[nextLaneIdx].zombieMinion) {
+      cowboyMoved = true
+      updatedLanes[nextLaneIdx] = {
+        ...updatedLanes[nextLaneIdx],
+        zombieMinion: zombie,
+      }
+      lane.zombieMinion = null
+      events.push({
+        laneIndex,
+        attackerSide: 'zombies',
+        attackerName: zombie.name,
+        target: 'hero',
+        targetSide: 'plants',
+        damageDealt: 0,
+        isBlocked: false,
+        isLethal: false,
+        description: `🤠 ${zombie.name} gây sát thương lên Plant Hero và tự động di chuyển sang làn ${nextLaneIdx + 1}!`,
+      })
+    }
+  }
+
   // Update lane state, clearing defeated minions
   lane.plantMinion = plant && plant.currentHealth > 0 ? plant : null
   lane.plantTeamUpMinion = plantTeamUp && plantTeamUp.currentHealth > 0 ? plantTeamUp : null
-  lane.zombieMinion = zombie && zombie.currentHealth > 0 ? zombie : null
+  if (!cowboyMoved) {
+    lane.zombieMinion = zombie && zombie.currentHealth > 0 ? zombie : null
+  }
 
   // Determine game winner
   let winner: Side | null = null
