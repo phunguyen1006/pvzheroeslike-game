@@ -21,7 +21,7 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] Hỗ trợ Armored 1 và Armored 2 giảm sát thương chính xác
 - [x] Hoàn thiện cơ chế cascade trigger khi minion bị tiêu diệt (`triggerOnDeath` & `triggerOnMultipleDeaths` trong `src/engine/triggers.ts` cho Valkyrie in hand, Punish-Shroom, Hothead, Pear Cub, Gas Giant, Frankentuar, Sharktronic Sub với 9 unit tests chuyên sâu)
 - [x] Triển khai cơ chế Gravestone (Bia Mộ): minion ẩn danh `isGravestone: true`, tự động nứt vỡ lúc bắt đầu `ZOMBIE_TRICKS`, kích hoạt "When Revealed" abilities và helper `revealGravestones`
-- [ ] [ĐỢT 3] Triển khai logic khả năng đặc biệt cho Cornucopia, Briar Rose, Disco-Tron 3000, Bad Moon Rising và Teleport
+- [x] [ĐỢT 3] Triển khai logic khả năng đặc biệt cho Cornucopia, Briar Rose, Disco-Tron 3000, Bad Moon Rising và Teleport (an toàn mảng rỗng, immutability, 125/125 tests pass)
 
 ### 🎨 UI Bot (`feature/ui`)
 - [x] Hiển thị huy hiệu chân Minion chân thực: Bullseye target reticle và Armored metal shield
@@ -31,15 +31,17 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] Tích hợp kinetic shockwave VFX và âm thanh (Web Audio API) khi minion tấn công / Hero mất máu
 - [x] Hoàn thiện hệ thống kéo thả (Drag & Drop) thẻ bài: viền Glowing Pulse Ring động tại các làn hợp lệ, dimming 0.4 làn không thể đặt, hiệu ứng tiếp đất Card Drop Thud và âm thanh Web Audio (`playCardPickup`, `playCardPlace`, `playFightHorn`)
 - [x] [ĐỢT 3] Thiết kế khối Bia Mộ (Gravestone) 3D đá Granite có vết nứt, huy hiệu ẩn danh `🪦 ? / ?` và animation nứt vỡ lúc Zombie Tricks kèm SFX Web Audio `playGravestoneReveal`
+- [ ] [ĐỢT 4] Superpower Choice Modal khi Super-Block nổ (Play Now vs Keep in Hand) và Hiệu ứng Địa hình Môi trường (Lane Environment Visuals)
 
 ### 🃏 Cards Bot (`feature/cards`)
 - [x] Bổ sung các thẻ bài thiếu: `zombie_browncoat`, `zombie_knight_living_dead`, `zombie_football_zombie`
 - [x] Chuẩn hóa metadata các thẻ bài mới vào `src/data/cards.ts` (`armored`, `antiHero`, `doubleStrike`)
 - [x] Bổ sung catalog validation tests cho Cabbage-Pult, Repeater, Snowdrop, Conehead, Buckethead, Stealthy Imp
-- [ ] [ĐỢT 3] Mở rộng kho thẻ bài Plants và Zombies với các lá Super-Rare và Legendary (Wall-Nut, Briar Rose, Cornucopia, Teleport, Bad Moon Rising, Disco-Tron 3000)
+- [x] [ĐỢT 3] Mở rộng kho thẻ bài Plants và Zombies với các lá Super-Rare và Legendary (Wall-Nut, Briar Rose, Cornucopia, Teleport, Bad Moon Rising, Disco-Tron 3000)
+- [ ] [ĐỢT 4] Triển khai hệ thống Thẻ bài Siêu Năng Lực (Hero Superpowers & Signature Superpowers) và Thẻ Môi Trường (Environments)
 
 ### 🧪 QA Bot (`feature/qa`)
 - [x] Thêm helper kiểm tra trait (`hasCardTrait`) và fixtures fallback cho thẻ bài AI
 - [x] Nâng tổng số test lên 112/112 test suite pass 100% (thêm test Double Strike, Armored 2, Bullseye Super-Block bypass, cascade on-death triggers, Gravestone reveal)
-- [ ] [ĐỢT 3] Viết bộ test chuyên sâu `14. Legendary & Super-Rare Strategic Cards Suite` nâng tổng test lên >120 test cases
-- [ ] Tối ưu hóa thuật toán ra quyết định của AI trong `src/engine/ai.ts`
+- [x] [ĐỢT 3] Viết bộ test chuyên sâu `15. Legendary & Super-Rare Strategic Cards Suite` nâng tổng test lên 125/125 test cases pass 100%
+- [ ] [ĐỢT 4] Mở rộng kiểm thử trí tuệ nhân tạo (AI Engine Tests) & Tích hợp Superpower / Environment Suite (>135+ tests)
