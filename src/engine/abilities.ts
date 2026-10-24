@@ -5,6 +5,7 @@
 
 import type { GameState, Side, Minion, Card, CombatEvent, HeroState } from './types'
 import { applyHeroDamage, triggerBonusAttack } from './combat'
+import { applyEnvironmentOnPlay } from './environments'
 import { ALL_CARDS, ZOMBIE_CARDS } from '../data/cards'
 
 export interface AbilityTriggerResult {
@@ -1405,8 +1406,8 @@ export function revealGravestones(state: GameState): {
     const lane = updatedState.lanes[laneIdx]
     const minion = lane.zombieMinion
     if (minion && minion.isGravestone) {
-      // Crack open gravestone
-      const revealedMinion: Minion = {
+      // 1. Crack open gravestone
+      let revealedMinion: Minion = {
         ...minion,
         isGravestone: false,
       }
@@ -1426,15 +1427,73 @@ export function revealGravestones(state: GameState): {
       })
       updatedState.combatLog.unshift(revealDesc)
 
-      // Trigger "When revealed" / "When played" abilities (e.g. Conga Zombie, Ra Zombie)
-      const abilityRes = triggerWhenPlayed(updatedState, revealedMinion, laneIdx, 'zombies')
+      // 2. Headstone Carver interaction:
+      // "When a Zombie is revealed from a Gravestone, that Zombie gets +1/+1" for each active Headstone Carver on board
+      let carverCount = 0
+      updatedState.lanes.forEach(l => {
+        if (
+          l.zombieMinion &&
+          !l.zombieMinion.isGravestone &&
+          (l.zombieMinion.cardId === 'zombie_headstone_carver' ||
+           l.zombieMinion.name.toLowerCase().includes('headstone carver'))
+        ) {
+          carverCount++
+        }
+      })
+      if (carverCount > 0) {
+        revealedMinion = {
+          ...revealedMinion,
+          currentAttack: revealedMinion.currentAttack + carverCount,
+          baseAttack: revealedMinion.baseAttack + carverCount,
+          currentHealth: revealedMinion.currentHealth + carverCount,
+          maxHealth: revealedMinion.maxHealth + carverCount,
+        }
+        lane.zombieMinion = revealedMinion
+        const carverMsg = `🗿 Headstone Carver tạc bia mộ: ${revealedMinion.name} nhận +${carverCount}/+${carverCount} (hiện tại: ${revealedMinion.currentAttack}/${revealedMinion.currentHealth})!`
+        events.push({
+          laneIndex: laneIdx,
+          attackerSide: 'zombies',
+          attackerName: 'Headstone Carver',
+          target: 'minion',
+          targetSide: 'zombies',
+          damageDealt: 0,
+          isBlocked: false,
+          isLethal: false,
+          description: carverMsg,
+        })
+        updatedState.combatLog.unshift(carverMsg)
+      }
+
+      // 3. Environment Come Into Play / On Play triggers
+      const envRes = applyEnvironmentOnPlay(updatedState, laneIdx, 'zombies')
+      updatedState = envRes.updatedState
+      if (envRes.events.length > 0) {
+        for (const envEvt of envRes.events) {
+          events.push({
+            laneIndex: laneIdx,
+            attackerSide: 'zombies',
+            attackerName: updatedState.lanes[laneIdx].environment?.name || 'Environment',
+            target: 'minion',
+            targetSide: 'zombies',
+            damageDealt: 0,
+            isBlocked: false,
+            isLethal: false,
+            description: envEvt,
+          })
+          updatedState.combatLog.unshift(envEvt)
+        }
+      }
+
+      // 4. Trigger "When revealed" / "When played" Come Into Play abilities (e.g. Conga Zombie, Ra Zombie)
+      const currentZombieOnLane = updatedState.lanes[laneIdx].zombieMinion || revealedMinion
+      const abilityRes = triggerWhenPlayed(updatedState, currentZombieOnLane, laneIdx, 'zombies')
       updatedState = abilityRes.updatedState
       if (abilityRes.events.length > 0) {
         for (const evtDesc of abilityRes.events) {
           events.push({
             laneIndex: laneIdx,
             attackerSide: 'zombies',
-            attackerName: revealedMinion.name,
+            attackerName: currentZombieOnLane.name,
             target: 'minion',
             targetSide: 'plants',
             damageDealt: 0,
