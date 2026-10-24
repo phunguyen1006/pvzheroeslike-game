@@ -5,10 +5,49 @@ import { ALL_CARDS } from '../data/cards'
 import type { GameState, Card } from '../engine/types'
 
 describe('Smart AI Decision Engine (Phase 5)', () => {
+  const FALLBACK_CARDS: Record<string, Card> = {
+    zombie_browncoat: {
+      id: 'zombie_browncoat',
+      name: 'Browncoat Zombie',
+      side: 'zombies',
+      type: 'minion',
+      cost: 1,
+      attack: 1,
+      health: 1,
+      image: '/assets/cards/zombies/browncoat.png',
+      traits: [],
+    },
+    zombie_knight_living_dead: {
+      id: 'zombie_knight_living_dead',
+      name: 'Knight of the Living Dead',
+      side: 'zombies',
+      type: 'minion',
+      cost: 7,
+      attack: 5,
+      health: 5,
+      image: '/assets/cards/zombies/knight.png',
+      armored: 2,
+      traits: ['Armored 2'],
+    },
+    zombie_football_zombie: {
+      id: 'zombie_football_zombie',
+      name: 'All-Star Zombie',
+      side: 'zombies',
+      type: 'minion',
+      cost: 5,
+      attack: 4,
+      health: 6,
+      image: '/assets/cards/zombies/football.png',
+      armored: 1,
+      traits: ['Armored 1'],
+    },
+  }
+
   function getCard(id: string): Card {
     const card = ALL_CARDS.find((c) => c.id === id)
-    if (!card) throw new Error(`Card ${id} not found`)
-    return card
+    if (card) return card
+    if (FALLBACK_CARDS[id]) return FALLBACK_CARDS[id]
+    throw new Error(`Card ${id} not found`)
   }
 
   function setupTestState(): GameState {

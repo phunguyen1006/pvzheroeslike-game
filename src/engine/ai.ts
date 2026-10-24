@@ -30,6 +30,18 @@ export function hasAmphibiousTrait(c: Card): boolean {
 }
 
 /**
+ * Checks whether a card possesses a specific trait case-insensitively.
+ */
+export function hasCardTrait(c: Card, traitName: string): boolean {
+  const tLower = traitName.toLowerCase()
+  return Boolean(
+    (c as any)[traitName] ||
+    (c as any)[tLower] ||
+    c.traits?.some((t: any) => typeof t === 'string' && t.toLowerCase().includes(tLower))
+  )
+}
+
+/**
  * Evaluates the danger of an enemy minion on the board.
  * Higher score = higher priority to block or eliminate.
  */
@@ -205,8 +217,8 @@ export function getAIDecision(
       for (const { lane, idx } of threatenedLanes) {
         // Find best blocker (highest HP or Armored/Deadly)
         const sortedBlockers = [...playableMinions].sort((a, b) => {
-          const aArmored = a.armored || a.traits?.some((t: any) => typeof t === 'string' && t.toLowerCase().includes('armored')) ? 3 : 0
-          const bArmored = b.armored || b.traits?.some((t: any) => typeof t === 'string' && t.toLowerCase().includes('armored')) ? 3 : 0
+          const aArmored = hasCardTrait(a, 'armored') ? 3 : 0
+          const bArmored = hasCardTrait(b, 'armored') ? 3 : 0
           return b.health + bArmored - (a.health + aArmored)
         })
 
@@ -232,8 +244,8 @@ export function getAIDecision(
     if (openLanes.length > 0) {
       // Pick highest attack or Bullseye/Frenzy minion for face pressure
       const aggressor = [...playableMinions].sort((a, b) => {
-        const aBullseye = a.bullseye || a.traits?.some((t: any) => typeof t === 'string' && t.toLowerCase().includes('bullseye')) ? 2 : 0
-        const bBullseye = b.bullseye || b.traits?.some((t: any) => typeof t === 'string' && t.toLowerCase().includes('bullseye')) ? 2 : 0
+        const aBullseye = hasCardTrait(a, 'bullseye') ? 2 : 0
+        const bBullseye = hasCardTrait(b, 'bullseye') ? 2 : 0
         return b.attack + bBullseye - (a.attack + aBullseye)
       })[0]
 
