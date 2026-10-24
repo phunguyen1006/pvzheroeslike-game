@@ -17,7 +17,7 @@ Bảng điều phối nhiệm vụ giữa Bot Tổng và 4 Bot Phụ. Mọi bot 
 - [x] Triển khai Double Strike (kích hoạt đòn đánh thứ 2 khi tiêu diệt minion hoặc lane trống)
 - [x] Đảm bảo Bullseye traits bỏ qua hoàn toàn Block Meter
 - [x] Hỗ trợ Armored 1 và Armored 2 giảm sát thương chính xác
-- [x] Hoàn thiện cơ chế cascade trigger khi minion bị tiêu diệt (`triggerWhenDestroyed` cho Valkyrie, Potato Mine, Punish-Shroom)
+- [x] Hoàn thiện cơ chế cascade trigger khi minion bị tiêu diệt (`triggerOnDeath` & `triggerOnMultipleDeaths` trong `src/engine/triggers.ts` cho Valkyrie in hand, Punish-Shroom, Hothead, Pear Cub, Gas Giant, Frankentuar, Sharktronic Sub với 9 unit tests chuyên sâu)
 
 ### 🎨 UI Bot (`feature/ui`)
 - [x] Hiển thị huy hiệu chân Minion chân thực: Bullseye target reticle và Armored metal shield
