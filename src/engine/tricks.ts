@@ -45,10 +45,10 @@ export function executeTrick(
         message: 'Plant Hero có đặc tính Untrickable, miễn nhiễm với mọi Trick của Zombies!',
       }
     }
-    if (targetLaneIndex !== undefined && state.lanes[targetLaneIndex]?.plantMinion) {
-      const targetPlant = state.lanes[targetLaneIndex].plantMinion!
-      const offensiveZombieTricks = ['zombie_bungee_plumber', 'zombie_locust_swarm', 'zombie_rocket_science']
-      if (offensiveZombieTricks.includes(card.id) && isUntrickable(targetPlant)) {
+    if (targetLaneIndex !== undefined) {
+      const targetPlant = state.lanes[targetLaneIndex]?.plantMinion || state.lanes[targetLaneIndex]?.plantTeamUpMinion
+      const offensiveZombieTricks = ['zombie_bungee_plumber', 'zombie_locust_swarm', 'zombie_rocket_science', 'zombie_final_mission']
+      if (targetPlant && offensiveZombieTricks.includes(card.id) && isUntrickable(targetPlant)) {
         return {
           updatedState: state,
           success: false,

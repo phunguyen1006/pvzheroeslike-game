@@ -52,6 +52,7 @@ export interface Card {
   doubleStrike?: boolean
   gravestone?: boolean
   untrickable?: boolean
+  tribe?: string
   description?: string
   heroClass?: string
   laneRequirement?: 'ground' | 'heights' | 'water' | 'any'
@@ -68,6 +69,7 @@ export interface Minion {
   currentHealth: number
   maxHealth: number
   image: string
+  tribe?: string
   traits?: Trait[]
   amphibious?: boolean
   bullseye?: boolean

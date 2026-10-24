@@ -200,18 +200,31 @@ export function canPlayCardToLane(
 
   if (side === 'plants') {
     if (lane.plantMinion) {
+      if (card.id === 'plant_gatling_pea') {
+        const isPea = Boolean(
+          lane.plantMinion.tribe?.toLowerCase().includes('pea') ||
+          lane.plantMinion.name.toLowerCase().includes('pea') ||
+          lane.plantMinion.cardId.toLowerCase().includes('pea')
+        )
+        if (isPea) {
+          return { allowed: true } // Pea Evolution allows evolving on any Pea plant!
+        }
+      }
       const hasTeamUp = card.teamUp || card.traits?.includes('teamUp') || lane.plantMinion.teamUp || lane.plantMinion.traits?.includes('teamUp')
       if (hasTeamUp && !lane.plantTeamUpMinion) {
         return { allowed: true } // Team-Up allows 2 plants on the same lane!
       }
       return {
         allowed: false,
-        reason: 'Lane này đã có Plant chiếm chỗ (không có Team-Up).',
+        reason: 'Lane này đã có Plant chiếm chỗ (không có Team-Up hoặc Evolution hợp lệ).',
       }
     }
   }
 
   if (side === 'zombies' && lane.zombieMinion) {
+    if (card.id === 'zombie_intergalactic_warlord') {
+      return { allowed: true } // Zombie Evolution allows evolving onto any Zombie!
+    }
     return {
       allowed: false,
       reason: 'Lane này đã có Zombie chiếm chỗ.',
@@ -432,11 +445,34 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         isGravestone: isGravestoneTrait,
       }
 
+      let isEvolved = false
+      if (side === 'plants' && card.id === 'plant_gatling_pea') {
+        const existing = lane.plantMinion
+        if (existing && (existing.tribe?.toLowerCase().includes('pea') || existing.name.toLowerCase().includes('pea') || existing.cardId.toLowerCase().includes('pea'))) {
+          // Pea Evolution: gets +1/+1
+          minion = {
+            ...minion,
+            currentAttack: minion.currentAttack + 1,
+            baseAttack: minion.baseAttack + 1,
+            currentHealth: minion.currentHealth + 1,
+            maxHealth: minion.maxHealth + 1,
+          }
+          isEvolved = true
+        }
+      } else if (side === 'zombies' && card.id === 'zombie_intergalactic_warlord') {
+        if (lane.zombieMinion) {
+          isEvolved = true
+        }
+      }
+
       minion = applyLaneRulesOnPlay(minion, lane)
 
       const updatedLanes = state.lanes.map((l, idx) => {
         if (idx !== laneIndex) return l
         if (side === 'plants') {
+          if (isEvolved) {
+            return { ...l, plantMinion: minion }
+          }
           if (l.plantMinion && (minion.teamUp || l.plantMinion.teamUp)) {
             return { ...l, plantTeamUpMinion: minion }
           }
@@ -460,7 +496,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ? `Zombie đặt một Bia Mộ bí ẩn (Gravestone) vào ${lane.name}.`
         : isTeleported
           ? `⚡ Teleport! Zombie dịch chuyển ${minion.name} (${minion.currentAttack}/${minion.currentHealth}) vào ${lane.name} ngay trong phase Tricks!`
-          : `${side === 'plants' ? 'Plant' : 'Zombie'} đặt ${minion.name} (${minion.currentAttack}/${minion.currentHealth}) vào ${lane.name}.`
+          : isEvolved
+            ? `${side === 'plants' ? '🌱 Tiến hóa Pea Evolution! ' : '🛸 Tiến hóa Zombie Evolution! '}${minion.name} (${minion.currentAttack}/${minion.currentHealth}) tiến hóa đè lên làn ${lane.name}!`
+            : `${side === 'plants' ? 'Plant' : 'Zombie'} đặt ${minion.name} (${minion.currentAttack}/${minion.currentHealth}) vào ${lane.name}.`
 
       let nextState: GameState = {
         ...state,

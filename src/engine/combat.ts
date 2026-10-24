@@ -240,6 +240,21 @@ export function resolveSingleLaneCombat(
     })
   }
 
+  if (plantTeamUp?.isFrozen) {
+    plantTeamUp.isFrozen = false
+    events.push({
+      laneIndex,
+      attackerSide: 'plants',
+      attackerName: `${plantTeamUp.name} (Team-Up)`,
+      target: 'minion',
+      targetSide: 'zombies',
+      damageDealt: 0,
+      isBlocked: false,
+      isLethal: false,
+      description: `❄️ ${plantTeamUp.name} Team-Up bị đóng băng nên bỏ lỡ lượt tấn công và tan băng!`,
+    })
+  }
+
   const zombieCanAttack = zombie !== null && !zombie.isFrozen && zombie.currentAttack > 0
   if (zombie?.isFrozen) {
     zombie.isFrozen = false
@@ -429,6 +444,53 @@ export function resolveSingleLaneCombat(
       })
     }
 
+    // Dusk Lobber: If on an Environment, attacks adjacent lanes as well!
+    if (plant.cardId === 'plant_dusk_lobber' && lane.environment && plantCanAttack) {
+      const adjIndices = [laneIndex - 1, laneIndex + 1].filter(idx => idx >= 0 && idx < updatedLanes.length)
+      adjIndices.forEach(adjIdx => {
+        const adjLane = updatedLanes[adjIdx]
+        if (adjLane.zombieMinion && adjLane.zombieMinion.currentHealth > 0) {
+          const dmg = plant.currentAttack
+          adjLane.zombieMinion = {
+            ...adjLane.zombieMinion,
+            currentHealth: Math.max(0, adjLane.zombieMinion.currentHealth - dmg),
+          }
+          events.push({
+            laneIndex: adjIdx,
+            attackerSide: 'plants',
+            attackerName: `${plant.name} (Bắn 3 làn)`,
+            target: 'minion',
+            targetSide: 'zombies',
+            damageDealt: dmg,
+            isBlocked: false,
+            isLethal: adjLane.zombieMinion.currentHealth <= 0,
+            description: `🌸 ${plant.name} trên Môi trường bắn sang làn ${adjIdx} gây ${dmg} sát thương lên ${adjLane.zombieMinion.name}!`,
+          })
+          if (adjLane.zombieMinion.currentHealth <= 0) {
+            deadUnits.push({ minion: adjLane.zombieMinion, laneIndex: adjIdx })
+            adjLane.zombieMinion = null
+          }
+        } else {
+          const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+          currentZombieHero = res.updatedHero
+          events.push({
+            laneIndex: adjIdx,
+            attackerSide: 'plants',
+            attackerName: `${plant.name} (Bắn 3 làn)`,
+            target: 'hero',
+            targetSide: 'zombies',
+            damageDealt: res.actualDamage,
+            isBlocked: res.blocked,
+            isLethal: currentZombieHero.hp <= 0,
+            description: `🌸 ${plant.name} bắn xuyên qua làn ${adjIdx} trúng Zombie Hero gây ${res.actualDamage} sát thương!`,
+          })
+          if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+            pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+          }
+        }
+      })
+    }
+
     // Strikethrough handling
     if (plantHasStrikethrough && plantCanAttack) {
       const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
@@ -526,6 +588,28 @@ export function resolveSingleLaneCombat(
         if (frenzyRes.isSuperBlockTriggered && !pendingSuperBlock) {
           pendingSuperBlock = getPendingSuperBlockForHero(currentPlantHero, 'plants')
         }
+      }
+    }
+
+    // Plant Frenzy handling (if Plant with Frenzy destroyed Zombie and survived)
+    const plantHasFrenzy = Boolean(plant.frenzy || plant.traits?.includes('frenzy'))
+    if (plantHasFrenzy && plantCanAttack && plant.currentHealth > 0 && zombie.currentHealth <= 0) {
+      const frenzyRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+      currentZombieHero = frenzyRes.updatedHero
+      events.push({
+        laneIndex,
+        attackerSide: 'plants',
+        attackerName: plant.name,
+        target: 'hero',
+        targetSide: 'zombies',
+        damageDealt: frenzyRes.actualDamage,
+        isBlocked: frenzyRes.blocked,
+        isLethal: currentZombieHero.hp <= 0,
+        traitsTriggered: ['frenzy'],
+        description: `${plant.name} triggered Frenzy bonus attack on Zombie Hero for ${frenzyRes.actualDamage} dmg${frenzyRes.blocked ? ' (SUPER-BLOCK!)' : ''}`,
+      })
+      if (frenzyRes.isSuperBlockTriggered && !pendingSuperBlock) {
+        pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
       }
     }
 
@@ -703,6 +787,53 @@ export function resolveSingleLaneCombat(
             })
           }
         }
+      }
+
+      // Dusk Lobber: If on an Environment, attacks adjacent lanes as well!
+      if (plant.cardId === 'plant_dusk_lobber' && lane.environment && plantCanAttack) {
+        const adjIndices = [laneIndex - 1, laneIndex + 1].filter(idx => idx >= 0 && idx < updatedLanes.length)
+        adjIndices.forEach(adjIdx => {
+          const adjLane = updatedLanes[adjIdx]
+          if (adjLane.zombieMinion && adjLane.zombieMinion.currentHealth > 0) {
+            const dmg = plant.currentAttack
+            adjLane.zombieMinion = {
+              ...adjLane.zombieMinion,
+              currentHealth: Math.max(0, adjLane.zombieMinion.currentHealth - dmg),
+            }
+            events.push({
+              laneIndex: adjIdx,
+              attackerSide: 'plants',
+              attackerName: `${plant.name} (Bắn 3 làn)`,
+              target: 'minion',
+              targetSide: 'zombies',
+              damageDealt: dmg,
+              isBlocked: false,
+              isLethal: adjLane.zombieMinion.currentHealth <= 0,
+              description: `🌸 ${plant.name} trên Môi trường bắn sang làn ${adjIdx} gây ${dmg} sát thương lên ${adjLane.zombieMinion.name}!`,
+            })
+            if (adjLane.zombieMinion.currentHealth <= 0) {
+              deadUnits.push({ minion: adjLane.zombieMinion, laneIndex: adjIdx })
+              adjLane.zombieMinion = null
+            }
+          } else {
+            const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+            currentZombieHero = res.updatedHero
+            events.push({
+              laneIndex: adjIdx,
+              attackerSide: 'plants',
+              attackerName: `${plant.name} (Bắn 3 làn)`,
+              target: 'hero',
+              targetSide: 'zombies',
+              damageDealt: res.actualDamage,
+              isBlocked: res.blocked,
+              isLethal: currentZombieHero.hp <= 0,
+              description: `🌸 ${plant.name} bắn xuyên qua làn ${adjIdx} trúng Zombie Hero gây ${res.actualDamage} sát thương!`,
+            })
+            if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+              pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+            }
+          }
+        })
       }
     }
   } else if (!plant && zombie) {
@@ -887,6 +1018,21 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
       })
     }
 
+    if (plantTeamUp?.isFrozen) {
+      plantTeamUp.isFrozen = false
+      events.push({
+        laneIndex: i,
+        attackerSide: 'plants',
+        attackerName: `${plantTeamUp.name} (Team-Up)`,
+        target: 'minion',
+        targetSide: 'zombies',
+        damageDealt: 0,
+        isBlocked: false,
+        isLethal: false,
+        description: `❄️ ${plantTeamUp.name} Team-Up bị đóng băng nên bỏ lỡ lượt tấn công và tan băng!`,
+      })
+    }
+
     const zombieCanAttack = zombie !== null && !zombie.isFrozen && zombie.currentAttack > 0
     if (zombie?.isFrozen) {
       zombie.isFrozen = false
@@ -1038,6 +1184,53 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
         description: `${zombie.name} dealt ${dmgToPlant} damage to ${plant.name}${plant.currentHealth <= 0 ? ' (Destroyed)' : ''}`,
       })
 
+      // Dusk Lobber: If on an Environment, attacks adjacent lanes as well!
+      if (plant.cardId === 'plant_dusk_lobber' && lane.environment && plantCanAttack) {
+        const adjIndices = [i - 1, i + 1].filter(idx => idx >= 0 && idx < updatedLanes.length)
+        adjIndices.forEach(adjIdx => {
+          const adjLane = updatedLanes[adjIdx]
+          if (adjLane.zombieMinion && adjLane.zombieMinion.currentHealth > 0) {
+            const dmg = plant.currentAttack
+            adjLane.zombieMinion = {
+              ...adjLane.zombieMinion,
+              currentHealth: Math.max(0, adjLane.zombieMinion.currentHealth - dmg),
+            }
+            events.push({
+              laneIndex: adjIdx,
+              attackerSide: 'plants',
+              attackerName: `${plant.name} (Bắn 3 làn)`,
+              target: 'minion',
+              targetSide: 'zombies',
+              damageDealt: dmg,
+              isBlocked: false,
+              isLethal: adjLane.zombieMinion.currentHealth <= 0,
+              description: `🌸 ${plant.name} trên Môi trường bắn sang làn ${adjIdx} gây ${dmg} sát thương lên ${adjLane.zombieMinion.name}!`,
+            })
+            if (adjLane.zombieMinion.currentHealth <= 0) {
+              adjLane.zombieMinion = null
+            }
+          } else {
+            const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+            currentZombieHero = res.updatedHero
+            zombieHeroDamageTaken += res.actualDamage
+            events.push({
+              laneIndex: adjIdx,
+              attackerSide: 'plants',
+              attackerName: `${plant.name} (Bắn 3 làn)`,
+              target: 'hero',
+              targetSide: 'zombies',
+              damageDealt: res.actualDamage,
+              isBlocked: res.blocked,
+              isLethal: currentZombieHero.hp <= 0,
+              description: `🌸 ${plant.name} bắn xuyên qua làn ${adjIdx} trúng Zombie Hero gây ${res.actualDamage} sát thương!`,
+            })
+            if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+              pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+            }
+          }
+        })
+      }
+
       // Strikethrough handling
       if (plantHasStrikethrough && plantCanAttack) {
         const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
@@ -1119,6 +1312,29 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
         })
         if (frenzyRes.isSuperBlockTriggered && !pendingSuperBlock) {
           pendingSuperBlock = getPendingSuperBlockForHero(currentPlantHero, 'plants')
+        }
+      }
+
+      // Plant Frenzy handling (if Plant destroyed Zombie and survived)
+      const plantHasFrenzy = Boolean(plant.frenzy || plant.traits?.includes('frenzy'))
+      if (plantHasFrenzy && plantCanAttack && plant.currentHealth > 0 && zombie.currentHealth <= 0) {
+        const frenzyRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+        currentZombieHero = frenzyRes.updatedHero
+        zombieHeroDamageTaken += frenzyRes.actualDamage
+        events.push({
+          laneIndex: i,
+          attackerSide: 'plants',
+          attackerName: plant.name,
+          target: 'hero',
+          targetSide: 'zombies',
+          damageDealt: frenzyRes.actualDamage,
+          isBlocked: frenzyRes.blocked,
+          isLethal: currentZombieHero.hp <= 0,
+          traitsTriggered: ['frenzy'],
+          description: `${plant.name} triggered Frenzy bonus attack on Zombie Hero for ${frenzyRes.actualDamage} dmg${frenzyRes.blocked ? ' (SUPER-BLOCK!)' : ''}`,
+        })
+        if (frenzyRes.isSuperBlockTriggered && !pendingSuperBlock) {
+          pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
         }
       }
 
@@ -1292,6 +1508,53 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
               })
             }
           }
+        }
+
+        // Dusk Lobber: If on an Environment, attacks adjacent lanes as well!
+        if (plant.cardId === 'plant_dusk_lobber' && lane.environment && plantCanAttack) {
+          const adjIndices = [i - 1, i + 1].filter(idx => idx >= 0 && idx < updatedLanes.length)
+          adjIndices.forEach(adjIdx => {
+            const adjLane = updatedLanes[adjIdx]
+            if (adjLane.zombieMinion && adjLane.zombieMinion.currentHealth > 0) {
+              const dmg = plant.currentAttack
+              adjLane.zombieMinion = {
+                ...adjLane.zombieMinion,
+                currentHealth: Math.max(0, adjLane.zombieMinion.currentHealth - dmg),
+              }
+              events.push({
+                laneIndex: adjIdx,
+                attackerSide: 'plants',
+                attackerName: `${plant.name} (Bắn 3 làn)`,
+                target: 'minion',
+                targetSide: 'zombies',
+                damageDealt: dmg,
+                isBlocked: false,
+                isLethal: adjLane.zombieMinion.currentHealth <= 0,
+                description: `🌸 ${plant.name} trên Môi trường bắn sang làn ${adjIdx} gây ${dmg} sát thương lên ${adjLane.zombieMinion.name}!`,
+              })
+              if (adjLane.zombieMinion.currentHealth <= 0) {
+                adjLane.zombieMinion = null
+              }
+            } else {
+              const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+              currentZombieHero = res.updatedHero
+              zombieHeroDamageTaken += res.actualDamage
+              events.push({
+                laneIndex: adjIdx,
+                attackerSide: 'plants',
+                attackerName: `${plant.name} (Bắn 3 làn)`,
+                target: 'hero',
+                targetSide: 'zombies',
+                damageDealt: res.actualDamage,
+                isBlocked: res.blocked,
+                isLethal: currentZombieHero.hp <= 0,
+                description: `🌸 ${plant.name} bắn xuyên qua làn ${adjIdx} trúng Zombie Hero gây ${res.actualDamage} sát thương!`,
+              })
+              if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+                pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+              }
+            }
+          })
         }
       }
     } else if (!plant && zombie) {

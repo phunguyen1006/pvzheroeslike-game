@@ -153,6 +153,56 @@ export function triggerWhenPlayed(
       break
     }
 
+    case 'plant_gatling_pea': {
+      // Gatling Pea: Pea Evolution / Bonus Attack
+      events.push(`🌱 Gatling Pea nã đạn liên thanh: Lập tức thực hiện 1 đòn Tấn công thêm (Bonus Attack)!`)
+      const targetLane = updatedState.lanes[laneIndex]
+      const attackDmg = minion.currentAttack
+      if (targetLane.zombieMinion) {
+        targetLane.zombieMinion = {
+          ...targetLane.zombieMinion,
+          currentHealth: Math.max(0, targetLane.zombieMinion.currentHealth - attackDmg),
+        }
+        events.push(`Gatling Pea xả ${attackDmg} sát thương đòn đánh thêm lên ${targetLane.zombieMinion.name}!`)
+        if (targetLane.zombieMinion.currentHealth <= 0) {
+          events.push(`💥 ${targetLane.zombieMinion.name} bị tiêu diệt bởi Gatling Pea!`)
+          targetLane.zombieMinion = null
+        }
+      } else {
+        const dmg = applyHeroDamage(updatedState.zombieHero, attackDmg, Boolean(minion.bullseye))
+        updatedState.zombieHero = dmg.updatedHero
+        events.push(`Gatling Pea bắn thẳng mặt Zombie Hero gây ${dmg.actualDamage} sát thương!`)
+      }
+      break
+    }
+
+    case 'zombie_intergalactic_warlord': {
+      // Intergalactic Warlord: Zombie Evolution: All Zombies get +1/+1
+      events.push(`🛸 Intergalactic Warlord xuất trận (Zombie Evolution): Toàn bộ Zombie trên sân và rút về sau nhận vĩnh viễn +1/+1!`)
+      updatedState.lanes.forEach(l => {
+        if (l.zombieMinion) {
+          l.zombieMinion = {
+            ...l.zombieMinion,
+            currentAttack: l.zombieMinion.currentAttack + 1,
+            baseAttack: l.zombieMinion.baseAttack + 1,
+            currentHealth: l.zombieMinion.currentHealth + 1,
+            maxHealth: l.zombieMinion.maxHealth + 1,
+          }
+        }
+      })
+      updatedState.zombieHand = updatedState.zombieHand.map(c => {
+        if (c.type === 'minion') {
+          return {
+            ...c,
+            attack: c.attack + 1,
+            health: c.health + 1,
+          }
+        }
+        return c
+      })
+      break
+    }
+
     case 'zombie_conga_zombie': {
       // Conga Zombie: Do 1 damage to a plant or plant hero
       const targetLane = updatedState.lanes[laneIndex]

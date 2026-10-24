@@ -39,19 +39,27 @@ export function executeSuperpower(
       // 1. Green Shadow: 5 damage in the middle lane (Lane 3, index 2)
       const middleLane = updatedLanes[2]
       if (middleLane.zombieMinion) {
-        middleLane.zombieMinion = {
-          ...middleLane.zombieMinion,
-          currentHealth: Math.max(0, middleLane.zombieMinion.currentHealth - 5),
-        }
-        message = `Precision Blast bắn luồng sáng cực đại 5 dmg vào ${middleLane.zombieMinion.name}!`
-        if (middleLane.zombieMinion.currentHealth <= 0) {
-          message += ` (Tiêu diệt ${middleLane.zombieMinion.name})`
-          middleLane.zombieMinion = null
+        if (isUntrickable(middleLane.zombieMinion)) {
+          message = `Precision Blast không thể tác động lên ${middleLane.zombieMinion.name} vì có Untrickable!`
+        } else {
+          middleLane.zombieMinion = {
+            ...middleLane.zombieMinion,
+            currentHealth: Math.max(0, middleLane.zombieMinion.currentHealth - 5),
+          }
+          message = `Precision Blast bắn luồng sáng cực đại 5 dmg vào ${middleLane.zombieMinion.name}!`
+          if (middleLane.zombieMinion.currentHealth <= 0) {
+            message += ` (Tiêu diệt ${middleLane.zombieMinion.name})`
+            middleLane.zombieMinion = null
+          }
         }
       } else {
-        const res = applyHeroDamage(updatedState.zombieHero, 5, false)
-        updatedState.zombieHero = res.updatedHero
-        message = `Precision Blast bắn thẳng vào Zombie Hero gây ${res.actualDamage} sát thương!`
+        if (isUntrickable(updatedState.zombieHero)) {
+          message = `Zombie Hero có đặc tính Untrickable, Precision Blast bị vô hiệu hóa!`
+        } else {
+          const res = applyHeroDamage(updatedState.zombieHero, 5, false)
+          updatedState.zombieHero = res.updatedHero
+          message = `Precision Blast bắn thẳng vào Zombie Hero gây ${res.actualDamage} sát thương!`
+        }
       }
       break
     }
@@ -267,7 +275,7 @@ export function executeSuperpower(
             image: '/assets/heroes/plants/Nightcap.png',
           }
         }
-        if (lane.zombieMinion) {
+        if (lane.zombieMinion && !isUntrickable(lane.zombieMinion)) {
           lane.zombieMinion = {
             ...lane.zombieMinion,
             currentHealth: Math.max(0, lane.zombieMinion.currentHealth - 2),
@@ -280,11 +288,11 @@ export function executeSuperpower(
     }
 
     case 'sp_goatify': {
-      // 8. Rose: Transform a Zombie with the highest Attack into a 1/1 Goat
+      // 8. Rose: Transform a Zombie with the highest Attack into a 1/1 Goat (skips untrickable)
       let highestAtk = -1
       let targetZombieLane: number = -1
       updatedLanes.forEach((l, idx) => {
-        if (l.zombieMinion && l.zombieMinion.currentAttack > highestAtk) {
+        if (l.zombieMinion && !isUntrickable(l.zombieMinion) && l.zombieMinion.currentAttack > highestAtk) {
           highestAtk = l.zombieMinion.currentAttack
           targetZombieLane = idx
         }
@@ -305,7 +313,7 @@ export function executeSuperpower(
         }
         message = `Goatify ma thuật biến đổi ${victim.name} (${highestAtk} ATK) thành một chú Dê 1/1 Goat ngơ ngác!`
       } else {
-        message = `Goatify: Không có Zombie nào trên sân để biến đổi!`
+        message = `Goatify: Không có Zombie nào trên sân (hoặc đều có Untrickable) để biến đổi!`
       }
       break
     }
@@ -320,11 +328,11 @@ export function executeSuperpower(
     }
 
     case 'sp_devour': {
-      // 10. Chompzilla: Destroy a Zombie with the lowest Health
+      // 10. Chompzilla: Destroy a Zombie with the lowest Health (skips untrickable)
       let lowestHp = 999
       let targetIdx = -1
       updatedLanes.forEach((l, idx) => {
-        if (l.zombieMinion && l.zombieMinion.currentHealth < lowestHp) {
+        if (l.zombieMinion && !isUntrickable(l.zombieMinion) && l.zombieMinion.currentHealth < lowestHp) {
           lowestHp = l.zombieMinion.currentHealth
           targetIdx = idx
         }
@@ -335,7 +343,7 @@ export function executeSuperpower(
         updatedLanes[targetIdx].zombieMinion = null
         message = `Chompzilla hả họng nuốt chửng ${devoured.name} (${lowestHp} HP) ngay tức khắc!`
       } else {
-        message = `Devour: Không có Zombie nào trên sân để nuốt!`
+        message = `Devour: Không có Zombie nào trên sân (hoặc đều có Untrickable) để nuốt!`
       }
       break
     }
@@ -551,8 +559,10 @@ export function executeSuperpower(
     }
 
     case 'sp_stayin_alive': {
-      // 16. Electric Boogaloo: 3 damage to a Plant. Heal Zombie Hero for 3
-      const targetIdx = targetLaneIndex ?? updatedLanes.findIndex(l => l.plantMinion)
+      // 16. Electric Boogaloo: 3 damage to a Plant. Heal Zombie Hero for 3 (skips untrickable)
+      const targetIdx = targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.plantMinion && !isUntrickable(updatedLanes[targetLaneIndex].plantMinion)
+        ? targetLaneIndex
+        : updatedLanes.findIndex(l => l.plantMinion && !isUntrickable(l.plantMinion))
       if (targetIdx >= 0 && updatedLanes[targetIdx]?.plantMinion) {
         const p = updatedLanes[targetIdx].plantMinion!
         p.currentHealth = Math.max(0, p.currentHealth - 3)
@@ -567,10 +577,10 @@ export function executeSuperpower(
     }
 
     case 'sp_frozen_tundra': {
-      // 17. Brain Freeze: Freeze all Plants on Ground lanes
+      // 17. Brain Freeze: Freeze all Plants on Ground lanes (skips untrickable)
       let count = 0
       updatedLanes.forEach(l => {
-        if (l.type === 'ground' && l.plantMinion) {
+        if (l.type === 'ground' && l.plantMinion && !isUntrickable(l.plantMinion)) {
           l.plantMinion.isFrozen = true
           count++
         }
@@ -625,10 +635,10 @@ export function executeSuperpower(
     }
 
     case 'sp_missile_madness': {
-      // 20. Z-Mech: 3 damage to target Plant and 1 damage to all other Plants
-      const targetIdx = targetLaneIndex ?? updatedLanes.findIndex(l => l.plantMinion)
+      // 20. Z-Mech: 3 damage to target Plant and 1 damage to all other Plants (skips untrickable)
+      const targetIdx = targetLaneIndex ?? updatedLanes.findIndex(l => l.plantMinion && !isUntrickable(l.plantMinion))
       updatedLanes.forEach((l, idx) => {
-        if (l.plantMinion) {
+        if (l.plantMinion && !isUntrickable(l.plantMinion)) {
           const dmgAmount = idx === targetIdx ? 3 : 1
           l.plantMinion = {
             ...l.plantMinion,
