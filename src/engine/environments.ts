@@ -4,7 +4,7 @@
  */
 
 import type { GameState, Side, Card, Minion, EnvironmentState, TerrainCoordinationResult } from './types'
-import { applyHeroDamage } from './combat'
+import { applyHeroDamage, hasBinaryStars, redirectHeroDamageToSoulPatch } from './combat'
 import { drawCard } from './reducer'
 
 export interface EnvironmentTriggerResult {
@@ -180,9 +180,14 @@ export function applyEnvironmentBeforeCombat(
     case 'zombie_moon_base_z': {
       // "Before combat here, Zombies here do 3 damage to the Plant Hero (Overshoot 3)."
       if (lane.zombieMinion) {
-        const dmg = applyHeroDamage(updatedState.plantHero, 3, false)
-        updatedState.plantHero = dmg.updatedHero
-        events.push(`Căn cứ mặt trăng Moon Base Z kích hoạt Overshoot 3: Bắn 3 sát thương thẳng vào Plant Hero (còn ${dmg.updatedHero.hp} HP)!`)
+        const mult = hasBinaryStars(updatedState.lanes) ? 2 : 1
+        const overshootDmg = 3 * mult
+        const spRes = redirectHeroDamageToSoulPatch(updatedState.lanes, overshootDmg, events, laneIndex, `${lane.zombieMinion.name} (Moon Base Z)`)
+        if (!spRes.absorbed) {
+          const dmg = applyHeroDamage(updatedState.plantHero, overshootDmg, false)
+          updatedState.plantHero = dmg.updatedHero
+          events.push(`Căn cứ mặt trăng Moon Base Z kích hoạt Overshoot 3: Bắn ${overshootDmg} sát thương thẳng vào Plant Hero (còn ${dmg.updatedHero.hp} HP)!`)
+        }
       }
       break
     }
@@ -460,6 +465,20 @@ export function coordinateTerrainAndLaneBuffs(
         },
       }
       events.push(`Tinh vân não Medulla Nebula nạp năng lượng: Cung cấp thêm +2 Brains (${updatedState.zombieHero.brains} Brains)!`)
+    } else if (envId === 'zombie_haunted_castle' && side === 'zombies') {
+      updatedMinion = {
+        ...updatedMinion,
+        currentAttack: updatedMinion.currentAttack + 1,
+        baseAttack: updatedMinion.baseAttack + 1,
+      }
+      events.push(`Haunted Castle: ${updatedMinion.name} nhận +1 Tấn công (+1/+0)!`)
+    } else if (envId === 'plant_mushroom_grotto' && side === 'plants') {
+      updatedMinion = {
+        ...updatedMinion,
+        currentHealth: updatedMinion.currentHealth + 2,
+        maxHealth: updatedMinion.maxHealth + 2,
+      }
+      events.push(`Mushroom Grotto: ${updatedMinion.name} nhận +2 Máu (+0/+2)!`)
     }
   }
 

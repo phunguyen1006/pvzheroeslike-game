@@ -398,6 +398,7 @@ export const HERO_QUESTS_REGISTRY: Record<string, HeroQuest[]> = {
 }
 
 export const HERO_QUEST_STORAGE_KEY = 'pvz_hero_quests_progress_v1'
+export const HERO_QUESTS_STORAGE_KEY = HERO_QUEST_STORAGE_KEY
 
 export function getAllHeroQuests(): HeroQuest[] {
   return Object.values(HERO_QUESTS_REGISTRY).flat()

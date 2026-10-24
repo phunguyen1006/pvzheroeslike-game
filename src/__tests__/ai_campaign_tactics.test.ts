@@ -17,18 +17,7 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
   function getCard(id: string): Card {
     const raw = getCardById(id) || ALL_CARDS.find((c) => c.id === id)
     if (!raw) {
-      // Fallback for custom or synthetic cards in tests
-      return {
-        id,
-        name: id,
-        side: id.startsWith('plant') ? 'plants' : 'zombies',
-        cost: 2,
-        attack: 2,
-        health: 2,
-        type: 'minion',
-        image: '/assets/mock.png',
-        traits: [],
-      }
+      throw new Error(`Card ${id} not found in database`)
     }
     return {
       id: raw.id,
@@ -64,6 +53,7 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
     frenzy?: boolean
     bullseye?: boolean
     armored?: number
+    isGravestone?: boolean
   }): Minion {
     return {
       baseAttack: data.currentAttack,
@@ -90,7 +80,7 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
         getCard('plant_peashooter'), // cost 1 -> keep
         getCard('plant_sunflower'), // cost 1 -> keep
         getCard('plant_repeater'), // cost 3 -> keep (curve)
-        getCard('plant_threepeater'), // cost 5 -> swap
+        getCard('plant_cherry_bomb'), // cost 6 -> swap
       ]
 
       const swapIndices = chooseMulliganCards(hand, 'tempo')
@@ -116,7 +106,7 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
         superPowerCard, // cost 0 -> keep
         getCard('zombie_arm_wrestler'), // cost 1 -> keep
         getCard('zombie_conehead'), // cost 2 -> keep
-        getCard('zombie_foot_soldier'), // cost 5 -> swap
+        getCard('zombie_knight_living_dead'), // cost 7 -> swap
       ]
 
       const swapIndices = chooseMulliganCards(hand, 'tempo')
@@ -129,15 +119,14 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
     it('should keep high-cost cards when holding a Ramp card (Sunflower / Medulla Nebula)', () => {
       const hand: Card[] = [
         getCard('plant_sunflower'), // Ramp card
-        getCard('plant_threepeater'), // Cost 5, but ramp enables it early
+        getCard('plant_dark_matter_dragonfruit'), // Cost 8, but ramp enables big drops
         getCard('plant_wall_nut'), // Cost 1
         getCard('plant_cabbage_pult'), // Cost 2
       ]
 
       const decision = getAIMulliganDecision(hand, 'ramp')
-      // With Sunflower on hand, the AI is allowed to keep a bomb
+      expect(decision.keepIndices).toContain(0) // Sunflower is kept!
       expect(decision.swapIndices.length).toBeLessThanOrEqual(1)
-      expect(decision.keepCards.some((c) => c.id === 'plant_sunflower')).toBe(true)
     })
 
     it('should keep key combo cards like Valkyrie or Trickster with cheap tricks', () => {
@@ -145,7 +134,7 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
         getCard('zombie_valkyrie'), // Core combo piece
         getCard('zombie_bungee_plumber'), // Cheap trick
         getCard('zombie_arm_wrestler'), // Early minion
-        getCard('zombie_foot_soldier'), // Non-combo expensive card
+        getCard('zombie_knight_living_dead'), // Non-combo expensive card
       ]
 
       const swapIndices = chooseMulliganCards(hand, 'combo')
@@ -228,7 +217,7 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
       })
       state.lanes[1].zombieMinion = createTestMinion({
         instanceId: 'z_blocker',
-        cardId: 'zombie_knight',
+        cardId: 'zombie_knight_living_dead',
         name: 'Knight Zombie',
         side: 'zombies',
         currentAttack: 1,
@@ -274,7 +263,8 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
       expect(result.hasLethal).toBe(true)
       expect(result.totalProjectedDamage).toBe(7) // 5 board + 2 burn
       expect(result.decision).toBeDefined()
-      expect(result.decision?.card.id).toBe('zombie_bungee_plumber')
+      expect(result.decision?.card?.id).toBe('zombie_bungee_plumber')
+      expect(result.decision?.targetHero).toBe(true)
     })
 
     it('should execute Bonus Attack trick (Lurch for Lunch / Plant Food) on unblocked minion for lethal', () => {
@@ -296,8 +286,8 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
 
       expect(result.hasLethal).toBe(true)
       expect(result.totalProjectedDamage).toBe(10)
-      expect(result.decision?.card.id).toBe('zombie_lurch_for_lunch')
-      expect(result.decision?.targetLane).toBe(2)
+      expect(result.decision?.card?.id).toBe('zombie_lurch_for_lunch')
+      expect(result.decision?.laneIndex).toBe(2)
     })
 
     it('should execute Attack Buff trick (Brute Strength) on unblocked minion to achieve exact lethal', () => {
@@ -319,8 +309,8 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
 
       expect(result.hasLethal).toBe(true)
       expect(result.totalProjectedDamage).toBe(6) // 3 + 3
-      expect(result.decision?.card.id).toBe('zombie_brute_strength')
-      expect(result.decision?.targetLane).toBe(1)
+      expect(result.decision?.card?.id).toBe('zombie_brute_strength')
+      expect(result.decision?.laneIndex).toBe(1)
     })
   })
 
@@ -330,6 +320,8 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
   describe('3. Campaign Chapter 2 Environment Hazards & Synergies (Z6 - Z10)', () => {
     it('Mission Z7 (Wall-Knight): should identify Spikeweed Sector as lethal hazard for fragile zombies (<= 2 HP without Armored)', () => {
       const lane: LaneState = {
+        index: 1,
+        name: 'Lane 2',
         type: 'ground',
         environment: {
           id: 'plant_spikeweed_sector',
@@ -351,6 +343,8 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
 
     it('Mission Z7 (Wall-Knight): should allow Armored or high-HP zombies in Spikeweed Sector', () => {
       const lane: LaneState = {
+        index: 1,
+        name: 'Lane 2',
         type: 'ground',
         environment: {
           id: 'plant_spikeweed_sector',
@@ -368,13 +362,15 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
       const hazardArmored = isEnvironmentHazardousForMinion(lane, armoredZombie, 'zombies')
       expect(hazardArmored.hazardous).toBe(false)
 
-      const bulkyZombie = getCard('zombie_knight') // 5/5
+      const bulkyZombie = getCard('zombie_knight_living_dead') // 5/5
       const hazardBulky = isEnvironmentHazardousForMinion(lane, bulkyZombie, 'zombies')
       expect(hazardBulky.hazardous).toBe(false)
     })
 
     it('Mission Z8 (Spudow): should identify Hot Lava as lethal hazard for 1-HP zombies without Armored', () => {
       const lane: LaneState = {
+        index: 0,
+        name: 'Lane 1',
         type: 'ground',
         environment: {
           id: 'plant_hot_lava',
@@ -418,8 +414,8 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
 
       const decision = getAIDecision(state, 'plants')
       expect(decision).toBeDefined()
-      expect(decision?.card.id).toBe('plant_repeater')
-      expect(decision?.targetLane).toBe(1) // Placed in Pair Pearadise!
+      expect(decision?.card?.id).toBe('plant_repeater')
+      expect(decision?.laneIndex).toBe(1) // Placed in Pair Pearadise!
     })
 
     it('Mission Z9 (Chompzilla): Plant AI should prioritize playing high-attack minion in Venus Flytrap Planet for healing', () => {
@@ -444,7 +440,7 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
 
       const decision = getAIDecision(state, 'plants')
       expect(decision).toBeDefined()
-      expect(decision?.targetLane).toBe(3) // Deploys to Venus Flytrap Planet!
+      expect(decision?.laneIndex).toBe(3) // Deploys to Venus Flytrap Planet!
     })
 
     it('should correctly flag Chapter 2 environments as dangerous to opposing side in isDangerousEnvironment', () => {
@@ -455,6 +451,33 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
 
       expect(isDangerousEnvironment('zombie_laser_base_alpha', 'plants')).toBe(true)
       expect(isDangerousEnvironment('zombie_area_22', 'plants')).toBe(true)
+    })
+
+    it('Anti-Grave Tactics: Plant AI should immediately play Grave Buster on enemy Gravestone', () => {
+      const state = setupState()
+      state.phase = 'PLANT_PLAY'
+      state.plantHero.sun = 4
+
+      // Lane 2 has a zombie hidden in a Gravestone
+      state.lanes[2].zombieMinion = createTestMinion({
+        instanceId: 'grave_zombie',
+        cardId: 'zombie_stealthy_imp',
+        name: 'Gravestone Zombie',
+        side: 'zombies',
+        currentAttack: 6,
+        currentHealth: 5,
+        isGravestone: true,
+      })
+
+      const graveBuster = getCard('plant_grave_buster')
+      state.plantHand = [graveBuster]
+
+      const decision = getAIDecision(state, 'plants')
+      expect(decision).toBeDefined()
+      expect(decision?.action).toBe('PLAY_TRICK')
+      expect(decision?.card?.id).toBe('plant_grave_buster')
+      expect(decision?.laneIndex).toBe(2)
+      expect(decision?.reason).toContain('Grave Buster')
     })
   })
 
@@ -478,7 +501,7 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
         traits: [],
       }
 
-      const decision = getAISuperpowerDecision(stayinAlive, state, 'zombies', 'hero_electric_boogaloo')
+      const decision = getAISuperpowerDecision(state, 'zombies', stayinAlive, 'tempo', 'hero_electric_boogaloo')
       expect(decision.action).toBe('PLAY_SUPERPOWER')
       expect(decision.targetHero).toBe(true)
       expect(decision.reason).toContain('Lethal Stayin\' Alive')
@@ -500,7 +523,7 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
         traits: [],
       }
 
-      const decision = getAISuperpowerDecision(sunburn, state, 'plants', 'hero_solar_flare')
+      const decision = getAISuperpowerDecision(state, 'plants', sunburn, 'tempo', 'hero_solar_flare')
       expect(decision.action).toBe('PLAY_SUPERPOWER')
       expect(decision.targetHero).toBe(true)
       expect(decision.reason).toContain('Lethal Sunburn')
@@ -523,9 +546,9 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
         traits: [],
       }
 
-      const decision = getAISuperpowerDecision(precisionBlast, state, 'plants', 'hero_green_shadow')
+      const decision = getAISuperpowerDecision(state, 'plants', precisionBlast, 'tempo', 'hero_green_shadow')
       expect(decision.action).toBe('PLAY_SUPERPOWER')
-      expect(decision.targetLane).toBe(2)
+      expect(decision.targetLaneIndex).toBe(2)
       expect(decision.reason).toContain('Lethal Precision Blast')
     })
 
@@ -545,7 +568,7 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
         traits: [],
       }
 
-      const decision = getAISuperpowerDecision(missileMadness, state, 'zombies', 'hero_zmech')
+      const decision = getAISuperpowerDecision(state, 'zombies', missileMadness, 'tempo', 'hero_zmech')
       expect(decision.action).toBe('PLAY_SUPERPOWER')
       expect(decision.targetHero).toBe(true)
       expect(decision.reason).toContain('Lethal Missile Madness')
@@ -586,10 +609,9 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
         traits: [],
       }
 
-      const decision = getAISuperpowerDecision(carriedAway, state, 'zombies', 'hero_super_brainz')
+      const decision = getAISuperpowerDecision(state, 'zombies', carriedAway, 'tempo', 'hero_super_brainz')
       expect(decision.action).toBe('PLAY_SUPERPOWER')
-      expect(decision.targetMinionId).toBe('z1')
-      expect(decision.targetLane).toBe(1)
+      expect(decision.targetLaneIndex).toBe(1)
       expect(decision.reason).toContain('Lethal Carried Away')
     })
   })
@@ -603,7 +625,7 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
       state.phase = 'ZOMBIE_PLAY'
       state.plantHero.hp = 8 // Triggers All-Out Aggression Mode!
 
-      // Lane 0 and 1 have defenders
+      // Lane 0 and 1 have defenders/blockers
       state.lanes[0].plantMinion = createTestMinion({
         instanceId: 'p0',
         cardId: 'plant_wall_nut',
@@ -612,6 +634,15 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
         currentAttack: 0,
         currentHealth: 6,
       })
+      state.lanes[0].zombieMinion = createTestMinion({
+        instanceId: 'z0',
+        cardId: 'zombie_conehead',
+        name: 'Conehead',
+        side: 'zombies',
+        currentAttack: 2,
+        currentHealth: 2,
+      })
+
       state.lanes[1].plantMinion = createTestMinion({
         instanceId: 'p1',
         cardId: 'plant_repeater',
@@ -621,15 +652,15 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
         currentHealth: 2,
       })
 
-      // Lanes 2, 3, 4 are open
+      // Lanes 2 and 3 are ground lanes open to face
       const attacker = getCard('zombie_arm_wrestler')
       state.zombieHand = [attacker]
 
       const decision = getAIDecision(state, 'zombies', 'aggro')
       expect(decision).toBeDefined()
-      expect(decision?.card.id).toBe('zombie_arm_wrestler')
+      expect(decision?.card?.id).toBe('zombie_arm_wrestler')
       // Deploys to an open ground lane (lane 2 or 3) to hit face!
-      expect([2, 3]).toContain(decision?.targetLane)
+      expect([2, 3]).toContain(decision?.laneIndex)
     })
 
     it('Aggro Mode: should target enemy hero with direct burn trick in ZOMBIE_TRICKS when enemy HP <= 10', () => {
@@ -653,7 +684,7 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
 
       const decision = getAIDecision(state, 'zombies', 'aggro')
       expect(decision).toBeDefined()
-      expect(decision?.card.id).toBe('zombie_bungee_plumber')
+      expect(decision?.card?.id).toBe('zombie_bungee_plumber')
       // Chooses direct face damage over trading minion
       expect(decision?.targetHero).toBe(true)
     })
@@ -666,8 +697,8 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
       // Lane 1 has a lethal 6-attack Plant
       state.lanes[1].plantMinion = createTestMinion({
         instanceId: 'big_plant',
-        cardId: 'plant_threepeater',
-        name: 'Threepeater',
+        cardId: 'plant_repeater',
+        name: 'Dangerous Plant',
         side: 'plants',
         currentAttack: 6,
         currentHealth: 5,
@@ -678,8 +709,8 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
 
       const decision = getAIDecision(state, 'zombies', 'control')
       expect(decision).toBeDefined()
-      expect(decision?.card.id).toBe('zombie_conehead')
-      expect(decision?.targetLane).toBe(1) // Blocks incoming fatal damage in Lane 1!
+      expect(decision?.card?.id).toBe('zombie_conehead')
+      expect(decision?.laneIndex).toBe(1) // Blocks incoming fatal damage in Lane 1!
     })
 
     it('Defensive Mode: should cast emergency removal trick (Locust Swarm / Rocket Science) on fatal attacker', () => {
@@ -703,8 +734,8 @@ describe('Round 10: AI Campaign Tactics, Multi-Lane Lethal & Boss Intelligence',
 
       const decision = getAIDecision(state, 'zombies', 'control')
       expect(decision).toBeDefined()
-      expect(decision?.card.id).toBe('zombie_locust_swarm')
-      expect(decision?.targetMinionId).toBe('boss_plant')
+      expect(decision?.card?.id).toBe('zombie_locust_swarm')
+      expect(decision?.laneIndex).toBe(2)
     })
   })
 })

@@ -3,6 +3,7 @@ import {
   getCardById,
 } from '../data/cards'
 import { ASSET_MANIFEST } from '../data/assetsManifest'
+import { CARD_FLAVOR_TEXTS } from '../data/flavorTexts'
 import {
   triggerWhenPlayed,
   triggerDinoRoar,
@@ -14,6 +15,7 @@ import {
 import { gameReducer, canPlayCardToLane, createInitialGameState } from '../engine/reducer'
 import { resolveCombat } from '../engine/combat'
 import { executeTrick } from '../engine/tricks'
+import { playEnvironment } from '../engine/environments'
 import type { Card, Minion } from '../engine/types'
 
 function convertCardDataToCard(data: any, side: 'plants' | 'zombies'): Card {
@@ -1064,6 +1066,408 @@ describe('Round 5 Card Catalog Validation Suite', () => {
         expect(conjured.type).toBe('superpower')
         expect(conjured.side).toBe('plants')
         expect(turnRes.events.some(e => e.includes('Bird of Paradise'))).toBe(true)
+      })
+    })
+
+    describe('Round 9: Game-Changer Legendaries & Iconic Mechanics Suite', () => {
+      it('should validate Soul Patch metadata, Armored 1, and complete Hero damage absorption (Combat & Trick)', () => {
+        const card = getCardById('plant_soul_patch')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Soul Patch')
+        expect(card?.cost).toBe(7)
+        expect(card?.attack).toBe(5)
+        expect(card?.hp).toBe(10)
+        expect(card?.rarity).toBe('Legendary')
+        expect(card?.tribe).toBe('Root Plant')
+        expect(card?.heroClass).toBe('Guardian')
+        expect(card?.armored).toBe(1)
+        expect(card?.traits).toContain('Armored 1')
+        expect(ASSET_MANIFEST.cards.plants['Soul Patch']).toBeDefined()
+
+        // 1. Combat Interception: Zombie attacks open lane into Plant Hero -> Soul Patch absorbs
+        const state = createInitialGameState()
+        state.plantHero.hp = 20
+        state.plantHero.blockMeter = 0
+        state.lanes[0].plantMinion = createMockMinion('sp1', 'Soul Patch', 'plants', 5, 10, {
+          cardId: 'plant_soul_patch',
+          armored: 1,
+        })
+        state.lanes[1].zombieMinion = createMockMinion('z1', 'Conehead', 'zombies', 4, 4, {
+          cardId: 'zombie_conehead',
+        })
+
+        const combatResult = resolveCombat(state)
+        // Plant Hero takes 0 damage and block meter remains 0
+        expect(combatResult.updatedState.plantHero.hp).toBe(20)
+        expect(combatResult.updatedState.plantHero.blockMeter).toBe(0)
+        // Soul Patch took 4 - 1 (Armor 1) = 3 damage -> 10 - 3 = 7 HP
+        expect(combatResult.updatedState.lanes[0].plantMinion?.currentHealth).toBe(7)
+        expect(combatResult.result.events.some(e => e.description.includes('Soul Patch'))).toBe(true)
+
+        // 2. Trick Interception: Zombie Bungee Plumber targeting Plant Hero -> Soul Patch absorbs
+        const trickCard: Card = {
+          id: 'zombie_bungee_plumber',
+          name: 'Bungee Plumber',
+          side: 'zombies',
+          cost: 1,
+          attack: 0,
+          health: 0,
+          type: 'trick',
+          image: '',
+        }
+        const trickRes = executeTrick(combatResult.updatedState, trickCard, 'zombies', undefined, undefined, true)
+        expect(trickRes.updatedState.plantHero.hp).toBe(20)
+        // Soul Patch took 2 - 1 = 1 damage -> 7 - 1 = 6 HP
+        expect(trickRes.updatedState.lanes[0].plantMinion?.currentHealth).toBe(6)
+      })
+
+      it('should validate Dandy Lion King metadata and halving Zombie Hero HP when played', () => {
+        const card = getCardById('plant_dandy_lion_king')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Dandy Lion King')
+        expect(card?.cost).toBe(6)
+        expect(card?.attack).toBe(4)
+        expect(card?.hp).toBe(4)
+        expect(card?.rarity).toBe('Legendary')
+        expect(card?.tribe).toBe('Flower Animal Plant')
+        expect(card?.heroClass).toBe('Kabloom')
+        expect(ASSET_MANIFEST.cards.plants['Dandy Lion King']).toBeDefined()
+
+        // When played with 20 HP -> loses Math.ceil(20 / 2) = 10 -> 10 HP
+        const state = createInitialGameState()
+        state.zombieHero.hp = 20
+        const dandy = createMockMinion('dlk1', 'Dandy Lion King', 'plants', 4, 4, {
+          cardId: 'plant_dandy_lion_king',
+        })
+        const res1 = triggerWhenPlayed(state, dandy, 1, 'plants')
+        expect(res1.updatedState.zombieHero.hp).toBe(10)
+        expect(res1.events.some(e => e.includes('Dandy Lion King'))).toBe(true)
+
+        // When played with 15 HP -> loses Math.ceil(15 / 2) = 8 -> 7 HP
+        state.zombieHero.hp = 15
+        const res2 = triggerWhenPlayed(state, dandy, 1, 'plants')
+        expect(res2.updatedState.zombieHero.hp).toBe(7)
+      })
+
+      it('should validate Onion Rings metadata and transforming all Plant minions in hand into 4/4', () => {
+        const card = getCardById('plant_onion_rings')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Onion Rings')
+        expect(card?.cost).toBe(5)
+        expect(card?.attack).toBe(4)
+        expect(card?.hp).toBe(4)
+        expect(card?.rarity).toBe('Legendary')
+        expect(card?.tribe).toBe('Root Plant')
+        expect(card?.heroClass).toBe('Mega-Grow')
+        expect(ASSET_MANIFEST.cards.plants['Onion Rings']).toBeDefined()
+
+        const state = createInitialGameState()
+        state.plantHand = [
+          { id: 'plant_peashooter', name: 'Peashooter', side: 'plants', cost: 1, attack: 1, health: 1, type: 'minion', image: '' },
+          { id: 'plant_wall_nut', name: 'Wall-Nut', side: 'plants', cost: 1, attack: 0, health: 6, type: 'minion', image: '' },
+          { id: 'plant_berry_blast', name: 'Berry Blast', side: 'plants', cost: 2, attack: 0, health: 0, type: 'trick', image: '' },
+        ]
+        const onion = createMockMinion('onion1', 'Onion Rings', 'plants', 4, 4, {
+          cardId: 'plant_onion_rings',
+        })
+        const res = triggerWhenPlayed(state, onion, 0, 'plants')
+        // Minions in hand become 4/4
+        expect(res.updatedState.plantHand[0].attack).toBe(4)
+        expect(res.updatedState.plantHand[0].health).toBe(4)
+        expect(res.updatedState.plantHand[1].attack).toBe(4)
+        expect(res.updatedState.plantHand[1].health).toBe(4)
+        // Trick remains unchanged
+        expect(res.updatedState.plantHand[2].attack).toBe(0)
+        expect(res.updatedState.plantHand[2].health).toBe(0)
+        expect(res.events.some(e => e.includes('Onion Rings'))).toBe(true)
+      })
+
+      it('should validate Binary Stars metadata, Gravestone, and 2x damage multiplier for Zombie combat and tricks', () => {
+        const card = getCardById('zombie_binary_stars')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Binary Stars')
+        expect(card?.cost).toBe(5)
+        expect(card?.attack).toBe(3)
+        expect(card?.hp).toBe(3)
+        expect(card?.rarity).toBe('Legendary')
+        expect(card?.tribe).toBe('Dancing Zombie')
+        expect(card?.heroClass).toBe('Crazy')
+        expect(card?.gravestone).toBe(true)
+        expect(ASSET_MANIFEST.cards.zombies['Binary Stars']).toBeDefined()
+
+        // 1. Combat 2x Damage:
+        const state = createInitialGameState()
+        state.plantHero.hp = 20
+        // Place unhidden Binary Stars on lane 0
+        state.lanes[0].zombieMinion = createMockMinion('bs1', 'Binary Stars', 'zombies', 3, 3, {
+          cardId: 'zombie_binary_stars',
+          isGravestone: false,
+        })
+        // Place another zombie on lane 1 with 2 attack
+        state.lanes[1].zombieMinion = createMockMinion('z1', 'Conehead', 'zombies', 2, 2)
+
+        const combatResult = resolveCombat(state)
+        // Binary Stars deals 3 * 2 = 6 dmg
+        // Conehead deals 2 * 2 = 4 dmg
+        // Total damage dealt = 10 -> Plant Hero HP = 20 - 10 = 10
+        expect(combatResult.updatedState.plantHero.hp).toBe(10)
+
+        // 2. Trick 2x Damage:
+        const trickState = createInitialGameState()
+        trickState.plantHero.hp = 20
+        trickState.lanes[0].zombieMinion = createMockMinion('bs2', 'Binary Stars', 'zombies', 3, 3, {
+          cardId: 'zombie_binary_stars',
+          isGravestone: false,
+        })
+        const trickCard: Card = {
+          id: 'zombie_bungee_plumber',
+          name: 'Bungee Plumber',
+          side: 'zombies',
+          cost: 1,
+          attack: 0,
+          health: 0,
+          type: 'trick',
+          image: '',
+        }
+        const trickRes = executeTrick(trickState, trickCard, 'zombies', undefined, undefined, true)
+        // Bungee Plumber normally does 2 dmg, with Binary Stars deals 4 dmg!
+        expect(trickRes.updatedState.plantHero.hp).toBe(16)
+      })
+
+      it('should validate Gargantuars Feast metadata and summoning 3 random Gargantuars into random lanes', () => {
+        const card = getCardById('zombie_gargantuars_feast')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe("Gargantuar's Feast")
+        expect(card?.cost).toBe(11)
+        expect(card?.type).toBe('trick')
+        expect(card?.rarity).toBe('Legendary')
+        expect(card?.heroClass).toBe('Crazy')
+        expect(ASSET_MANIFEST.cards.zombies["Gargantuar's Feast"]).toBeDefined()
+
+        const state = createInitialGameState()
+        const feastCard: Card = {
+          id: 'zombie_gargantuars_feast',
+          name: "Gargantuar's Feast",
+          side: 'zombies',
+          cost: 11,
+          attack: 0,
+          health: 0,
+          type: 'trick',
+          image: '',
+        }
+        const res = executeTrick(state, feastCard, 'zombies')
+        expect(res.success).toBe(true)
+        const spawnedZombies = res.updatedState.lanes.filter(l => l.zombieMinion !== null)
+        expect(spawnedZombies.length).toBe(3)
+        spawnedZombies.forEach(l => {
+          expect(l.zombieMinion?.name.toLowerCase()).toContain('gargantuar')
+        })
+        expect(res.message).toContain("Gargantuar's Feast")
+      })
+    })
+
+    describe('Round 10: Expanded Card Catalog Suite', () => {
+      it('should validate Cob Cannon Splash Damage 4 and direct damage to enemy Hero during combat', () => {
+        const card = getCardById('plant_cob_cannon')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Cob Cannon')
+        expect(card?.cost).toBe(6)
+        expect(card?.attack).toBe(6)
+        expect(card?.hp).toBe(6)
+        expect(card?.rarity).toBe('Legendary')
+        expect(card?.traits).toContain('Splash Damage 4')
+        expect(card?.splashDamage).toBe(4)
+
+        const state = createInitialGameState()
+        state.zombieHero.hp = 20
+        // Cob Cannon in lane 2
+        state.lanes[2].plantMinion = createMockMinion('cob1', 'Cob Cannon', 'plants', 6, 6, {
+          cardId: 'plant_cob_cannon',
+          splashDamage: 4,
+        })
+        // Adjacent zombies in lane 1 and lane 3
+        state.lanes[1].zombieMinion = createMockMinion('z1', 'Conehead', 'zombies', 2, 6)
+        state.lanes[2].zombieMinion = createMockMinion('z2', 'Gargantuar', 'zombies', 5, 8)
+        state.lanes[3].zombieMinion = createMockMinion('z3', 'Buckethead', 'zombies', 3, 6)
+
+        const combatRes = resolveCombat(state)
+        // Splash damage 4 hits adjacent minions
+        expect(combatRes.updatedState.lanes[1].zombieMinion?.currentHealth).toBe(2) // 6 - 4 = 2
+        expect(combatRes.updatedState.lanes[3].zombieMinion?.currentHealth).toBe(2) // 6 - 4 = 2
+        // Cob Cannon deals 4 damage to Zombie Hero when attacking
+        expect(combatRes.updatedState.zombieHero.hp).toBe(16) // 20 - 4 = 16
+      })
+
+      it('should validate Kernel-Pult metadata, 2 damage and Freeze ability when played', () => {
+        const card = getCardById('plant_kernel_pult')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Kernel-Pult')
+        expect(card?.cost).toBe(4)
+        expect(card?.attack).toBe(3)
+        expect(card?.hp).toBe(4)
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.tribe).toBe('Corn Plant')
+        expect(card?.heroClass).toBe('Solar')
+        expect(ASSET_MANIFEST.cards.plants['Kernel-Pult']).toBeDefined()
+
+        const state = createInitialGameState()
+        state.lanes[2].zombieMinion = createMockMinion('z_target', 'Basic Zombie', 'zombies', 2, 5)
+        const kernel = createMockMinion('kp1', 'Kernel-Pult', 'plants', 3, 4, {
+          cardId: 'plant_kernel_pult',
+        })
+        const res = triggerWhenPlayed(state, kernel, 2, 'plants')
+        expect(res.updatedState.lanes[2].zombieMinion?.currentHealth).toBe(3) // 5 - 2 = 3
+        expect(res.updatedState.lanes[2].zombieMinion?.isFrozen).toBe(true)
+        expect(res.events.some(e => e.includes('Kernel-Pult'))).toBe(true)
+      })
+
+      it('should validate Chomper metadata, Deadly trait, and destroying high HP minions in combat', () => {
+        const card = getCardById('plant_chomper')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Chomper')
+        expect(card?.cost).toBe(3)
+        expect(card?.attack).toBe(4)
+        expect(card?.hp).toBe(1)
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.traits).toContain('Deadly')
+        expect(card?.deadly).toBe(true)
+        expect(card?.heroClass).toBe('Solar')
+        expect(ASSET_MANIFEST.cards.plants['Chomper']).toBeDefined()
+
+        const state = createInitialGameState()
+        state.lanes[0].plantMinion = createMockMinion('ch1', 'Chomper', 'plants', 4, 1, {
+          cardId: 'plant_chomper',
+          deadly: true,
+        })
+        state.lanes[0].zombieMinion = createMockMinion('z_boss', 'Giant Zombie', 'zombies', 0, 20)
+        const combatRes = resolveCombat(state)
+        // Deadly trait instantly destroys the 20 HP zombie!
+        expect(combatRes.updatedState.lanes[0].zombieMinion).toBeNull()
+      })
+
+      it('should validate Newspaper Zombie metadata, Frenzy, and +4 ATK rage boost when damaged', () => {
+        const card = getCardById('zombie_newspaper_zombie')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Newspaper Zombie')
+        expect(card?.cost).toBe(2)
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.tribe).toBe('Professional Zombie')
+        expect(card?.heroClass).toBe('Crazy')
+        expect(card?.frenzy).toBe(true)
+        expect(ASSET_MANIFEST.cards.zombies['Newspaper Zombie']).toBeDefined()
+
+        const state = createInitialGameState()
+        state.lanes[1].zombieMinion = createMockMinion('np1', 'Newspaper Zombie', 'zombies', 1, 4, {
+          cardId: 'zombie_newspaper_zombie',
+          frenzy: true,
+        })
+        state.lanes[1].plantMinion = createMockMinion('p1', 'Peashooter', 'plants', 2, 2)
+        const combatRes = resolveCombat(state)
+        // Newspaper Zombie takes 2 damage -> 2 HP left, and gains +4 ATK -> 5 ATK!
+        expect(combatRes.updatedState.lanes[1].zombieMinion?.currentHealth).toBe(2)
+        expect(combatRes.updatedState.lanes[1].zombieMinion?.currentAttack).toBe(5)
+        expect(combatRes.updatedState.lanes[1].zombieMinion?.frenzy).toBe(true)
+      })
+
+      it('should validate Jester metadata, Untrickable trait, and reflecting combat damage back to attacker', () => {
+        const card = getCardById('zombie_jester')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Jester')
+        expect(card?.cost).toBe(4)
+        expect(card?.attack).toBe(3)
+        expect(card?.hp).toBe(4)
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.traits).toContain('Untrickable')
+        expect(card?.heroClass).toBe('Crazy')
+        expect(ASSET_MANIFEST.cards.zombies['Jester']).toBeDefined()
+
+        const state = createInitialGameState()
+        state.lanes[1].zombieMinion = createMockMinion('jester1', 'Jester', 'zombies', 3, 4, {
+          cardId: 'zombie_jester',
+          untrickable: true,
+        })
+        state.lanes[1].plantMinion = createMockMinion('p1', 'Repeater', 'plants', 2, 5)
+        const combatRes = resolveCombat(state)
+        // Plant takes 3 combat dmg from Jester + 2 reflected dmg = 5 dmg -> Plant is destroyed!
+        expect(combatRes.updatedState.lanes[1].plantMinion).toBeNull()
+      })
+
+      it('should validate Zombot Plank Walker metadata, Amphibious, Strikethrough, and destroying all environments', () => {
+        const card = getCardById('zombie_zombot_plank_walker')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Zombot Plank Walker')
+        expect(card?.cost).toBe(8)
+        expect(card?.attack).toBe(7)
+        expect(card?.hp).toBe(7)
+        expect(card?.rarity).toBe('Legendary')
+        expect(card?.tribe).toBe('Pirate Mech Zombie')
+        expect(card?.heroClass).toBe('Sneaky')
+        expect(card?.amphibious).toBe(true)
+        expect(card?.strikethrough).toBe(true)
+        expect(ASSET_MANIFEST.cards.zombies['Zombot Plank Walker']).toBeDefined()
+
+        const state = createInitialGameState()
+        state.lanes[0].environment = { id: 'plant_spikeweed_sector', name: 'Spikeweed Sector', side: 'plants', description: '' }
+        state.lanes[2].environment = { id: 'zombie_area_22', name: 'Area 22', side: 'zombies', description: '' }
+        const plankWalker = createMockMinion('pw1', 'Zombot Plank Walker', 'zombies', 7, 7, {
+          cardId: 'zombie_zombot_plank_walker',
+          amphibious: true,
+          strikethrough: true,
+        })
+        const res = triggerWhenPlayed(state, plankWalker, 4, 'zombies')
+        expect(res.updatedState.lanes.every(l => !l.environment)).toBe(true)
+        expect(res.events.some(e => e.includes('Zombot Plank Walker'))).toBe(true)
+      })
+
+      it('should validate Haunted Castle and Mushroom Grotto Super-Rare Environments', () => {
+        const castleCard = getCardById('zombie_haunted_castle')
+        expect(castleCard).toBeDefined()
+        expect(castleCard?.name).toBe('Haunted Castle')
+        expect(castleCard?.cost).toBe(2)
+        expect(castleCard?.type).toBe('environment')
+        expect(castleCard?.rarity).toBe('Super-Rare')
+
+        const grottoCard = getCardById('plant_mushroom_grotto')
+        expect(grottoCard).toBeDefined()
+        expect(grottoCard?.name).toBe('Mushroom Grotto')
+        expect(grottoCard?.cost).toBe(2)
+        expect(grottoCard?.type).toBe('environment')
+        expect(grottoCard?.rarity).toBe('Super-Rare')
+
+        // Test Haunted Castle (+1/+0 to zombie)
+        const state = createInitialGameState()
+        const playCastle = playEnvironment(state, convertCardDataToCard(castleCard!, 'zombies'), 1, 'zombies')
+        expect(playCastle.updatedState.lanes[1].environment?.id).toBe('zombie_haunted_castle')
+        playCastle.updatedState.lanes[1].zombieMinion = createMockMinion('z1', 'Conehead', 'zombies', 2, 2)
+        const triggerCastle = playEnvironment(playCastle.updatedState, convertCardDataToCard(castleCard!, 'zombies'), 1, 'zombies')
+        expect(triggerCastle.updatedState.lanes[1].zombieMinion?.currentAttack).toBe(3)
+
+        // Test Mushroom Grotto (+0/+2 to plant)
+        const playGrotto = playEnvironment(state, convertCardDataToCard(grottoCard!, 'plants'), 2, 'plants')
+        expect(playGrotto.updatedState.lanes[2].environment?.id).toBe('plant_mushroom_grotto')
+        playGrotto.updatedState.lanes[2].plantMinion = createMockMinion('p1', 'Peashooter', 'plants', 1, 1)
+        const triggerGrotto = playEnvironment(playGrotto.updatedState, convertCardDataToCard(grottoCard!, 'plants'), 2, 'plants')
+        expect(triggerGrotto.updatedState.lanes[2].plantMinion?.currentHealth).toBe(3)
+      })
+
+      it('should validate authentic Vietnamese flavor lore texts for all 10 new cards', () => {
+        const requiredCards = [
+          'plant_soul_patch',
+          'plant_dandy_lion_king',
+          'plant_onion_rings',
+          'plant_kernel_pult',
+          'plant_chomper',
+          'plant_mushroom_grotto',
+          'zombie_binary_stars',
+          'zombie_gargantuars_feast',
+          'zombie_jester',
+          'zombie_zombot_plank_walker',
+          'zombie_haunted_castle',
+        ]
+        requiredCards.forEach(id => {
+          expect(CARD_FLAVOR_TEXTS[id]).toBeDefined()
+          expect(CARD_FLAVOR_TEXTS[id].length).toBeGreaterThan(15)
+        })
       })
     })
   })

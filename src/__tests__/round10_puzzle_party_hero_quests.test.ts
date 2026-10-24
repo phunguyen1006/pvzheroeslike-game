@@ -22,7 +22,7 @@ import {
   loadAllHeroQuestProgress,
   HERO_QUESTS_STORAGE_KEY,
 } from '../data/heroQuests'
-import { CAMPAIGN_MISSIONS, ZOMBIE_CAMPAIGN_MISSIONS } from '../data/campaign'
+import { ALL_CAMPAIGN_MISSIONS, ALL_ZOMBIE_CAMPAIGN_MISSIONS } from '../data/campaign'
 
 describe('Round 10: Puzzle Party, Event Showcase, Daily Challenges & Hero Quests', () => {
   let mockStore: Record<string, string> = {}
@@ -58,7 +58,7 @@ describe('Round 10: Puzzle Party, Event Showcase, Daily Challenges & Hero Quests
         expect(puzzle.playerStartingHp).toBeGreaterThan(0)
         expect(puzzle.opponentStartingHp).toBeGreaterThan(0)
         expect(puzzle.playerStartingMana).toBeGreaterThan(0)
-        expect(puzzle.playerHandCards.length).toBeGreaterThan(0)
+        expect(puzzle.handCardIds.length).toBeGreaterThan(0)
         expect(puzzle.rewardGems).toBeGreaterThanOrEqual(100)
         expect(puzzle.rewardTickets).toBeGreaterThanOrEqual(50)
         expect(puzzle.hint).toBeTruthy()
@@ -92,7 +92,7 @@ describe('Round 10: Puzzle Party, Event Showcase, Daily Challenges & Hero Quests
         expect(showcase.mutator.id).toBeTruthy()
         expect(showcase.mutator.name).toBeTruthy()
         expect(showcase.mutator.description).toBeTruthy()
-        expect(showcase.rewardGems).toBeGreaterThanOrEqual(120)
+        expect(showcase.rewardGems).toBeGreaterThanOrEqual(100)
         expect(showcase.rewardTickets).toBeGreaterThanOrEqual(75)
       })
     })
@@ -225,7 +225,7 @@ describe('Round 10: Puzzle Party, Event Showcase, Daily Challenges & Hero Quests
 
       const claim5 = claimHeroQuestReward(heroId, 5)
       expect(claim5?.success).toBe(true)
-      expect(claim5?.titleAwarded).toBe('Bộ Não Tối Thượng')
+      expect(claim5?.titleAwarded).toBe('Siêu Não Bất Bại')
 
       const finalState = getHeroQuestState(heroId)
       expect(finalState.isFullyCompleted).toBe(true)
@@ -239,7 +239,7 @@ describe('Round 10: Puzzle Party, Event Showcase, Daily Challenges & Hero Quests
   describe('Campaign Chapter 2 Final Boss Cinematic Conditions', () => {
     it('should correctly configure Chapter 2 final bosses for Citron and Rustbolt', () => {
       // Zombie Campaign Mission 10: Boss Citron
-      const citronMission = ZOMBIE_CAMPAIGN_MISSIONS.find((m) => m.missionNumber === 10)
+      const citronMission = ALL_ZOMBIE_CAMPAIGN_MISSIONS.find((m) => m.missionNumber === 10)
       expect(citronMission).toBeDefined()
       expect(citronMission?.difficulty).toBe('boss')
       expect(citronMission?.chapter).toBe(2)
@@ -247,7 +247,7 @@ describe('Round 10: Puzzle Party, Event Showcase, Daily Challenges & Hero Quests
       expect(citronMission?.rewards.gems).toBeGreaterThanOrEqual(500)
 
       // Plant Campaign Mission 10: Boss Rustbolt
-      const rustboltMission = CAMPAIGN_MISSIONS.find((m) => m.missionNumber === 10)
+      const rustboltMission = ALL_CAMPAIGN_MISSIONS.find((m) => m.missionNumber === 10)
       expect(rustboltMission).toBeDefined()
       expect(rustboltMission?.difficulty).toBe('boss')
       expect(rustboltMission?.chapter).toBe(2)

@@ -317,6 +317,14 @@ export const MinionSlot: React.FC<MinionSlotProps> = ({
               onError={() => setImgError(true)}
             />
 
+            {/* Hit Violent Red Flash & Impact Wave */}
+            {isHitNow && (
+              <div className="minion-hit-red-flash-overlay" aria-hidden="true">
+                <div className="hit-red-flash-glow" />
+                <div className="hit-impact-rings" />
+              </div>
+            )}
+
             {/* Frozen Ice Block Overlay */}
             {minion.isFrozen && (
               <div className="minion-frozen-ice-block">

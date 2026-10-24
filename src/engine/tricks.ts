@@ -1,5 +1,5 @@
 import type { GameState, HeroState, Side, Card, Minion } from './types'
-import { applyHeroDamage } from './combat'
+import { applyHeroDamage, hasBinaryStars, redirectHeroDamageToSoulPatch } from './combat'
 import { drawCard } from './reducer'
 import { triggerWhenTrickPlayed, isUntrickable } from './abilities'
 
@@ -250,11 +250,18 @@ export function executeTrick(
 
     // === ZOMBIE TRICKS ===
     case 'zombie_bungee_plumber': {
-      // 2 damage to any plant or plant hero
+      // 2 damage to any plant or plant hero (x2 if Binary Stars)
+      const zMult = hasBinaryStars(updatedLanes) ? 2 : 1
+      const trickDmg = 2 * zMult
       if (targetHero) {
-        const dmg = applyHeroDamage(updatedState.plantHero, 2, false)
-        updatedState.plantHero = dmg.updatedHero
-        message = `Bungee Plumber ném thông bồn vào Plant Hero gây ${dmg.actualDamage} sát thương!`
+        const spRes = redirectHeroDamageToSoulPatch(updatedLanes, trickDmg, undefined, 0, 'Bungee Plumber')
+        if (spRes.absorbed) {
+          message = `Bungee Plumber nhắm vào Plant Hero nhưng Soul Patch đã hấp thụ toàn bộ ${trickDmg} sát thương!`
+        } else {
+          const dmg = applyHeroDamage(updatedState.plantHero, trickDmg, false)
+          updatedState.plantHero = dmg.updatedHero
+          message = `Bungee Plumber ném thông bồn vào Plant Hero gây ${dmg.actualDamage} sát thương${zMult > 1 ? ' (x2 Binary Stars)' : ''}!`
+        }
       } else if (targetLaneIndex !== undefined) {
         const lane = updatedLanes[targetLaneIndex]
         if (lane.plantMinion) {
@@ -262,16 +269,16 @@ export function executeTrick(
             message = `${lane.plantMinion.name} Miễn thương (Invulnerable) nên không nhận sát thương từ Bungee Plumber!`
           } else {
             const armor = lane.plantMinion.armored || (lane.plantMinion.traits?.includes('armored') ? 1 : 0)
-            const effectiveDmg = Math.max(0, 2 - armor)
+            const effectiveDmg = Math.max(0, trickDmg - armor)
             lane.plantMinion = {
               ...lane.plantMinion,
               currentHealth: Math.max(0, lane.plantMinion.currentHealth - effectiveDmg),
             }
             if (lane.plantMinion.currentHealth <= 0) {
-              message = `Bungee Plumber tiêu diệt ${lane.plantMinion.name}!`
+              message = `Bungee Plumber tiêu diệt ${lane.plantMinion.name}${zMult > 1 ? ' (x2 Binary Stars)' : ''}!`
               lane.plantMinion = null
             } else {
-              message = `Bungee Plumber gây ${effectiveDmg} sát thương lên ${lane.plantMinion.name}.`
+              message = `Bungee Plumber gây ${effectiveDmg} sát thương lên ${lane.plantMinion.name}${zMult > 1 ? ' (x2 Binary Stars)' : ''}.`
             }
           }
         }
@@ -307,15 +314,22 @@ export function executeTrick(
       // A zombie does a Bonus Attack
       if (targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.zombieMinion) {
         const z = updatedLanes[targetLaneIndex].zombieMinion!
+        const zMult = hasBinaryStars(updatedLanes) ? 2 : 1
+        const effAtk = z.currentAttack * zMult
         const p = updatedLanes[targetLaneIndex].plantMinion
         if (p) {
-          p.currentHealth = Math.max(0, p.currentHealth - z.currentAttack)
-          message = `Lurch for Lunch: ${z.name} tấn công bất ngờ gây ${z.currentAttack} dmg lên ${p.name}!`
+          p.currentHealth = Math.max(0, p.currentHealth - effAtk)
+          message = `Lurch for Lunch: ${z.name} tấn công bất ngờ gây ${effAtk} dmg lên ${p.name}${zMult > 1 ? ' (x2 Binary Stars)' : ''}!`
           if (p.currentHealth <= 0) updatedLanes[targetLaneIndex].plantMinion = null
         } else {
-          const dmg = applyHeroDamage(updatedState.plantHero, z.currentAttack, Boolean(z.bullseye))
-          updatedState.plantHero = dmg.updatedHero
-          message = `Lurch for Lunch: ${z.name} tấn công bất ngờ vào Plant Hero gây ${dmg.actualDamage} sát thương!`
+          const spRes = redirectHeroDamageToSoulPatch(updatedLanes, effAtk, undefined, targetLaneIndex, `${z.name} (Bonus Attack)`)
+          if (spRes.absorbed) {
+            message = `Lurch for Lunch: ${z.name} tấn công bất ngờ vào Plant Hero nhưng Soul Patch đã hấp thụ toàn bộ ${effAtk} sát thương!`
+          } else {
+            const dmg = applyHeroDamage(updatedState.plantHero, effAtk, Boolean(z.bullseye))
+            updatedState.plantHero = dmg.updatedHero
+            message = `Lurch for Lunch: ${z.name} tấn công bất ngờ vào Plant Hero gây ${dmg.actualDamage} sát thương${zMult > 1 ? ' (x2 Binary Stars)' : ''}!`
+          }
         }
       }
       break
@@ -339,7 +353,9 @@ export function executeTrick(
     }
 
     case 'zombie_the_chickening': {
-      // 2 damage to all Plants (AOE trick, bypasses untrickable single-target protection)
+      // 2 damage to all Plants (AOE trick, bypasses untrickable single-target protection, x2 if Binary Stars)
+      const zMult = hasBinaryStars(updatedLanes) ? 2 : 1
+      const trickDmg = 2 * zMult
       const hitPlants: string[] = []
       updatedLanes.forEach(lane => {
         const targets = [lane.plantMinion, lane.plantTeamUpMinion].filter(Boolean) as Minion[]
@@ -348,7 +364,7 @@ export function executeTrick(
             hitPlants.push(`${p.name} (Miễn thương)`)
           } else {
             const armor = p.armored || (p.traits?.includes('armored') ? 1 : 0)
-            const dmg = Math.max(0, 2 - armor)
+            const dmg = Math.max(0, trickDmg - armor)
             p.currentHealth = Math.max(0, p.currentHealth - dmg)
             hitPlants.push(`${p.name} (-${dmg})`)
             if (p.currentHealth <= 0) {
@@ -358,33 +374,45 @@ export function executeTrick(
           }
         })
       })
-      message = `The Chickening thả bầy gà gây 2 sát thương lên tất cả Plants: ${hitPlants.join(', ') || 'Không có ai'}!`
+      message = `The Chickening thả bầy gà gây ${trickDmg} sát thương lên tất cả Plants${zMult > 1 ? ' (x2 Binary Stars)' : ''}: ${hitPlants.join(', ') || 'Không có ai'}!`
       break
     }
 
     case 'zombie_final_mission': {
-      // Destroy a Zombie. Do 4 damage to any Plant or the Plant Hero
+      // Destroy a Zombie. Do 4 damage to any Plant or the Plant Hero (x2 if Binary Stars)
       const sacrificeIdx = updatedLanes.findIndex(l => l.zombieMinion)
       if (sacrificeIdx >= 0) {
         const deadZombie = updatedLanes[sacrificeIdx].zombieMinion!
         updatedLanes[sacrificeIdx].zombieMinion = null
+        const zMult = hasBinaryStars(updatedLanes) ? 2 : 1
+        const trickDmg = 4 * zMult
         if (targetHero) {
-          const dmg = applyHeroDamage(updatedState.plantHero, 4, false)
-          updatedState.plantHero = dmg.updatedHero
-          message = `Final Mission: Hi sinh ${deadZombie.name} phóng tên lửa 4 dmg vào Plant Hero!`
+          const spRes = redirectHeroDamageToSoulPatch(updatedLanes, trickDmg, undefined, 0, 'Final Mission')
+          if (spRes.absorbed) {
+            message = `Final Mission: Hi sinh ${deadZombie.name} phóng tên lửa nhưng Soul Patch đã hấp thụ toàn bộ ${trickDmg} sát thương thay cho Plant Hero!`
+          } else {
+            const dmg = applyHeroDamage(updatedState.plantHero, trickDmg, false)
+            updatedState.plantHero = dmg.updatedHero
+            message = `Final Mission: Hi sinh ${deadZombie.name} phóng tên lửa ${dmg.actualDamage} dmg vào Plant Hero${zMult > 1 ? ' (x2 Binary Stars)' : ''}!`
+          }
         } else if (targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.plantMinion) {
           const p = updatedLanes[targetLaneIndex].plantMinion!
           if (p.isInvulnerable || p.invulnerableThisTurn) {
             message = `Final Mission: Hi sinh ${deadZombie.name} phóng tên lửa nhưng ${p.name} Miễn thương (Invulnerable)!`
           } else {
-            p.currentHealth = Math.max(0, p.currentHealth - 4)
+            p.currentHealth = Math.max(0, p.currentHealth - trickDmg)
             if (p.currentHealth <= 0) updatedLanes[targetLaneIndex].plantMinion = null
-            message = `Final Mission: Hi sinh ${deadZombie.name} tiêu diệt ${p.name} với 4 dmg!`
+            message = `Final Mission: Hi sinh ${deadZombie.name} tiêu diệt ${p.name} với ${trickDmg} dmg${zMult > 1 ? ' (x2 Binary Stars)' : ''}!`
           }
         } else {
-          const dmg = applyHeroDamage(updatedState.plantHero, 4, false)
-          updatedState.plantHero = dmg.updatedHero
-          message = `Final Mission: Hi sinh ${deadZombie.name} bắn 4 dmg vào Plant Hero!`
+          const spRes = redirectHeroDamageToSoulPatch(updatedLanes, trickDmg, undefined, 0, 'Final Mission')
+          if (spRes.absorbed) {
+            message = `Final Mission: Hi sinh ${deadZombie.name} phóng tên lửa nhưng Soul Patch đã hấp thụ toàn bộ ${trickDmg} sát thương thay cho Plant Hero!`
+          } else {
+            const dmg = applyHeroDamage(updatedState.plantHero, trickDmg, false)
+            updatedState.plantHero = dmg.updatedHero
+            message = `Final Mission: Hi sinh ${deadZombie.name} bắn ${dmg.actualDamage} dmg vào Plant Hero${zMult > 1 ? ' (x2 Binary Stars)' : ''}!`
+          }
         }
       } else {
         return { updatedState: state, success: false, message: 'Cần có ít nhất 1 Zombie trên sân để hi sinh!' }
@@ -600,6 +628,84 @@ export function executeTrick(
         } else {
           message = `Grave Buster không tìm thấy Bia Mộ tại làn ${targetLaneIndex}!`
         }
+      }
+      break
+    }
+
+    case 'zombie_gargantuars_feast': {
+      // Triệu hồi 3 Gargantuar Zombie ngẫu nhiên vào các làn ngẫu nhiên trên sân đấu
+      const GARG_POOL = [
+        {
+          cardId: 'zombie_deep_sea_gargantuar',
+          name: 'Deep Sea Gargantuar',
+          attack: 7,
+          health: 8,
+          amphibious: true,
+          image: '/assets/cards/zombies/Zombot 1000.png',
+        },
+        {
+          cardId: 'zombie_smashing_gargantuar',
+          name: 'Smashing Gargantuar',
+          attack: 5,
+          health: 5,
+          frenzy: true,
+          image: '/assets/cards/zombies/Arm Wrestler.png',
+        },
+        {
+          cardId: 'zombie_supernova_gargantuar',
+          name: 'Supernova Gargantuar',
+          attack: 5,
+          health: 7,
+          frenzy: true,
+          image: '/assets/cards/zombies/Disco Zombie.png',
+        },
+        {
+          cardId: 'zombie_defensive_end',
+          name: 'Defensive End Gargantuar',
+          attack: 6,
+          health: 5,
+          armored: 1,
+          image: '/assets/cards/zombies/Arm Wrestler.png',
+        },
+        {
+          cardId: 'zombie_wizard_gargantuar',
+          name: 'Wizard Gargantuar',
+          attack: 6,
+          health: 7,
+          image: '/assets/cards/zombies/Disco Zombie.png',
+        },
+      ]
+
+      // Find all empty lanes for zombies
+      const emptyLanes = updatedLanes.filter(l => !l.zombieMinion)
+      // Pick up to 3 random empty lanes
+      const shuffledLanes = [...emptyLanes].sort(() => Math.random() - 0.5).slice(0, 3)
+      const spawnedNames: string[] = []
+
+      shuffledLanes.forEach(targetLane => {
+        const pool = targetLane.type === 'water' ? GARG_POOL.filter(g => g.amphibious) : GARG_POOL
+        const chosen = pool[Math.floor(Math.random() * pool.length)] || GARG_POOL[0]
+        targetLane.zombieMinion = {
+          instanceId: `garg_feast_${Date.now()}_${targetLane.index}_${Math.random()}`,
+          cardId: chosen.cardId,
+          name: chosen.name,
+          side: 'zombies',
+          currentAttack: chosen.attack,
+          baseAttack: chosen.attack,
+          currentHealth: chosen.health,
+          maxHealth: chosen.health,
+          armored: chosen.armored,
+          frenzy: chosen.frenzy,
+          amphibious: chosen.amphibious,
+          image: chosen.image,
+        }
+        spawnedNames.push(`${chosen.name} tại ${targetLane.name}`)
+      })
+
+      if (spawnedNames.length > 0) {
+        message = `Gargantuar's Feast! Bữa tiệc khổng lồ triệu hồi 3 Gargantuar: ${spawnedNames.join(', ')}!`
+      } else {
+        message = `Gargantuar's Feast được kích hoạt nhưng không còn chỗ trống trên sân đấu!`
       }
       break
     }

@@ -1946,25 +1946,34 @@ export function reserveBrainsForTricks(
 export function getAIDecision(
   state: GameState,
   side: Side,
-  difficultyOrOptions: AIDifficulty | AIDecisionOptions = 'normal'
+  difficultyOrOptions: AIDifficulty | AIArchetype | AIDecisionOptions = 'normal'
 ): AIDecision {
-  const difficulty: AIDifficulty =
-    typeof difficultyOrOptions === 'string'
-      ? difficultyOrOptions
-      : (difficultyOrOptions.difficulty ?? 'normal')
+  const isDifficulty =
+    typeof difficultyOrOptions === 'string' &&
+    ['easy', 'normal', 'hard', 'expert'].includes(difficultyOrOptions)
+  const isArchetype =
+    typeof difficultyOrOptions === 'string' &&
+    ['aggro', 'control', 'tempo', 'combo'].includes(difficultyOrOptions)
+
+  const difficulty: AIDifficulty = isDifficulty
+    ? (difficultyOrOptions as AIDifficulty)
+    : typeof difficultyOrOptions === 'object' && difficultyOrOptions.difficulty
+      ? difficultyOrOptions.difficulty
+      : 'normal'
 
   const isZombie = side === 'zombies'
   const myHero = isZombie ? state.zombieHero : state.plantHero
 
-  // When archetype is explicitly provided, use it.
+  // When archetype is explicitly provided (as string or in options), use it.
   // In bossMode without explicit archetype, infer from hero.
-  // Otherwise, default to 'tempo' (balanced tactical baseline) for backwards compatibility with existing suites.
-  const archetype: AIArchetype =
-    typeof difficultyOrOptions === 'object' && difficultyOrOptions.archetype
+  // Otherwise, default to 'tempo' (balanced tactical baseline) for backwards compatibility.
+  const archetype: AIArchetype = isArchetype
+    ? (difficultyOrOptions as AIArchetype)
+    : typeof difficultyOrOptions === 'object' && difficultyOrOptions.archetype
       ? difficultyOrOptions.archetype
-      : (typeof difficultyOrOptions === 'object' && difficultyOrOptions.bossMode
-          ? getHeroDefaultArchetype(myHero.id)
-          : 'tempo')
+      : typeof difficultyOrOptions === 'object' && difficultyOrOptions.bossMode
+        ? getHeroDefaultArchetype(myHero.id)
+        : 'tempo'
 
   const hand = isZombie ? state.zombieHand : state.plantHand
   const resource = isZombie ? myHero.brains : myHero.sun
@@ -2723,6 +2732,20 @@ export function getAIDecision(
           card: plantEnv,
           laneIndex: anyZombieEnvLaneIdx,
           reason: `Environment Tactics: ${plantEnv.name} overrides beneficial zombie environment ${state.lanes[anyZombieEnvLaneIdx].environment!.name} in lane ${anyZombieEnvLaneIdx + 1}`,
+        }
+      }
+    }
+
+    // B2. Anti-Grave Tactics: Grave Buster destroys enemy Gravestones before reveal
+    const graveBuster = playableCards.find((c) => c.id === 'plant_grave_buster')
+    if (graveBuster) {
+      const graveLaneIdx = state.lanes.findIndex((l) => l.zombieMinion?.isGravestone)
+      if (graveLaneIdx !== -1) {
+        return {
+          action: 'PLAY_TRICK',
+          card: graveBuster,
+          laneIndex: graveLaneIdx,
+          reason: `Anti-Grave Tactics: Grave Buster crushes enemy Gravestone in lane ${graveLaneIdx + 1} before reveal`,
         }
       }
     }
