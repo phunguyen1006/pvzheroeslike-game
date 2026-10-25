@@ -27,12 +27,12 @@ import {
 import { executeTrick } from './tricks'
 import { executeSuperpower } from './superpowers'
 
-export const DEFAULT_LANES_CONFIG: { index: number; type: 'heights' | 'ground' | 'water'; name: string }[] = [
-  { index: 0, type: 'heights', name: 'Lane 1 (Heights)' },
-  { index: 1, type: 'ground', name: 'Lane 2 (Ground)' },
-  { index: 2, type: 'ground', name: 'Lane 3 (Ground)' },
-  { index: 3, type: 'ground', name: 'Lane 4 (Ground)' },
-  { index: 4, type: 'water', name: 'Lane 5 (Water)' },
+export const DEFAULT_LANES_CONFIG: { index: number; type: 'heights' | 'ground' | 'water'; laneType?: 'ground' | 'water' | 'heights'; name: string }[] = [
+  { index: 0, type: 'heights', laneType: 'heights', name: 'Lane 1 (Heights)' },
+  { index: 1, type: 'ground', laneType: 'ground', name: 'Lane 2 (Ground)' },
+  { index: 2, type: 'ground', laneType: 'ground', name: 'Lane 3 (Ground)' },
+  { index: 3, type: 'ground', laneType: 'ground', name: 'Lane 4 (Ground)' },
+  { index: 4, type: 'water', laneType: 'water', name: 'Lane 5 (Water)' },
 ]
 
 export function createInitialHero(side: Side, heroId?: string): HeroState {
@@ -63,6 +63,7 @@ export function createInitialLanes(): LaneState[] {
   return DEFAULT_LANES_CONFIG.map(cfg => ({
     index: cfg.index,
     type: cfg.type,
+    laneType: cfg.laneType || (cfg.type === 'water' ? 'water' : 'ground'),
     name: cfg.name,
     zombieMinion: null,
     plantMinion: null,
@@ -146,14 +147,17 @@ export function createInitialGameState(
   customZombieDeck?: Card[],
   initialLanes?: LaneState[],
   startingSunBonus: number = 0,
-  startingBrainsBonus: number = 0
+  startingBrainsBonus: number = 0,
+  modifiers?: string[]
 ): GameState {
   const plantHero = createInitialHero('plants', plantHeroId)
   const zombieHero = createInitialHero('zombies', zombieHeroId)
 
-  if (startingSunBonus > 0) {
-    plantHero.sun += startingSunBonus
-    plantHero.maxSun += startingSunBonus
+  const effectiveSunBonus = startingSunBonus + (modifiers?.includes('sun_surge') ? 2 : 0)
+
+  if (effectiveSunBonus > 0) {
+    plantHero.sun += effectiveSunBonus
+    plantHero.maxSun += effectiveSunBonus
   }
   if (startingBrainsBonus > 0) {
     zombieHero.brains += startingBrainsBonus
@@ -177,12 +181,40 @@ export function createInitialGameState(
   const plantSP = getHeroSuperpowerCard(plantHero.id, 'plants')
   const zombieSP = getHeroSuperpowerCard(zombieHero.id, 'zombies')
 
+  let processedLanes = initialLanes ? initialLanes.map(l => ({ ...l })) : createInitialLanes()
+  if (modifiers && modifiers.length > 0) {
+    processedLanes = processedLanes.map(lane => {
+      const updatedLane = { ...lane }
+      const transformMinion = (m: Minion | null | undefined): Minion | null | undefined => {
+        if (!m) return m
+        let res = { ...m }
+        if (modifiers.includes('zombie_frenzy') && res.side === 'zombies') {
+          res.frenzy = true
+          if (!res.traits?.includes('frenzy')) {
+            res.traits = [...(res.traits || []), 'frenzy']
+          }
+        }
+        if (modifiers.includes('glass_cannon')) {
+          res.currentAttack += 3
+          res.baseAttack += 3
+          res.currentHealth = Math.max(1, res.currentHealth - 2)
+          res.maxHealth = Math.max(1, res.maxHealth - 2)
+        }
+        return res
+      }
+      if (updatedLane.plantMinion) updatedLane.plantMinion = transformMinion(updatedLane.plantMinion) as Minion
+      if (updatedLane.plantTeamUpMinion) updatedLane.plantTeamUpMinion = transformMinion(updatedLane.plantTeamUpMinion) as Minion
+      if (updatedLane.zombieMinion) updatedLane.zombieMinion = transformMinion(updatedLane.zombieMinion) as Minion
+      return updatedLane
+    })
+  }
+
   return {
     turn: 1,
     phase: 'ZOMBIE_PLAY',
     plantHero,
     zombieHero,
-    lanes: initialLanes ? initialLanes.map(l => ({ ...l })) : createInitialLanes(),
+    lanes: processedLanes,
     plantDeck: remainingPlantDeck,
     zombieDeck: remainingZombieDeck,
     plantHand: [...initialPlantHand, plantSP],
@@ -193,6 +225,7 @@ export function createInitialGameState(
     pendingSuperBlock: null,
     combatEvents: [],
     combatLog: ['Trận đấu bắt đầu! Lượt 1: Zombies xuất chiêu.'],
+    modifiers: modifiers || [],
   }
 }
 
@@ -207,7 +240,8 @@ export function canPlayCardToLane(
     card.laneRequirement === 'water' ||
     card.traits?.some((t: any) => typeof t === 'string' && t.toLowerCase().includes('amphibious'))
   )
-  if (lane.type === 'water' && !isAmphibious) {
+  const isWater = lane.laneType === 'water' || lane.type === 'water'
+  if (isWater && !isAmphibious) {
     return {
       allowed: false,
       reason: 'Chỉ các lá bài có đặc tính Amphibious mới có thể đặt vào Water Lane.',
@@ -236,7 +270,14 @@ export function canPlayCardToLane(
           return { allowed: true } // Corn Evolution allows evolving on any Corn plant!
         }
       }
-      const hasTeamUp = card.teamUp || card.traits?.includes('teamUp') || lane.plantMinion.teamUp || lane.plantMinion.traits?.includes('teamUp')
+      const hasTeamUp = Boolean(
+        card.teamUp ||
+        card.traits?.includes('teamUp') ||
+        card.traits?.some((t: any) => typeof t === 'string' && (t.toLowerCase().includes('teamup') || t.toLowerCase().includes('team-up'))) ||
+        lane.plantMinion.teamUp ||
+        lane.plantMinion.traits?.includes('teamUp') ||
+        lane.plantMinion.traits?.some((t: any) => typeof t === 'string' && (t.toLowerCase().includes('teamup') || t.toLowerCase().includes('team-up')))
+      )
       if (hasTeamUp && !lane.plantTeamUpMinion) {
         return { allowed: true } // Team-Up allows 2 plants on the same lane!
       }
@@ -304,7 +345,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         action.zombieDeck,
         action.initialLanes,
         action.startingSunBonus ?? 0,
-        action.startingBrainsBonus ?? 0
+        action.startingBrainsBonus ?? 0,
+        action.modifiers
       )
     }
 
@@ -478,6 +520,22 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         doubleStrike: card.doubleStrike,
         gravestone: isGravestoneTrait || card.gravestone,
         isGravestone: isGravestoneTrait,
+      }
+
+      // Apply mission modifiers if active
+      if (state.modifiers && state.modifiers.length > 0) {
+        if (state.modifiers.includes('zombie_frenzy') && side === 'zombies') {
+          minion.frenzy = true
+          if (!minion.traits?.includes('frenzy')) {
+            minion.traits = [...(minion.traits || []), 'frenzy']
+          }
+        }
+        if (state.modifiers.includes('glass_cannon')) {
+          minion.currentAttack += 3
+          minion.baseAttack += 3
+          minion.currentHealth = Math.max(1, minion.currentHealth - 2)
+          minion.maxHealth = Math.max(1, minion.maxHealth - 2)
+        }
       }
 
       let isEvolved = false

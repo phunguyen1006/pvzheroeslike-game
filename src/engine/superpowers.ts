@@ -16,10 +16,20 @@ export interface SuperpowerResult {
 
 export function executeSuperpower(
   state: GameState,
-  superpowerId: string,
-  side: Side,
-  targetLaneIndex?: number
+  superpowerIdOrCard: string | Card,
+  sideOrLaneIndex?: Side | number,
+  maybeTargetLaneIndex?: number
 ): SuperpowerResult {
+  const superpowerId = typeof superpowerIdOrCard === 'string' ? superpowerIdOrCard : superpowerIdOrCard.id
+  let side: Side = typeof superpowerIdOrCard === 'object' && superpowerIdOrCard.side ? superpowerIdOrCard.side : 'plants'
+  let targetLaneIndex: number | undefined = maybeTargetLaneIndex
+
+  if (typeof sideOrLaneIndex === 'number') {
+    targetLaneIndex = sideOrLaneIndex
+  } else if (sideOrLaneIndex === 'plants' || sideOrLaneIndex === 'zombies') {
+    side = sideOrLaneIndex
+  }
+
   let updatedState: GameState = {
     ...state,
     lanes: state.lanes.map(l => ({ ...l })),

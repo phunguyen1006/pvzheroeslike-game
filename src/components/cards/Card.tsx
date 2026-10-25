@@ -123,6 +123,19 @@ export const Card: React.FC<CardProps> = ({
 
   const classIcon = card.heroClass ? CLASS_ICON_MAP[card.heroClass] : null
 
+  // Card Rarity Classification & Visual Indicator Border
+  const rawRarity = (card.rarity || 'common').toLowerCase()
+  let rarityClass = 'rarity-border-common'
+  if (rawRarity.includes('legendary')) {
+    rarityClass = 'rarity-border-legendary'
+  } else if (rawRarity.includes('super')) {
+    rarityClass = 'rarity-border-super-rare'
+  } else if (rawRarity.includes('rare')) {
+    rarityClass = 'rarity-border-rare'
+  } else if (rawRarity.includes('uncommon')) {
+    rarityClass = 'rarity-border-uncommon'
+  }
+
   // Normalize traits list
   const activeTraits: string[] = []
   if (card.amphibious) activeTraits.push('amphibious')
@@ -216,11 +229,11 @@ export const Card: React.FC<CardProps> = ({
       <div
         className={`pvz-card ${card.side}-card type-${card.type} ${isSelected ? 'is-selected' : ''} ${
           isPlayable ? 'is-playable' : 'is-unplayable'
-        }`}
+        } ${rarityClass}`}
         onClick={handleClick}
       >
         {/* Outer Frame Decoration (Plant leaf / Zombie metallic plate) */}
-        <div className="card-frame-border" />
+        <div className={`card-frame-border ${rarityClass}`} />
 
         {/* Cost Orb (Sun for plants, Brain for zombies, Free 0 for Superpowers) */}
         <div className={`card-cost-orb ${isSuperpower ? 'superpower-orb' : isPlant ? 'sun-orb' : 'brain-orb'}`}>

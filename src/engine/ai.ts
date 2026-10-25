@@ -15,10 +15,144 @@ export type AIDifficulty = 'easy' | 'normal' | 'hard' | 'expert'
 
 export type AIArchetype = 'aggro' | 'control' | 'tempo' | 'combo'
 
+export interface AIPerformanceMetrics {
+  turnsElapsed: number
+  totalDamageDealt: number
+  totalDamageTaken: number
+  cardsPlayed: number
+  superpowersUsed: number
+  missedLethalsCount: number
+  lethalPlaysCount: number
+  suboptimalPlaysCount: number
+  decisionsCount: number
+  actionsHistory: Array<{
+    turn: number
+    phase: string
+    action: string
+    cardId?: string
+    laneIndex?: number
+    reason?: string
+    isSuboptimal?: boolean
+    isLethal?: boolean
+    isMissedLethal?: boolean
+  }>
+}
+
+export interface AIPerformanceTracker {
+  metrics: AIPerformanceMetrics
+  getMetrics(): AIPerformanceMetrics
+  recordDecision(
+    decision: AIDecision,
+    state: GameState,
+    flags?: { isSuboptimal?: boolean; isLethal?: boolean; isMissedLethal?: boolean }
+  ): void
+  recordCombatDamage(damageDealt: number, damageTaken: number): void
+  recordSuperpowerUsed(superpowerId: string): void
+  recordTurnEnd(turn: number): void
+  reset(): void
+  exportSummary(): {
+    turnsElapsed: number
+    totalDamageDealt: number
+    totalDamageTaken: number
+    cardsPlayed: number
+    superpowersUsed: number
+    missedLethalsCount: number
+    lethalPlaysCount: number
+    suboptimalPlaysCount: number
+    suboptimalRate: number
+  }
+}
+
+export function createAIPerformanceTracker(): AIPerformanceTracker {
+  const metrics: AIPerformanceMetrics = {
+    turnsElapsed: 0,
+    totalDamageDealt: 0,
+    totalDamageTaken: 0,
+    cardsPlayed: 0,
+    superpowersUsed: 0,
+    missedLethalsCount: 0,
+    lethalPlaysCount: 0,
+    suboptimalPlaysCount: 0,
+    decisionsCount: 0,
+    actionsHistory: [],
+  }
+
+  return {
+    metrics,
+    getMetrics: () => ({ ...metrics, actionsHistory: [...metrics.actionsHistory] }),
+    recordDecision(decision, state, flags) {
+      metrics.decisionsCount++
+      if (decision.card) metrics.cardsPlayed++
+      if (flags?.isSuboptimal) metrics.suboptimalPlaysCount++
+      if (flags?.isLethal) metrics.lethalPlaysCount++
+      if (flags?.isMissedLethal) metrics.missedLethalsCount++
+
+      metrics.actionsHistory.push({
+        turn: state.turn,
+        phase: state.phase,
+        action: decision.action,
+        cardId: decision.card?.id,
+        laneIndex: decision.laneIndex,
+        reason: decision.reason,
+        isSuboptimal: flags?.isSuboptimal,
+        isLethal: flags?.isLethal,
+        isMissedLethal: flags?.isMissedLethal,
+      })
+    },
+    recordCombatDamage(damageDealt, damageTaken) {
+      metrics.totalDamageDealt += damageDealt
+      metrics.totalDamageTaken += damageTaken
+    },
+    recordSuperpowerUsed(_superpowerId) {
+      metrics.superpowersUsed++
+    },
+    recordTurnEnd(turn) {
+      metrics.turnsElapsed = Math.max(metrics.turnsElapsed, turn)
+    },
+    reset() {
+      metrics.turnsElapsed = 0
+      metrics.totalDamageDealt = 0
+      metrics.totalDamageTaken = 0
+      metrics.cardsPlayed = 0
+      metrics.superpowersUsed = 0
+      metrics.missedLethalsCount = 0
+      metrics.lethalPlaysCount = 0
+      metrics.suboptimalPlaysCount = 0
+      metrics.decisionsCount = 0
+      metrics.actionsHistory = []
+    },
+    exportSummary() {
+      const suboptimalRate =
+        metrics.decisionsCount > 0 ? metrics.suboptimalPlaysCount / metrics.decisionsCount : 0
+      return {
+        turnsElapsed: metrics.turnsElapsed,
+        totalDamageDealt: metrics.totalDamageDealt,
+        totalDamageTaken: metrics.totalDamageTaken,
+        cardsPlayed: metrics.cardsPlayed,
+        superpowersUsed: metrics.superpowersUsed,
+        missedLethalsCount: metrics.missedLethalsCount,
+        lethalPlaysCount: metrics.lethalPlaysCount,
+        suboptimalPlaysCount: metrics.suboptimalPlaysCount,
+        suboptimalRate: Math.round(suboptimalRate * 100) / 100,
+      }
+    },
+  }
+}
+
+export function exportAIPerformanceMetrics(tracker: AIPerformanceTracker): AIPerformanceMetrics {
+  return tracker.getMetrics()
+}
+
 export interface AIDecisionOptions {
   difficulty?: AIDifficulty
   archetype?: AIArchetype
   bossMode?: boolean
+  playerConsecutiveLosses?: number
+  turnCount?: number
+  metricsTracker?: AIPerformanceTracker
+  suboptimalRate?: number
+  forceSuboptimal?: boolean
+  forceMissLethal?: boolean
 }
 
 export interface BoardEvaluation {
@@ -382,8 +516,28 @@ export function evaluateBoardState(
 export function getAIMulliganDecision(
   hand: Card[],
   archetype: AIArchetype = 'tempo',
-  _heroId?: string
+  _heroId?: string,
+  difficulty: AIDifficulty = 'normal'
 ): MulliganDecision {
+  if (difficulty === 'easy') {
+    // Easy AI: Suboptimal mulligan.
+    // Keeps heavy cards (cost >= 4) and swaps cheap early-game curve cards (1-2 cost).
+    const keepIndices: number[] = []
+    const swapIndices: number[] = []
+    hand.forEach((card, idx) => {
+      if (card.cost >= 4) {
+        keepIndices.push(idx)
+      } else {
+        swapIndices.push(idx)
+      }
+    })
+    return {
+      keepIndices,
+      swapIndices,
+      reason: 'Easy AI: Suboptimal mulligan (keeps heavy cards >= 4 cost, swaps early curve cards)',
+    }
+  }
+
   const keepIndices: number[] = []
   const swapIndices: number[] = []
 
@@ -521,9 +675,10 @@ export function getAIMulliganDecision(
 export function chooseMulliganCards(
   hand: Card[],
   archetype: AIArchetype = 'tempo',
-  heroId?: string
+  heroId?: string,
+  difficulty: AIDifficulty = 'normal'
 ): number[] {
-  return getAIMulliganDecision(hand, archetype, heroId).swapIndices
+  return getAIMulliganDecision(hand, archetype, heroId, difficulty).swapIndices
 }
 
 /**

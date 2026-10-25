@@ -206,6 +206,7 @@ export function App() {
       initialLanes: missionLanes,
       startingSunBonus: mission.rule.startingSunBonus || 0,
       startingBrainsBonus: mission.rule.startingBrainsBonus || 0,
+      modifiers: mission.rule.modifiers || [],
     })
     setShowComicIntro(true)
     setCurrentScreen('battle')
@@ -781,6 +782,7 @@ export function App() {
         initialLanes: buildMissionLanes(activeCampaignMission),
         startingSunBonus: activeCampaignMission.rule.startingSunBonus || 0,
         startingBrainsBonus: activeCampaignMission.rule.startingBrainsBonus || 0,
+        modifiers: activeCampaignMission.rule.modifiers || [],
       })
     } else {
       dispatch({

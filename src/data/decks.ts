@@ -4,8 +4,8 @@
  * Ready for Core Game Engine & Frontend Battle Board
  */
 
-import { getCardById } from './cards';
-import type { CardData, Team } from './cards';
+import { getCardById, ALL_HEROES } from './cards';
+import type { CardData, Team, HeroData } from './cards';
 
 function getCard(id: string): CardData {
  const card = getCardById(id);
@@ -122,4 +122,64 @@ export function shuffleDeck<T>(deck: T[]): T[] {
  */
 export function createCustomDeck(cardIds: string[]): CardData[] {
  return cardIds.map((id) => getCard(id));
+}
+
+export interface DeckValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+/**
+ * Validates that all cards in a deck strictly conform to the Hero's assigned two classes and team.
+ */
+export function validateDeckForHero(
+  heroIdOrHero: string | HeroData,
+  cards: (CardData | string)[]
+): DeckValidationResult {
+  const hero = typeof heroIdOrHero === 'string'
+    ? ALL_HEROES.find(h => h.id === heroIdOrHero)
+    : heroIdOrHero;
+
+  if (!hero) {
+    return {
+      valid: false,
+      errors: [`Hero not found: ${heroIdOrHero}`],
+    };
+  }
+
+  const errors: string[] = [];
+  const cardCounts: Record<string, number> = {};
+
+  cards.forEach((item, index) => {
+    const card = typeof item === 'string' ? getCardById(item) : item;
+    if (!card) {
+      errors.push(`Card at index ${index} is invalid or not found.`);
+      return;
+    }
+
+    // Check team alignment
+    if (card.team !== hero.team) {
+      errors.push(
+        `Card "${card.name}" (${card.team}) does not match Hero "${hero.name}" team (${hero.team}).`
+      );
+    }
+
+    // Check Hero Class alignment
+    if (!hero.classes.includes(card.heroClass)) {
+      errors.push(
+        `Card "${card.name}" has class "${card.heroClass}", which is not available to ${hero.name} (Classes: ${hero.classes.join(', ')}).`
+      );
+    }
+
+    // Check max copies (standard 4-copy rule)
+    cardCounts[card.id] = (cardCounts[card.id] || 0) + 1;
+    if (cardCounts[card.id] > 4) {
+      errors.push(`Card "${card.name}" exceeds the maximum limit of 4 copies (Found: ${cardCounts[card.id]}).`);
+    }
+  });
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
 }

@@ -222,6 +222,29 @@ export function executeTrick(
       break
     }
 
+    case 'plant_tactical_cuke': {
+      // Destroy all plants and zombies on ground lanes (non-targeted AOE)
+      const destroyed: string[] = []
+      updatedLanes.forEach(lane => {
+        if (lane.type === 'ground') {
+          if (lane.plantMinion) {
+            destroyed.push(lane.plantMinion.name)
+            lane.plantMinion = null
+          }
+          if (lane.plantTeamUpMinion) {
+            destroyed.push(lane.plantTeamUpMinion.name)
+            lane.plantTeamUpMinion = null
+          }
+          if (lane.zombieMinion) {
+            destroyed.push(lane.zombieMinion.name)
+            lane.zombieMinion = null
+          }
+        }
+      })
+      message = `Tactical Cuke phóng tên lửa hủy diệt tất cả minion trên các làn đất: ${destroyed.join(', ') || 'Không có ai'}!`
+      break
+    }
+
     case 'plant_spring_bean': {
       // Bounce a Zombie
       if (targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.zombieMinion) {
@@ -484,6 +507,36 @@ export function executeTrick(
           health: 8,
           amphibious: true,
           image: '/assets/cards/zombies/Zombot 1000.png',
+        },
+        {
+          cardId: 'zombie_smashing_gargantuar',
+          name: 'Smashing Gargantuar',
+          attack: 6,
+          health: 6,
+          frenzy: true,
+          image: '/assets/cards/zombies/Arm Wrestler.png',
+        },
+        {
+          cardId: 'zombie_mondo_bronto',
+          name: 'Mondo Bronto',
+          attack: 5,
+          health: 5,
+          amphibious: true,
+          image: '/assets/cards/zombies/Zombot 1000.png',
+        },
+        {
+          cardId: 'zombie_turquoise_skull_zombie',
+          name: 'Turquoise Skull Zombie',
+          attack: 5,
+          health: 5,
+          image: '/assets/cards/zombies/Disco Zombie.png',
+        },
+        {
+          cardId: 'zombie_imp_throwing_gargantuar',
+          name: 'Imp-Throwing Gargantuar',
+          attack: 8,
+          health: 8,
+          image: '/assets/cards/zombies/Arm Wrestler.png',
         },
       ]
 

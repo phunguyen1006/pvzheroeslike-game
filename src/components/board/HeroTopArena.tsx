@@ -11,6 +11,7 @@ export interface HeroTopArenaProps {
   phase: Phase
   isHurt?: boolean
   isUsingSuperpower?: boolean
+  isSuperBlockTriggered?: boolean
   floatingDamage?: string
   isTargetable?: boolean
   onHeroClick?: () => void
@@ -31,6 +32,7 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
   phase,
   isHurt = false,
   isUsingSuperpower = false,
+  isSuperBlockTriggered = false,
   floatingDamage,
   isTargetable = false,
   onHeroClick,
@@ -53,7 +55,20 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
   // Visual feedback when Opponent Super-Block meter charges (1-3 segments bouncing & flashing)
   const [activeChargeRoll, setActiveChargeRoll] = useState<number | null>(null)
   const [flashingSegments, setFlashingSegments] = useState<number[]>([])
+  const [showShieldShatter, setShowShieldShatter] = useState(false)
   const prevMeterRef = useRef(blockMeterVal)
+  const prevShieldActiveRef = useRef(hero.isShieldActive)
+
+  useEffect(() => {
+    if ((hero.isShieldActive && !prevShieldActiveRef.current) || isSuperBlockTriggered) {
+      setShowShieldShatter(true)
+      soundManager.playShieldClang()
+      const timer = setTimeout(() => setShowShieldShatter(false), 1300)
+      prevShieldActiveRef.current = hero.isShieldActive
+      return () => clearTimeout(timer)
+    }
+    prevShieldActiveRef.current = hero.isShieldActive
+  }, [hero.isShieldActive, isSuperBlockTriggered])
 
   useEffect(() => {
     const prev = prevMeterRef.current
@@ -193,6 +208,32 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
             <div className="hero-superpower-radiant-aura" aria-hidden="true">
               <div className="superpower-aura-ring" />
               <div className="superpower-sparkle-burst" />
+            </div>
+          )}
+
+          {/* Super-Block 1.2s Protective Radiant Energy Bubble */}
+          {showShieldShatter && (
+            <div className={`hero-energy-bubble-shield ${side}-energy-bubble`} aria-hidden="true">
+              <div className="energy-bubble-sphere" />
+              <div className="energy-bubble-sheen" />
+              <div className="energy-bubble-pulse-ring ring-1" />
+              <div className="energy-bubble-pulse-ring ring-2" />
+            </div>
+          )}
+
+          {/* Super-Block Shattering Energy Shield & Glass Particles */}
+          {showShieldShatter && (
+            <div className="shield-shatter-particles-container" aria-hidden="true">
+              <div className="shield-glass-shard shard-1" />
+              <div className="shield-glass-shard shard-2" />
+              <div className="shield-glass-shard shard-3" />
+              <div className="shield-glass-shard shard-4" />
+              <div className="shield-glass-shard shard-5" />
+              <div className="shield-glass-shard shard-6" />
+              <div className="shield-glass-shard shard-7" />
+              <div className="shield-glass-shard shard-8" />
+              <div className="shield-burst-flash" />
+              <div className="shield-block-comic-badge">BLOCKED!</div>
             </div>
           )}
 

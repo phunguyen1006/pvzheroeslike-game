@@ -496,20 +496,63 @@ class SoundManager {
 
   // 6. Shield Deflection / Block Meter Charge (metallic ping)
   playShieldBlock() {
+    this.playShieldClang()
+  }
+
+  // 6a. Heavy metallic Super-Block shield shatter / clang with glass splinter harmonics
+  playShieldClang() {
     const dest = this.getSFXDestination()
     if (!dest || !this.ctx) return
     const now = this.ctx.currentTime
-    const osc = this.ctx.createOscillator()
-    const gain = this.ctx.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(1200, now)
-    osc.frequency.exponentialRampToValueAtTime(600, now + 0.15)
-    gain.gain.setValueAtTime(0.3, now)
-    gain.gain.linearRampToValueAtTime(0.01, now + 0.18)
-    osc.connect(gain)
-    gain.connect(dest)
-    osc.start(now)
-    osc.stop(now + 0.18)
+
+    // Heavy metallic clang frequencies (inharmonic metal resonator)
+    const metalFreqs = [520, 840, 1420, 2600]
+    metalFreqs.forEach((freq, idx) => {
+      if (!this.ctx) return
+      const osc = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+      osc.type = idx % 2 === 0 ? 'triangle' : 'square'
+      osc.frequency.setValueAtTime(freq, now)
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.45, now + 0.32)
+
+      const volume = idx === 0 ? 0.35 : 0.18
+      gain.gain.setValueAtTime(volume, now)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35)
+
+      osc.connect(gain)
+      gain.connect(dest)
+      osc.start(now)
+      osc.stop(now + 0.35)
+    })
+
+    // Glass shatter sparkle burst (high white noise burst)
+    try {
+      const bufferSize = Math.floor(this.ctx.sampleRate * 0.2)
+      const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate)
+      const output = noiseBuffer.getChannelData(0)
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1
+      }
+      const noise = this.ctx.createBufferSource()
+      noise.buffer = noiseBuffer
+
+      const filter = this.ctx.createBiquadFilter()
+      filter.type = 'bandpass'
+      filter.frequency.setValueAtTime(3200, now)
+      filter.Q.setValueAtTime(4.0, now)
+
+      const noiseGain = this.ctx.createGain()
+      noiseGain.gain.setValueAtTime(0.22, now)
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22)
+
+      noise.connect(filter)
+      filter.connect(noiseGain)
+      noiseGain.connect(dest)
+      noise.start(now)
+      noise.stop(now + 0.22)
+    } catch {
+      // AudioBuffer fallback ignored in mock tests
+    }
   }
 
   // 6b. Super-Block Meter Charge (1-3 rising ding chimes)

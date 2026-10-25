@@ -757,11 +757,11 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
       const res = executeTrick(state, bmr, 'zombies')
       expect(res.success).toBe(true)
       expect(res.updatedState.lanes[0].zombieMinion).toBeDefined()
-      expect(res.updatedState.lanes[0].zombieMinion?.currentAttack).toBeGreaterThanOrEqual(4)
-      expect(res.updatedState.lanes[0].zombieMinion?.currentHealth).toBeGreaterThanOrEqual(4)
+      expect(res.updatedState.lanes[0].zombieMinion?.currentAttack).toBeGreaterThanOrEqual(3)
+      expect(res.updatedState.lanes[0].zombieMinion?.currentHealth).toBeGreaterThanOrEqual(3)
       expect(res.updatedState.lanes[1].zombieMinion).toBeDefined()
-      expect(res.updatedState.lanes[1].zombieMinion?.currentAttack).toBeGreaterThanOrEqual(4)
-      expect(res.updatedState.lanes[1].zombieMinion?.currentHealth).toBeGreaterThanOrEqual(4)
+      expect(res.updatedState.lanes[1].zombieMinion?.currentAttack).toBeGreaterThanOrEqual(3)
+      expect(res.updatedState.lanes[1].zombieMinion?.currentHealth).toBeGreaterThanOrEqual(3)
     })
   })
 
@@ -2335,17 +2335,17 @@ describe('PvZ Heroes Comprehensive Core Game Engine Test Suite', () => {
       const z4 = res.updatedState.lanes[4].zombieMinion!
 
       expect(z0).toBeDefined()
-      expect(z0.currentAttack).toBeGreaterThanOrEqual(4)
-      expect(z0.currentHealth).toBeGreaterThanOrEqual(4)
+      expect(z0.currentAttack).toBeGreaterThanOrEqual(3)
+      expect(z0.currentHealth).toBeGreaterThanOrEqual(3)
 
       expect(z1).toBeDefined()
-      expect(z1.currentAttack).toBeGreaterThanOrEqual(4)
-      expect(z1.currentHealth).toBeGreaterThanOrEqual(4)
+      expect(z1.currentAttack).toBeGreaterThanOrEqual(3)
+      expect(z1.currentHealth).toBeGreaterThanOrEqual(3)
 
       // Water lane zombie must be Amphibious!
       expect(z4).toBeDefined()
       expect(z4.amphibious).toBe(true)
-      expect(z4.name).toBe('Deep Sea Gargantuar')
+      expect(['Deep Sea Gargantuar', 'Mondo Bronto', 'Zombot Sharktronic Sub']).toContain(z4.name)
 
       expect(res.message).toContain('Bad Moon Rising! Trăng máu trỗi dậy')
     })

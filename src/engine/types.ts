@@ -92,6 +92,7 @@ export interface Minion {
   damageTakenThisTurn?: number
   isInvulnerable?: boolean
   invulnerableThisTurn?: boolean
+  laneRequirement?: 'ground' | 'heights' | 'water' | 'any'
 }
 
 export interface EnvironmentState {
@@ -106,6 +107,7 @@ export interface EnvironmentState {
 export interface LaneState {
   index: number
   type: LaneType
+  laneType?: 'ground' | 'water' | 'heights'
   name: string
   zombieMinion: Minion | null
   plantMinion: Minion | null
@@ -194,6 +196,7 @@ export interface GameState {
   } | null
   combatEvents: CombatEvent[]
   combatLog: string[]
+  modifiers?: string[]
 }
 
 export type GameAction =
@@ -206,6 +209,7 @@ export type GameAction =
       initialLanes?: LaneState[]
       startingSunBonus?: number
       startingBrainsBonus?: number
+      modifiers?: string[]
     }
   | { type: 'MULLIGAN_SWAP'; side: Side; cardIndices: number[] }
   | { type: 'FINISH_MULLIGAN'; side: Side }
@@ -228,6 +232,7 @@ export interface MissionRule {
   startingBrainBonus?: number
   initialEnvironments?: { laneIndex: number; environmentCardId: string }[]
   initialMinions?: { laneIndex: number; cardId: string; side: Side }[]
+  modifiers?: string[]
 }
 
 export interface ComicStoryDialogue {
@@ -239,6 +244,7 @@ export interface ComicStoryDialogue {
 
 export interface CampaignMission {
   id: string
+  code?: string
   chapter?: number
   missionNumber: number
   faction?: Side

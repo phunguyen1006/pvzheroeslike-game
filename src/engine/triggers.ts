@@ -319,6 +319,36 @@ export function triggerOnDeath(
     })
   }
 
+  // --- Turquoise Skull Zombie (zombie_turquoise_skull_zombie) ---
+  if (deadMinion.cardId === 'zombie_turquoise_skull_zombie' || deadMinion.name.toLowerCase().includes('turquoise skull')) {
+    logs.push(`💀 Turquoise Skull Zombie giải phóng sức mạnh cổ xưa: Biến tất cả Zombie trên sân thành bản sao 5/5!`)
+    updatedState.lanes.forEach(l => {
+      if (l.zombieMinion && l.zombieMinion.instanceId !== deadMinion.instanceId && l.zombieMinion.currentHealth > 0) {
+        l.zombieMinion = {
+          ...l.zombieMinion,
+          cardId: 'zombie_turquoise_skull_zombie',
+          name: 'Turquoise Skull Zombie',
+          currentAttack: 5,
+          baseAttack: 5,
+          currentHealth: 5,
+          maxHealth: 5,
+        }
+        events.push({
+          laneIndex: l.index,
+          attackerSide: 'zombies',
+          attackerName: 'Turquoise Skull Zombie',
+          target: 'minion',
+          targetSide: 'zombies',
+          damageDealt: 0,
+          isBlocked: false,
+          isLethal: false,
+          description: `💀 ${l.zombieMinion.name} tại ${l.name} đã biến đổi thành Turquoise Skull Zombie 5/5!`,
+        })
+        logs.push(`💀 Một Zombie tại ${l.name} đã biến đổi thành Turquoise Skull Zombie 5/5!`)
+      }
+    })
+  }
+
   // =========================================================================
   // 2. IN-HAND CARDS REACTION (Valkyrie)
   // =========================================================================

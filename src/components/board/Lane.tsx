@@ -144,7 +144,7 @@ export const Lane: React.FC<LaneProps> = ({
         isEligible && selectedCard?.side ? `eligible-${selectedCard.side}-lane` : ''
       } ${
         isEligible ? `eligible-lane-type-${lane.type}` : ''
-      } ${isLandingThud ? 'lane-landing-impact' : ''}`}
+      } ${isLandingThud ? 'lane-landing-impact lane-flash-active' : ''}`}
       onClick={() => onSelectLane(lane.index)}
       onDragOver={handleLaneDragOver}
       onDragLeave={handleLaneDragLeave}

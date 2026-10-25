@@ -229,9 +229,101 @@ export function redirectHeroDamageToSoulPatch(
 
 export interface SingleLaneCombatResult {
   updatedState: GameState
+  updatedLane?: LaneState
   events: CombatEvent[]
   hasSuperBlock: boolean
   winner: Side | null
+}
+
+/**
+ * Determines whether a lane is a water/aquatic lane.
+ */
+export function isWaterLane(lane: LaneState): boolean {
+  return lane.laneType === 'water' || lane.type === 'water'
+}
+
+/**
+ * Checks whether a card or minion has the Amphibious trait or water lane requirement.
+ */
+export function isAmphibious(cardOrMinion: Card | Minion): boolean {
+  if (cardOrMinion.amphibious === true) return true
+  if ('laneRequirement' in cardOrMinion && (cardOrMinion as any).laneRequirement === 'water') return true
+  if (cardOrMinion.traits?.some((t: any) => typeof t === 'string' && t.toLowerCase().includes('amphibious'))) return true
+  return false
+}
+
+/**
+ * Checks whether a minion or card has the Team-Up trait.
+ */
+export function hasTeamUp(minion: Minion | Card | null | undefined): boolean {
+  if (!minion) return false
+  if (minion.teamUp === true) return true
+  if (minion.traits?.some((t: any) => typeof t === 'string' && (t.toLowerCase().includes('teamup') || t.toLowerCase().includes('team-up')))) return true
+  return false
+}
+
+/**
+ * Validates whether a card can be placed in an aquatic/water lane.
+ */
+export function validateAquaticPlacement(
+  card: Card,
+  lane: LaneState
+): { allowed: boolean; reason?: string } {
+  if (isWaterLane(lane) && !isAmphibious(card)) {
+    return {
+      allowed: false,
+      reason: 'Chỉ các lá bài có đặc tính Amphibious mới có thể đặt vào Water Lane.',
+    }
+  }
+  return { allowed: true }
+}
+
+/**
+ * Returns all valid lane indices for playing a given card.
+ */
+export function getValidLanesForCard(
+  state: GameState,
+  card: Card,
+  side: Side
+): number[] {
+  const valid: number[] = []
+  state.lanes.forEach((lane, idx) => {
+    // Check aquatic placement restriction
+    if (isWaterLane(lane) && !isAmphibious(card)) {
+      return
+    }
+    // Check minion slot availability
+    if (side === 'plants') {
+      if (!lane.plantMinion) {
+        valid.push(idx)
+      } else if (hasTeamUp(card) || hasTeamUp(lane.plantMinion)) {
+        if (!lane.plantTeamUpMinion) {
+          valid.push(idx)
+        }
+      }
+    } else {
+      if (!lane.zombieMinion) {
+        valid.push(idx)
+      }
+    }
+  })
+  return valid
+}
+
+/**
+ * Finds an alternative valid lane if the preferred lane is unavailable or invalid (e.g. non-amphibious on water).
+ */
+export function findAlternativeLaneForCard(
+  state: GameState,
+  card: Card,
+  side: Side,
+  preferredLaneIndex?: number
+): number | null {
+  const valid = getValidLanesForCard(state, card, side)
+  if (preferredLaneIndex !== undefined && valid.includes(preferredLaneIndex)) {
+    return preferredLaneIndex
+  }
+  return valid.length > 0 ? valid[0] : null
 }
 
 /**
@@ -691,6 +783,75 @@ export function resolveSingleLaneCombat(
       })
     }
 
+    // Shooting Starfruit: Attacks in ALL 5 lanes simultaneously!
+    if ((plant.cardId === 'plant_shooting_starfruit' || plant.name.toLowerCase().includes('shooting starfruit')) && plantCanAttack) {
+      for (let targetLaneIdx = 0; targetLaneIdx < updatedLanes.length; targetLaneIdx++) {
+        if (targetLaneIdx === laneIndex) continue
+        const targetLane = updatedLanes[targetLaneIdx]
+        if (targetLane.zombieMinion && targetLane.zombieMinion.currentHealth > 0) {
+          const isTargetInv = Boolean(targetLane.zombieMinion.isInvulnerable || targetLane.zombieMinion.invulnerableThisTurn)
+          const targetArmor = targetLane.zombieMinion.armored ?? (targetLane.zombieMinion.traits?.some(t => t.toLowerCase().includes('armored')) ? 1 : 0)
+          const dmg = isTargetInv ? 0 : Math.max(0, plant.currentAttack - targetArmor)
+          if (!isTargetInv && dmg > 0) {
+            targetLane.zombieMinion = {
+              ...targetLane.zombieMinion,
+              currentHealth: plantHasDeadly ? 0 : Math.max(0, targetLane.zombieMinion.currentHealth - dmg),
+            }
+          }
+          events.push({
+            laneIndex: targetLaneIdx,
+            attackerSide: 'plants',
+            attackerName: `${plant.name} (Bắn 5 làn)`,
+            target: 'minion',
+            targetSide: 'zombies',
+            damageDealt: dmg,
+            isBlocked: false,
+            isLethal: targetLane.zombieMinion.currentHealth <= 0,
+            description: `⭐ ${plant.name} xạ kích sang làn ${targetLaneIdx + 1} gây ${dmg} sát thương lên ${targetLane.zombieMinion.name}!`,
+          })
+          if (targetLane.zombieMinion.currentHealth <= 0) {
+            deadUnits.push({ minion: targetLane.zombieMinion, laneIndex: targetLaneIdx })
+            targetLane.zombieMinion = null
+          }
+          if (plantHasStrikethrough) {
+            const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
+            currentZombieHero = res.updatedHero
+            events.push({
+              laneIndex: targetLaneIdx,
+              attackerSide: 'plants',
+              attackerName: `${plant.name} (Bắn 5 làn - Strikethrough)`,
+              target: 'hero',
+              targetSide: 'zombies',
+              damageDealt: res.actualDamage,
+              isBlocked: res.blocked,
+              isLethal: currentZombieHero.hp <= 0,
+              description: `⭐ ${plant.name} bắn xuyên thấu làn ${targetLaneIdx + 1} trúng Zombie Hero gây ${res.actualDamage} sát thương!`,
+            })
+            if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+              pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+            }
+          }
+        } else {
+          const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
+          currentZombieHero = res.updatedHero
+          events.push({
+            laneIndex: targetLaneIdx,
+            attackerSide: 'plants',
+            attackerName: `${plant.name} (Bắn 5 làn)`,
+            target: 'hero',
+            targetSide: 'zombies',
+            damageDealt: res.actualDamage,
+            isBlocked: res.blocked,
+            isLethal: currentZombieHero.hp <= 0,
+            description: `⭐ ${plant.name} bắn thẳng qua làn ${targetLaneIdx + 1} trúng Zombie Hero gây ${res.actualDamage} sát thương!`,
+          })
+          if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+            pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+          }
+        }
+      }
+    }
+
     // Strikethrough handling
     if (plantHasStrikethrough && plantCanAttack) {
       const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
@@ -1096,6 +1257,75 @@ export function resolveSingleLaneCombat(
           }
         })
       }
+
+      // Shooting Starfruit: Attacks in ALL 5 lanes simultaneously (Open lane)!
+      if ((plant.cardId === 'plant_shooting_starfruit' || plant.name.toLowerCase().includes('shooting starfruit')) && plantCanAttack) {
+        for (let targetLaneIdx = 0; targetLaneIdx < updatedLanes.length; targetLaneIdx++) {
+          if (targetLaneIdx === laneIndex) continue
+          const targetLane = updatedLanes[targetLaneIdx]
+          if (targetLane.zombieMinion && targetLane.zombieMinion.currentHealth > 0) {
+            const isTargetInv = Boolean(targetLane.zombieMinion.isInvulnerable || targetLane.zombieMinion.invulnerableThisTurn)
+            const targetArmor = targetLane.zombieMinion.armored ?? (targetLane.zombieMinion.traits?.some(t => t.toLowerCase().includes('armored')) ? 1 : 0)
+            const dmg = isTargetInv ? 0 : Math.max(0, plant.currentAttack - targetArmor)
+            if (!isTargetInv && dmg > 0) {
+              targetLane.zombieMinion = {
+                ...targetLane.zombieMinion,
+                currentHealth: plantHasDeadly ? 0 : Math.max(0, targetLane.zombieMinion.currentHealth - dmg),
+              }
+            }
+            events.push({
+              laneIndex: targetLaneIdx,
+              attackerSide: 'plants',
+              attackerName: `${plant.name} (Bắn 5 làn)`,
+              target: 'minion',
+              targetSide: 'zombies',
+              damageDealt: dmg,
+              isBlocked: false,
+              isLethal: targetLane.zombieMinion.currentHealth <= 0,
+              description: `⭐ ${plant.name} xạ kích sang làn ${targetLaneIdx + 1} gây ${dmg} sát thương lên ${targetLane.zombieMinion.name}!`,
+            })
+            if (targetLane.zombieMinion.currentHealth <= 0) {
+              deadUnits.push({ minion: targetLane.zombieMinion, laneIndex: targetLaneIdx })
+              targetLane.zombieMinion = null
+            }
+            if (plantHasStrikethrough) {
+              const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
+              currentZombieHero = res.updatedHero
+              events.push({
+                laneIndex: targetLaneIdx,
+                attackerSide: 'plants',
+                attackerName: `${plant.name} (Bắn 5 làn - Strikethrough)`,
+                target: 'hero',
+                targetSide: 'zombies',
+                damageDealt: res.actualDamage,
+                isBlocked: res.blocked,
+                isLethal: currentZombieHero.hp <= 0,
+                description: `⭐ ${plant.name} bắn xuyên thấu làn ${targetLaneIdx + 1} trúng Zombie Hero gây ${res.actualDamage} sát thương!`,
+              })
+              if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+                pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+              }
+            }
+          } else {
+            const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
+            currentZombieHero = res.updatedHero
+            events.push({
+              laneIndex: targetLaneIdx,
+              attackerSide: 'plants',
+              attackerName: `${plant.name} (Bắn 5 làn)`,
+              target: 'hero',
+              targetSide: 'zombies',
+              damageDealt: res.actualDamage,
+              isBlocked: res.blocked,
+              isLethal: currentZombieHero.hp <= 0,
+              description: `⭐ ${plant.name} bắn thẳng qua làn ${targetLaneIdx + 1} trúng Zombie Hero gây ${res.actualDamage} sát thương!`,
+            })
+            if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+              pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+            }
+          }
+        }
+      }
     }
   } else if (!plant && zombie) {
     // ========================================================
@@ -1254,6 +1484,7 @@ export function resolveSingleLaneCombat(
 
   return {
     updatedState: finalState,
+    updatedLane: finalState.lanes[laneIndex],
     events: stampedEvents,
     hasSuperBlock: finalState.pendingSuperBlock !== null && finalState.pendingSuperBlock !== gameState.pendingSuperBlock,
     winner,

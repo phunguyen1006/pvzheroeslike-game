@@ -6,6 +6,7 @@
 import type { GameState, Side, Minion, Card, CombatEvent, HeroState } from './types'
 import { applyHeroDamage, triggerBonusAttack } from './combat'
 import { applyEnvironmentOnPlay } from './environments'
+import { drawCard } from './reducer'
 import { ALL_CARDS, ZOMBIE_CARDS } from '../data/cards'
 
 export interface AbilityTriggerResult {
@@ -650,6 +651,65 @@ export function triggerWhenPlayed(
       }
       break
     }
+
+    case 'plant_velociradish_hunters': {
+      // Spawn 1 Velociradish Hatchling in an adjacent empty lane
+      const adjLanes = [laneIndex + 1, laneIndex - 1].filter(idx => idx >= 0 && idx < updatedState.lanes.length)
+      const emptyAdj = adjLanes.find(idx => !updatedState.lanes[idx].plantMinion && updatedState.lanes[idx].type !== 'water')
+      if (emptyAdj !== undefined) {
+        updatedState.lanes[emptyAdj].plantMinion = {
+          instanceId: `vrh_${Date.now()}_${emptyAdj}`,
+          cardId: 'plant_velociradish_hatchling',
+          name: 'Velociradish Hatchling',
+          side: 'plants',
+          currentAttack: 2,
+          baseAttack: 2,
+          currentHealth: 2,
+          maxHealth: 2,
+          image: '/assets/cards/plants/Bananasaurus Rex.png',
+        }
+        events.push(`🦖 Velociradish Hunters ấp nở thêm 1 Velociradish Hatchling (2/2) tại làn ${emptyAdj + 1}!`)
+      }
+      break
+    }
+
+    case 'zombie_zombot_sharktronic_sub': {
+      // Deal 3 damage to up to 3 random plants. If any die, draw 3 cards!
+      const targetPlants: { minion: Minion; laneIdx: number; isTeamUp: boolean }[] = []
+      updatedState.lanes.forEach((l, lIdx) => {
+        if (l.plantMinion && l.plantMinion.currentHealth > 0) targetPlants.push({ minion: l.plantMinion, laneIdx: lIdx, isTeamUp: false })
+        if (l.plantTeamUpMinion && l.plantTeamUpMinion.currentHealth > 0) targetPlants.push({ minion: l.plantTeamUpMinion, laneIdx: lIdx, isTeamUp: true })
+      })
+
+      const shuffled = [...targetPlants].sort(() => Math.random() - 0.5).slice(0, 3)
+      let anyDied = false
+      shuffled.forEach(tp => {
+        const p = tp.minion
+        p.currentHealth = Math.max(0, p.currentHealth - 3)
+        events.push(`🦈 Zombot Sharktronic Sub phóng ngư lôi gây 3 sát thương lên ${p.name}!`)
+        if (p.currentHealth <= 0) {
+          anyDied = true
+          events.push(`💥 ${p.name} bị tiêu diệt bởi ngư lôi Sharktronic Sub!`)
+          if (tp.isTeamUp) {
+            updatedState.lanes[tp.laneIdx].plantTeamUpMinion = null
+          } else {
+            updatedState.lanes[tp.laneIdx].plantMinion = null
+          }
+        }
+      })
+
+      if (anyDied) {
+        for (let d = 0; d < 3; d++) {
+          const { newDeck, newHand, drawnCard } = drawCard(updatedState.zombieDeck, updatedState.zombieHand)
+          updatedState.zombieDeck = newDeck
+          updatedState.zombieHand = newHand
+          if (drawnCard) {
+            events.push(`🦈 Tàu ngầm Sharktronic Sub nuốt chửng con mồi: Rút lá bài [${drawnCard.name}]!`)
+          }
+        }
+      }
+      break
+    }
   }
 
   // 2. React to other minions on board
@@ -660,6 +720,11 @@ export function triggerWhenPlayed(
         const res = applyHeroDamage(updatedState.zombieHero, 1, true) // Bullseye!
         updatedState.zombieHero = res.updatedHero
         events.push(`Astro-Shroom phản ứng với Plant mới: Bắn 1 Bullseye damage vào Zombie Hero!`)
+      }
+      if (l.plantTeamUpMinion && l.plantTeamUpMinion.cardId === 'plant_astro_shroom' && l.plantTeamUpMinion.instanceId !== minion.instanceId) {
+        const res = applyHeroDamage(updatedState.zombieHero, 1, true) // Bullseye!
+        updatedState.zombieHero = res.updatedHero
+        events.push(`Astro-Shroom Team-Up phản ứng với Plant mới: Bắn 1 Bullseye damage vào Zombie Hero!`)
       }
     })
 
@@ -1016,25 +1081,76 @@ export function triggerDinoRoar(state: GameState, side: Side): AbilityTriggerRes
       // Aloesaurus: Dino-Roar: Heal all Plants and the Plant Hero for 2!
       const hasAloe = (l.plantMinion && l.plantMinion.cardId === 'plant_aloeosaurus') || (l.plantTeamUpMinion && l.plantTeamUpMinion.cardId === 'plant_aloeosaurus')
       if (hasAloe) {
+        let totalPlantHealed = 0
         updatedState.lanes.forEach(lane => {
           if (lane.plantMinion) {
+            const oldH = lane.plantMinion.currentHealth
             lane.plantMinion = {
               ...lane.plantMinion,
               currentHealth: Math.min(lane.plantMinion.maxHealth, lane.plantMinion.currentHealth + 2),
             }
+            totalPlantHealed += (lane.plantMinion.currentHealth - oldH)
           }
           if (lane.plantTeamUpMinion) {
+            const oldH = lane.plantTeamUpMinion.currentHealth
             lane.plantTeamUpMinion = {
               ...lane.plantTeamUpMinion,
               currentHealth: Math.min(lane.plantTeamUpMinion.maxHealth, lane.plantTeamUpMinion.currentHealth + 2),
             }
+            totalPlantHealed += (lane.plantTeamUpMinion.currentHealth - oldH)
           }
         })
+        const oldHeroHp = updatedState.plantHero.hp
         updatedState.plantHero = {
           ...updatedState.plantHero,
           hp: Math.min(updatedState.plantHero.maxHp, updatedState.plantHero.hp + 2),
         }
+        const heroHealed = updatedState.plantHero.hp - oldHeroHp
         events.push(`🦕 Aloesaurus gầm vang (Dino-Roar): Hồi 2 Máu cho toàn bộ Plants và Plant Hero!`)
+
+        const totalHealed = heroHealed + totalPlantHealed
+        if (totalHealed > 0) {
+          const hRes = triggerWhenHealed(updatedState, totalHealed, 'Cây Trồng & Hero')
+          updatedState = hRes.updatedState
+          events.push(...hRes.events)
+        }
+      }
+
+      // Tricarrotops: Dino-Roar: +1/+1!
+      if (l.plantMinion && l.plantMinion.cardId === 'plant_tricarrotops') {
+        l.plantMinion = {
+          ...l.plantMinion,
+          currentAttack: l.plantMinion.currentAttack + 1,
+          currentHealth: l.plantMinion.currentHealth + 1,
+          maxHealth: l.plantMinion.maxHealth + 1,
+        }
+        events.push(`🥕 Tricarrotops gầm vang (Dino-Roar): Nhận +1/+1 (hiện là ${l.plantMinion.currentAttack}/${l.plantMinion.currentHealth})!`)
+      }
+      if (l.plantTeamUpMinion && l.plantTeamUpMinion.cardId === 'plant_tricarrotops') {
+        l.plantTeamUpMinion = {
+          ...l.plantTeamUpMinion,
+          currentAttack: l.plantTeamUpMinion.currentAttack + 1,
+          currentHealth: l.plantTeamUpMinion.currentHealth + 1,
+          maxHealth: l.plantTeamUpMinion.maxHealth + 1,
+        }
+        events.push(`🥕 Tricarrotops Team-Up gầm vang (Dino-Roar): Nhận +1/+1 (hiện là ${l.plantTeamUpMinion.currentAttack}/${l.plantTeamUpMinion.currentHealth})!`)
+      }
+
+      // Velociradish Hunters & Hatchling: Dino-Roar: +1 Attack!
+      const isVR = (m: Minion | null | undefined) => Boolean(m && (m.cardId === 'plant_velociradish_hunters' || m.cardId === 'plant_velociradish_hatchling'))
+      if (isVR(l.plantMinion)) {
+        l.plantMinion = {
+          ...l.plantMinion!,
+          currentAttack: l.plantMinion!.currentAttack + 1,
+        }
+        events.push(`🦖 ${l.plantMinion.name} gầm vang (Dino-Roar): Nhận +1 Tấn công (hiện có ${l.plantMinion.currentAttack} ATK)!`)
+      }
+      if (isVR(l.plantTeamUpMinion)) {
+        l.plantTeamUpMinion = {
+          ...l.plantTeamUpMinion!,
+          currentAttack: l.plantTeamUpMinion!.currentAttack + 1,
+        }
+        events.push(`🦖 ${l.plantTeamUpMinion.name} Team-Up gầm vang (Dino-Roar): Nhận +1 Tấn công (hiện có ${l.plantTeamUpMinion.currentAttack} ATK)!`)
       }
     })
 
@@ -1056,6 +1172,57 @@ export function triggerDinoRoar(state: GameState, side: Side): AbilityTriggerRes
           baseAttack: l.zombieMinion.baseAttack + 2,
         }
         events.push(`🦖 Raiding Raptor gầm vang (Dino-Roar): Nhận +2 Tấn công (+2 ATK, hiện là ${l.zombieMinion.currentAttack})!`)
+      }
+
+      // Tankylosaurus: Dino-Roar: Deal 2 damage to a random Plant or Plant Hero
+      if (l.zombieMinion && l.zombieMinion.cardId === 'zombie_tankylosaurus') {
+        const potentialTargets: { type: 'minion' | 'hero'; laneIdx?: number; isTeamUp?: boolean; name: string }[] = [
+          { type: 'hero', name: 'Plant Hero' }
+        ]
+        updatedState.lanes.forEach((lane, idx) => {
+          if (lane.plantMinion && lane.plantMinion.currentHealth > 0) {
+            potentialTargets.push({ type: 'minion', laneIdx: idx, isTeamUp: false, name: lane.plantMinion.name })
+          }
+          if (lane.plantTeamUpMinion && lane.plantTeamUpMinion.currentHealth > 0) {
+            potentialTargets.push({ type: 'minion', laneIdx: idx, isTeamUp: true, name: lane.plantTeamUpMinion.name })
+          }
+        })
+        const chosen = potentialTargets[Math.floor(Math.random() * potentialTargets.length)]
+        if (chosen.type === 'hero') {
+          const dmg = applyHeroDamage(updatedState.plantHero, 2, false)
+          updatedState.plantHero = dmg.updatedHero
+          events.push(`🦕 Tankylosaurus quăng đá (Dino-Roar): Gây 2 sát thương vào Plant Hero!`)
+        } else if (chosen.laneIdx !== undefined) {
+          const targetLane = updatedState.lanes[chosen.laneIdx]
+          const targetMinion = chosen.isTeamUp ? targetLane.plantTeamUpMinion : targetLane.plantMinion
+          if (targetMinion) {
+            targetMinion.currentHealth = Math.max(0, targetMinion.currentHealth - 2)
+            events.push(`🦕 Tankylosaurus quăng đá (Dino-Roar): Gây 2 sát thương vào ${targetMinion.name}!`)
+            if (targetMinion.currentHealth <= 0) {
+              if (chosen.isTeamUp) targetLane.plantTeamUpMinion = null
+              else targetLane.plantMinion = null
+              events.push(`💥 ${targetMinion.name} bị tiêu diệt bởi Tankylosaurus!`)
+            }
+          }
+        }
+      }
+
+      // Mondo Bronto: Dino-Roar: Destroy all plants in this lane
+      if (l.zombieMinion && l.zombieMinion.cardId === 'zombie_mondo_bronto') {
+        let destroyedInLane = false
+        if (l.plantMinion) {
+          events.push(`🦕 Mondo Bronto dậm chân (Dino-Roar): Tiêu diệt ${l.plantMinion.name} tại ${l.name}!`)
+          l.plantMinion = null
+          destroyedInLane = true
+        }
+        if (l.plantTeamUpMinion) {
+          events.push(`🦕 Mondo Bronto dậm chân (Dino-Roar): Tiêu diệt ${l.plantTeamUpMinion.name} tại ${l.name}!`)
+          l.plantTeamUpMinion = null
+          destroyedInLane = true
+        }
+        if (!destroyedInLane) {
+          events.push(`🦕 Mondo Bronto gầm vang chấn động làn ${l.name}!`)
+        }
       }
     })
   }
@@ -1586,6 +1753,39 @@ export function freezeMinion(
       events.push(`🎃 Winter Squash Tiêu diệt ngay Zombie bị đóng băng (${targetMinion.name})!`)
       lane.zombieMinion = null
     }
+  }
+
+  return { updatedState, events }
+}
+
+/**
+ * Triggered whenever a Plant or Plant Hero is healed.
+ * Heartichoke: "Whenever a Plant or your Hero is healed, do that much damage to the Zombie Hero."
+ */
+export function triggerWhenHealed(
+  state: GameState,
+  healAmount: number,
+  targetName: string
+): AbilityTriggerResult {
+  let updatedState = { ...state }
+  const events: string[] = []
+  if (healAmount <= 0) return { updatedState, events }
+
+  let heartichokeCount = 0
+  updatedState.lanes.forEach(l => {
+    if (l.plantMinion && (l.plantMinion.cardId === 'plant_heartichoke' || l.plantMinion.name.toLowerCase().includes('heartichoke'))) {
+      heartichokeCount++
+    }
+    if (l.plantTeamUpMinion && (l.plantTeamUpMinion.cardId === 'plant_heartichoke' || l.plantTeamUpMinion.name.toLowerCase().includes('heartichoke'))) {
+      heartichokeCount++
+    }
+  })
+
+  if (heartichokeCount > 0) {
+    const totalDmg = healAmount * heartichokeCount
+    const dmgRes = applyHeroDamage(updatedState.zombieHero, totalDmg, false)
+    updatedState.zombieHero = dmgRes.updatedHero
+    events.push(`❤️ Heartichoke phản ứng khi ${targetName} được hồi ${healAmount} máu: Gây ${totalDmg} sát thương vào Zombie Hero (máu còn ${updatedState.zombieHero.hp})!`)
   }
 
   return { updatedState, events }
