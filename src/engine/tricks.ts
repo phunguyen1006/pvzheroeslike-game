@@ -314,6 +314,10 @@ export function executeTrick(
       // A zombie does a Bonus Attack
       if (targetLaneIndex !== undefined && updatedLanes[targetLaneIndex]?.zombieMinion) {
         const z = updatedLanes[targetLaneIndex].zombieMinion!
+        if (z.isFrozen) {
+          message = `Lurch for Lunch: ${z.name} đang bị đóng băng (Frozen), không thể thực hiện Bonus Attack!`
+          break
+        }
         const zMult = hasBinaryStars(updatedLanes) ? 2 : 1
         const effAtk = z.currentAttack * zMult
         const p = updatedLanes[targetLaneIndex].plantMinion

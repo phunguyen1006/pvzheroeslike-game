@@ -401,7 +401,9 @@ export function executeSuperpower(
 
         const destLane = updatedLanes[destLaneIdx]
         // Perform Bonus Attack
-        if (destLane.plantMinion) {
+        if (z.isFrozen) {
+          message = `Carried Away nhấc bổng ${z.name} sang ${destLane.name}, nhưng minion đang bị đóng băng (Frozen) không thể Bonus Attack!`
+        } else if (destLane.plantMinion) {
           const p = destLane.plantMinion
           p.currentHealth = Math.max(0, p.currentHealth - z.currentAttack)
           message = `Carried Away nhấc bổng ${z.name} sang ${destLane.name} và kích hoạt Bonus Attack gây ${z.currentAttack} dmg lên ${p.name}!`

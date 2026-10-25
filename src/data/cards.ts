@@ -1179,6 +1179,42 @@ export const PLANT_CARDS: CardData[] = [
  description: 'Môi trường: Khi một Cây Trồng (Plant) được chơi tại đây, nó nhận thêm +2 Máu (+0/+2).',
  heroClass: 'Kabloom',
  laneRequirement: 'ground'
+ },
+ {
+ id: 'plant_shooting_starfruit',
+ name: 'Shooting Starfruit',
+ team: 'plants',
+ type: 'plant',
+ cost: 5,
+ attack: 2,
+ hp: 2,
+ health: 2,
+ traits: [],
+ rarity: 'Legendary',
+ tribe: 'Fruit Plant',
+ assetPath: '/assets/cards/plants/Starfruit.png',
+ image: '/assets/cards/plants/Starfruit.png',
+ description: 'Ngôi sao xạ kích: Khi đến lượt tấn công, nó bắn vào TẤT CẢ 5 làn đấu!',
+ heroClass: 'Smarty',
+ laneRequirement: 'ground'
+ },
+ {
+ id: 'plant_heartichoke',
+ name: 'Heartichoke',
+ team: 'plants',
+ type: 'plant',
+ cost: 4,
+ attack: 3,
+ hp: 4,
+ health: 4,
+ traits: [],
+ rarity: 'Super-Rare',
+ tribe: 'Flower Plant',
+ assetPath: '/assets/cards/plants/Sunflower.png',
+ image: '/assets/cards/plants/Sunflower.png',
+ description: 'Cộng hưởng hồi phục: Khi Plant Hero hoặc bất kỳ Plant nào được hồi máu (Heal), gây lượng sát thương tương đương vào Zombie Hero!',
+ heroClass: 'Solar',
+ laneRequirement: 'ground'
  }
 ];
 
