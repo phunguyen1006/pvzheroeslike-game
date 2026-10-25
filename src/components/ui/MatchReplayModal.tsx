@@ -7,6 +7,7 @@ export interface MatchReplayModalProps {
   isOpen?: boolean
   replayHistory?: ReplaySnapshot[]
   initialReplayCode?: string
+  winner?: Side
   onClose: () => void
   onRematch?: () => void
 }
@@ -31,8 +32,10 @@ export function encodeReplayCode(history: ReplaySnapshot[]): string {
     let encoded: string
     if (typeof btoa !== 'undefined') {
       encoded = btoa(unescape(encodeURIComponent(json)))
+    } else if (typeof (globalThis as any).Buffer !== 'undefined') {
+      encoded = (globalThis as any).Buffer.from(json, 'utf-8').toString('base64')
     } else {
-      encoded = Buffer.from(json, 'utf-8').toString('base64')
+      encoded = json
     }
     return `PVZ_REPLAY:${encoded}`
   } catch {
@@ -63,8 +66,10 @@ export function decodeReplayCode(code: string): ReplaySnapshot[] {
     let jsonStr: string
     if (typeof atob !== 'undefined') {
       jsonStr = decodeURIComponent(escape(atob(raw)))
+    } else if (typeof (globalThis as any).Buffer !== 'undefined') {
+      jsonStr = (globalThis as any).Buffer.from(raw, 'base64').toString('utf-8')
     } else {
-      jsonStr = Buffer.from(raw, 'base64').toString('utf-8')
+      jsonStr = raw
     }
     const parsed = JSON.parse(jsonStr)
     if (Array.isArray(parsed)) return parsed
@@ -116,9 +121,9 @@ export function computeReplayMVP(history: ReplaySnapshot[]): ReplayMVPInfo {
   }
 
   // Check last frame board for strongest minion if no cards played directly
-  if (!bestCardId) {
-    const lastState = history[history.length - 1].state
-    for (const lane of lastState.lanes || []) {
+  if (!bestCardId && history.length > 0) {
+    const lastState = history[history.length - 1]?.state
+    for (const lane of lastState?.lanes || []) {
       if (lane.plantMinion && lane.plantMinion.currentAttack >= 4) {
         bestCardId = lane.plantMinion.cardId || 'plant_peashooter'
         break
@@ -133,9 +138,9 @@ export function computeReplayMVP(history: ReplaySnapshot[]): ReplayMVPInfo {
   const foundCard = bestCardId ? getCardById(bestCardId) : undefined
   if (foundCard) {
     return {
-      card: foundCard,
+      card: foundCard as any,
       name: foundCard.name,
-      side: foundCard.side,
+      side: (foundCard as any).side || 'plants',
       cost: foundCard.cost,
       attack: foundCard.attack,
       health: foundCard.health,
@@ -181,8 +186,8 @@ export function formatReplayAction(frame: ReplaySnapshot): string {
       return `Giai đoạn Giao Tranh (Combat Phase) bùng nổ!`
     case 'STEP_COMBAT_LANE':
       return `Giao tranh tại Làn ${(action.laneIndex ?? 0) + 1}`
-    case 'USE_SUPERPOWER':
-      return `Kích hoạt Siêu Năng Lực (Superpower) [${action.superpowerId || 'Đặc biệt'}]`
+    case 'PLAY_SUPERPOWER':
+      return `Kích hoạt Siêu Năng Lực (Superpower) [${(action as any).superpowerId || 'Đặc biệt'}]`
     default:
       return `${action.type} (Lượt ${turn} - ${phase})`
   }
@@ -192,6 +197,7 @@ export const MatchReplayModal: React.FC<MatchReplayModalProps> = ({
   isOpen = true,
   replayHistory,
   initialReplayCode,
+  winner: propWinner,
   onClose,
   onRematch,
 }) => {
@@ -250,22 +256,25 @@ export const MatchReplayModal: React.FC<MatchReplayModalProps> = ({
 
   // Winner calculation
   const winner: Side | null = useMemo(() => {
+    if (propWinner) return propWinner
     if (!history.length) return null
     const lastFrame = history[history.length - 1]
-    if (lastFrame.state?.winner) return lastFrame.state.winner
-    if (lastFrame.state?.plantHero?.hp <= 0) return 'zombies'
-    if (lastFrame.state?.zombieHero?.hp <= 0) return 'plants'
+    if (lastFrame?.state?.winner) return lastFrame.state.winner
+    if ((lastFrame?.state?.plantHero?.hp ?? (lastFrame as any)?.plantHeroHp ?? 20) <= 0) return 'zombies'
+    if ((lastFrame?.state?.zombieHero?.hp ?? (lastFrame as any)?.zombieHeroHp ?? 20) <= 0) return 'plants'
     return null
-  }, [history])
+  }, [propWinner, history])
 
   // MVP Card
   const mvp = useMemo(() => computeReplayMVP(history), [history])
 
   // Hero HP and HP Deltas
-  const plantHp = currentState?.plantHero?.hp ?? 20
-  const zombieHp = currentState?.zombieHero?.hp ?? 20
-  const prevPlantHp = previousState?.plantHero?.hp ?? plantHp
-  const prevZombieHp = previousState?.zombieHero?.hp ?? zombieHp
+  const plantHp = currentState?.plantHero?.hp ?? (currentFrame as any)?.plantHeroHp ?? 20
+  const zombieHp = currentState?.zombieHero?.hp ?? (currentFrame as any)?.zombieHeroHp ?? 20
+  const prevPlantHp =
+    previousState?.plantHero?.hp ?? (history[currentFrameIndex - 1] as any)?.plantHeroHp ?? plantHp
+  const prevZombieHp =
+    previousState?.zombieHero?.hp ?? (history[currentFrameIndex - 1] as any)?.zombieHeroHp ?? zombieHp
   const plantHpDelta = plantHp - prevPlantHp
   const zombieHpDelta = zombieHp - prevZombieHp
 
@@ -375,9 +384,9 @@ export const MatchReplayModal: React.FC<MatchReplayModalProps> = ({
           <div className="winner-details">
             <span className="winner-headline">
               {winner === 'plants'
-                ? 'PLANTS CHIẾN THẮNG RỰC RỠ!'
+                ? 'PLANTS CHIẾN THẮNG RỰC RỠ! - CHIẾN THẮNG: CÂY CỎ (PLANTS)'
                 : winner === 'zombies'
-                ? 'ZOMBIES ĐẠT CHIẾN THẮNG TỐI HẬU!'
+                ? 'ZOMBIES ĐẠT CHIẾN THẮNG TỐI HẬU! - CHIẾN THẮNG: ZOMBIES'
                 : 'TRẬN ĐẤU ĐANG DIỄN RA HOẶC CHƯA HOÀN TẤT'}
             </span>
             <span className="winner-meta">

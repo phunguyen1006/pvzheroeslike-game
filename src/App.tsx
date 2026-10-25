@@ -11,6 +11,8 @@ import { HeroTopArena } from './components/board/HeroTopArena'
 import { HeroBottomArena } from './components/board/HeroBottomArena'
 import { GameBoard } from './components/board/GameBoard'
 import { Hand } from './components/cards/Hand'
+import { Card } from './components/cards/Card'
+import { CombatLog } from './components/CombatLog'
 import { CombatLogDrawer } from './components/ui/CombatLogDrawer'
 import { GameOverModal } from './components/ui/GameOverModal'
 import { SuperBlockModal } from './components/ui/SuperBlockModal'
@@ -114,6 +116,7 @@ export function App() {
   }>({})
   const [isMuted, setIsMuted] = useState(soundManager.getMuted())
   const [isCombatLogOpen, setIsCombatLogOpen] = useState(false)
+  const [playingFlyCard, setPlayingFlyCard] = useState<{ card: CardType; laneIndex: number } | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [playerEmote, setPlayerEmote] = useState<{ text: string; emoji?: string } | null>(null)
   const [opponentEmote, setOpponentEmote] = useState<{ text: string; emoji?: string } | null>(null)
@@ -450,6 +453,9 @@ export function App() {
     setSelectedLaneIndex(laneIndex)
 
     if (selectedCard && isPlayerPlantTurn) {
+      setPlayingFlyCard({ card: selectedCard, laneIndex })
+      setTimeout(() => setPlayingFlyCard(null), 450)
+
       if (selectedCard.type === 'superpower') {
         setPlantUsingSuperpower(true)
         setTimeout(() => setPlantUsingSuperpower(false), 1500)
@@ -472,6 +478,9 @@ export function App() {
   const handleDropCardToLane = (laneIndex: number, cardId: string) => {
     const card = gameState.plantHand.find((c) => c.id === cardId)
     if (card && isPlayerPlantTurn && card.cost <= gameState.plantHero.sun) {
+      setPlayingFlyCard({ card, laneIndex })
+      setTimeout(() => setPlayingFlyCard(null), 450)
+
       if (card.type === 'superpower') {
         setPlantUsingSuperpower(true)
         setTimeout(() => setPlantUsingSuperpower(false), 1500)
@@ -1165,6 +1174,30 @@ export function App() {
             </div>
           </footer>
         </main>
+
+        {/* Card Play Flying Animation Overlay (translateY -200px & 0.4s ease-out) */}
+        {playingFlyCard && (
+          <div
+            className="card-flying-to-play"
+            style={{
+              position: 'fixed',
+              left: `calc(18% + ${playingFlyCard.laneIndex * 13}%)`,
+              bottom: '120px',
+              zIndex: 2000,
+              pointerEvents: 'none',
+            }}
+          >
+            <Card card={playingFlyCard.card} interactive={false} size="sm" />
+          </div>
+        )}
+
+        {/* Dedicated 280px x 400px Floating Combat Log Panel with Color-Coded Events & '📜 Log' Button */}
+        <CombatLog
+          logs={gameState.combatLog}
+          isOpen={isCombatLogOpen}
+          onToggle={() => setIsCombatLogOpen((prev) => !prev)}
+          onClose={() => setIsCombatLogOpen(false)}
+        />
 
         {/* Slide-Out Battle Feed Drawer (Opened via 💬 button at top left) */}
         <CombatLogDrawer

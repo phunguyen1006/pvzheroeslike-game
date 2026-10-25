@@ -104,9 +104,12 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
                         interactive={false}
                       />
 
-                      {/* Redraw Cross Overlay */}
+                      {/* Redraw Cross Overlay with Red Stamp */}
                       {isSelectedForRedraw && (
                         <div className="mulligan-cross-overlay">
+                          <div className="mulligan-red-stamp">
+                            <span className="mulligan-stamp-text">✕ ĐỔI BÀI</span>
+                          </div>
                           <div className="cross-badge-circle">
                             <span className="cross-badge-icon">❌</span>
                           </div>
