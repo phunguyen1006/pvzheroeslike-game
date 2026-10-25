@@ -128,9 +128,14 @@ export const ASSET_MANIFEST = {
       "Shooting Starfruit": "/assets/cards/plants/Starfruit.png",
       "Heartichoke": "/assets/cards/plants/Sunflower.png",
       "Tricarrotops": "/assets/cards/plants/Bananasaurus Rex.png",
+      "Velociradish Hunter": "/assets/cards/plants/Bananasaurus Rex.png",
       "Velociradish Hunters": "/assets/cards/plants/Bananasaurus Rex.png",
       "Velociradish Hatchling": "/assets/cards/plants/Bananasaurus Rex.png",
-      "Tactical Cuke": "/assets/cards/plants/Cherry Bomb.png"
+      "Puff-Shroom": "/assets/cards/plants/Cherry Bomb.png",
+      "Doom-Shroom": "/assets/cards/plants/Doom-Shroom.png",
+      "Tactical Cuke": "/assets/cards/plants/Cherry Bomb.png",
+      "Tankylosaurus": "/assets/cards/plants/Bananasaurus Rex.png",
+      "Mondo Bronto": "/assets/cards/plants/Bananasaurus Rex.png"
     },
     "zombies": {
       "Area 22": "/assets/cards/zombies/Area 22.png",
@@ -188,7 +193,9 @@ export const ASSET_MANIFEST = {
       "Zombot Sharktronic Sub": "/assets/cards/zombies/Zombot 1000.png",
       "Smashing Gargantuar": "/assets/cards/zombies/Arm Wrestler.png",
       "Turquoise Skull Zombie": "/assets/cards/zombies/Disco Zombie.png",
-      "Imp-Throwing Gargantuar": "/assets/cards/zombies/Arm Wrestler.png"
+      "Imp-Throwing Gargantuar": "/assets/cards/zombies/Arm Wrestler.png",
+      "Barrel of Deadbeards": "/assets/cards/zombies/Arm Wrestler.png",
+      "Octo Zombie": "/assets/cards/zombies/Zombot 1000.png"
     }
   },
   "traits": {

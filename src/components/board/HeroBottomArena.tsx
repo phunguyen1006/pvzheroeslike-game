@@ -15,6 +15,9 @@ export interface HeroBottomArenaProps {
   activeEmote?: { text: string; emoji?: string } | null
   onDismissEmote?: () => void
   onSuperBlockClick?: () => void
+  winner?: Side | null
+  isWinner?: boolean
+  isDefeated?: boolean
 }
 
 export const HeroBottomArena: React.FC<HeroBottomArenaProps> = ({
@@ -28,6 +31,9 @@ export const HeroBottomArena: React.FC<HeroBottomArenaProps> = ({
   activeEmote,
   onDismissEmote,
   onSuperBlockClick,
+  winner,
+  isWinner = winner === side,
+  isDefeated = Boolean(winner && winner !== side),
 }) => {
   const isPlant = side === 'plants'
   const isLowHp = hero.hp <= 5 && hero.hp > 0
@@ -148,8 +154,32 @@ export const HeroBottomArena: React.FC<HeroBottomArenaProps> = ({
             isTurnActive ? 'hero-turn-focus' : ''
           } ${isHurt ? 'hero-portrait-hurt-shake' : ''} ${
             isUsingSuperpower ? 'hero-portrait-superpower-glow' : ''
-          } ${isLowHp ? 'hero-portrait-low-hp' : ''}`}
+          } ${isLowHp ? 'hero-portrait-low-hp' : ''} ${
+            isWinner ? 'hero-winner-radiance' : ''
+          } ${isDefeated ? 'hero-defeated-gloom' : ''}`}
         >
+          {/* Victory Gold Aura & Crown */}
+          {isWinner && (
+            <div className="hero-victory-crown-wrapper" aria-hidden="true">
+              <div className="hero-victory-crown" title="Chiến thắng!">👑</div>
+              <div className="hero-victory-aura" />
+              <div className="hero-winner-halo" />
+            </div>
+          )}
+
+          {/* Defeat Screen Crack Overlay */}
+          {isDefeated && (
+            <div className="hero-defeat-cracked-overlay" aria-hidden="true">
+              <div className="crack-line crack-line-1" />
+              <div className="crack-line crack-line-2" />
+              <div className="crack-line crack-line-3" />
+              <div className="defeat-skull-badge">☠️</div>
+            </div>
+          )}
+
+          {/* Hurt Red Glowing Rim Flash */}
+          {isHurt && <div className="hero-hurt-red-rim-flash" aria-hidden="true" />}
+
           {/* Low HP Red Pulsating Danger Vignette & Alarm */}
           {isLowHp && (
             <div className="hero-danger-vignette-overlay" aria-hidden="true">
@@ -205,7 +235,9 @@ export const HeroBottomArena: React.FC<HeroBottomArenaProps> = ({
 
           {/* Floating Damage Number */}
           {floatingDamage && (
-            <div className="hero-floating-damage-burst">{floatingDamage}</div>
+            <div className="hero-floating-damage-burst">
+              {floatingDamage.startsWith('-') ? floatingDamage : `-${floatingDamage}`}
+            </div>
           )}
 
           {/* Comic Speech Bubble */}

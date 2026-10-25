@@ -161,7 +161,7 @@ describe('Round 9: Zombie Campaign Chapter 2 & Advanced Deck Builder', () => {
 
     it('should verify full milestone tiers structure', () => {
       const starCounts = CAMPAIGN_STAR_MILESTONES.map((m) => m.requiredStars)
-      expect(starCounts).toEqual([5, 15, 25, 35, 45, 60])
+      expect(starCounts).toEqual([5, 15, 25, 35, 45, 60, 75, 90])
     })
 
     it('should successfully claim the 60-star milestone reward', () => {

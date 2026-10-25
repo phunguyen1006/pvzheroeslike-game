@@ -16,6 +16,7 @@ import {
   loadClaimedMilestones,
   claimMilestoneReward,
   getTotalCampaignStars,
+  getMissionModifier,
 } from '../../data/campaign'
 import {
   CURRENT_WEEKLY_EVENT,
@@ -420,6 +421,36 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
                             : '🌱 DỄ'}
                     </span>
 
+                    {/* Mission Modifiers Tags */}
+                    {mission.rule.modifiers && mission.rule.modifiers.length > 0 && (
+                      <div className="node-modifiers-strip" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
+                        {mission.rule.modifiers.map((modId) => {
+                          const mod = getMissionModifier(modId)
+                          return (
+                            <span
+                              key={modId}
+                              title={mod?.description || modId}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '2px',
+                                fontSize: '10px',
+                                background: 'rgba(255, 180, 0, 0.25)',
+                                border: '1px solid #f59e0b',
+                                borderRadius: '4px',
+                                padding: '1px 5px',
+                                color: '#fef3c7',
+                                fontWeight: 'bold',
+                              }}
+                            >
+                              <span>{mod?.icon || '⚡'}</span>
+                              <span>{mod?.name ? mod.name.split('(')[0].trim() : modId}</span>
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
+
                     {/* Stars earned display */}
                     <div className="node-stars-row">
                       {[1, 2, 3].map((starIdx) => (
@@ -491,6 +522,33 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
                     </span>
                   </div>
                   <p className="rule-description">{selectedMission.rule.description}</p>
+                  {selectedMission.rule.modifiers && selectedMission.rule.modifiers.length > 0 && (
+                    <div className="briefing-modifiers-list" style={{ marginTop: '8px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {selectedMission.rule.modifiers.map((modId) => {
+                        const mod = getMissionModifier(modId)
+                        return (
+                          <div
+                            key={modId}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: 'rgba(255, 180, 0, 0.15)',
+                              border: '1px solid #f59e0b',
+                              borderRadius: '8px',
+                              padding: '4px 10px',
+                              fontSize: '12px',
+                              color: '#fef3c7',
+                            }}
+                          >
+                            <span style={{ fontSize: '14px' }}>{mod?.icon || '⚡'}</span>
+                            <span style={{ fontWeight: 'bold' }}>{mod?.name || modId}:</span>
+                            <span style={{ opacity: 0.9 }}>{mod?.description}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* 3-Star Objectives */}
@@ -772,21 +830,21 @@ export const CampaignMap: React.FC<CampaignMapProps> = ({ onStartMission, onBack
                     <span className="summary-card-emoji">🌿</span>
                     <span className="summary-card-label">Sao Cây Trồng</span>
                     <span className="summary-card-val">
-                      {combinedCampaignStars.plantStars} / 30 ⭐
+                      {combinedCampaignStars.plantStars} / 45 ⭐
                     </span>
                   </div>
                   <div className="stars-summary-card zombie-stars-card">
                     <span className="summary-card-emoji">🧟</span>
                     <span className="summary-card-label">Sao Thây Ma</span>
                     <span className="summary-card-val">
-                      {combinedCampaignStars.zombieStars} / 30 ⭐
+                      {combinedCampaignStars.zombieStars} / 45 ⭐
                     </span>
                   </div>
                   <div className="stars-summary-card total-stars-card">
                     <span className="summary-card-emoji">⭐</span>
                     <span className="summary-card-label">Tổng Sao Thu Thập</span>
                     <span className="summary-card-val">
-                      {combinedCampaignStars.totalStars} / 60 ⭐
+                      {combinedCampaignStars.totalStars} / 90 ⭐
                     </span>
                   </div>
                 </div>

@@ -7,6 +7,7 @@ import { CARD_FLAVOR_TEXTS } from '../data/flavorTexts'
 import {
   triggerWhenPlayed,
   triggerDinoRoar,
+  triggerWhenHealed,
   triggerWhenTrickPlayed,
   triggerWhenDestroyed,
   triggerStartOfTurn,
@@ -1466,6 +1467,159 @@ describe('Round 5 Card Catalog Validation Suite', () => {
           'zombie_haunted_castle',
         ]
         requiredCards.forEach(id => {
+          expect(CARD_FLAVOR_TEXTS[id]).toBeDefined()
+          expect(CARD_FLAVOR_TEXTS[id].length).toBeGreaterThan(15)
+        })
+      })
+    })
+
+    describe('Đợt 11: Dino-Roar Dinosaurs, Strategic Meta-Definers & Board Wipes', () => {
+      it('should validate Shooting Starfruit metadata and attacking in all 5 lanes simultaneously', () => {
+        const card = getCardById('plant_shooting_starfruit')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Shooting Starfruit')
+        expect(card?.cost).toBe(5)
+        expect(card?.attack).toBe(2)
+        expect(card?.hp).toBe(2)
+        expect(card?.rarity).toBe('Legendary')
+        expect(card?.heroClass).toBe('Smarty')
+
+        // Put Shooting Starfruit in Lane 2 (Ground)
+        const state = createInitialGameState()
+        state.zombieHero.hp = 20
+        state.zombieHero.blockCount = 3
+        state.lanes[2].plantMinion = createMockMinion('starfruit', 'Shooting Starfruit', 'plants', 2, 2, {
+          cardId: 'plant_shooting_starfruit',
+        })
+
+        // Place a Zombie in Lane 0 (2 HP) and Lane 1 (5 HP)
+        state.lanes[0].zombieMinion = createMockMinion('z0', 'Browncoat', 'zombies', 1, 2)
+        state.lanes[1].zombieMinion = createMockMinion('z1', 'Conehead', 'zombies', 2, 5)
+        // Lanes 2, 3, 4 are empty of Zombies
+
+        const combatRes = resolveCombat(state)
+        // Lane 0: 2 HP zombie defeated by 2 dmg
+        expect(combatRes.updatedState.lanes[0].zombieMinion).toBeNull()
+        // Lane 1: 5 HP zombie reduced to 3 HP (5 - 2 = 3)
+        expect(combatRes.updatedState.lanes[1].zombieMinion?.currentHealth).toBe(3)
+        // Lanes 2, 3, 4 hit Zombie Hero for 2 dmg each = 6 dmg!
+        expect(combatRes.updatedState.zombieHero.hp).toBe(14) // 20 - 6 = 14
+      })
+
+      it('should validate Heartichoke dealing damage to Zombie Hero when healing occurs', () => {
+        const card = getCardById('plant_heartichoke')
+        expect(card).toBeDefined()
+        expect(card?.name).toBe('Heartichoke')
+        expect(card?.cost).toBe(4)
+        expect(card?.attack).toBe(3)
+        expect(card?.hp).toBe(4)
+        expect(card?.rarity).toBe('Super-Rare')
+        expect(card?.heroClass).toBe('Solar')
+
+        const state = createInitialGameState()
+        state.zombieHero.hp = 20
+        state.lanes[1].plantMinion = createMockMinion('heart1', 'Heartichoke', 'plants', 3, 4, {
+          cardId: 'plant_heartichoke',
+        })
+
+        // Trigger heal of 4 on a plant or hero
+        const healRes = triggerWhenHealed(state, 4, 'Plant Hero')
+        expect(healRes.updatedState.zombieHero.hp).toBe(16) // 20 - 4 = 16
+        expect(healRes.events.some(e => e.includes('Heartichoke'))).toBe(true)
+      })
+
+      it('should validate Dino-Roar mechanics: Tricarrotops, Velociradish, Tankylosaurus, Mondo Bronto', () => {
+        // 1. Tricarrotops (+1/+1 on plant draw)
+        const triCard = getCardById('plant_tricarrotops')
+        expect(triCard).toBeDefined()
+        expect(triCard?.traits).toContain('Bullseye')
+
+        let state = createInitialGameState()
+        state.lanes[1].plantMinion = createMockMinion('tri1', 'Tricarrotops', 'plants', 1, 3, {
+          cardId: 'plant_tricarrotops',
+        })
+        const plantDrawRes = triggerDinoRoar(state, 'plants')
+        expect(plantDrawRes.updatedState.lanes[1].plantMinion?.currentAttack).toBe(2)
+        expect(plantDrawRes.updatedState.lanes[1].plantMinion?.currentHealth).toBe(4)
+
+        // 2. Velociradish Hunters: When played, spawns hatchling; on draw gains +1 ATK
+        const vrhMinion = createMockMinion('vrh1', 'Velociradish Hunters', 'plants', 2, 2, {
+          cardId: 'plant_velociradish_hunters',
+        })
+        state.lanes[1].plantMinion = vrhMinion
+        const playVRH = triggerWhenPlayed(state, vrhMinion, 1)
+        expect(playVRH.updatedState.lanes[2].plantMinion?.cardId).toBe('plant_velociradish_hatchling')
+
+        const vrDrawRes = triggerDinoRoar(playVRH.updatedState, 'plants')
+        // Both hunters and hatchling should gain +1 attack
+        expect(vrDrawRes.updatedState.lanes[1].plantMinion?.currentAttack).toBe(3) // 2 + 1
+        expect(vrDrawRes.updatedState.lanes[2].plantMinion?.currentAttack).toBe(3) // 2 + 1
+
+        // 3. Tankylosaurus: On draw deals 2 damage to random Plant or Plant Hero
+        const tankyMinion = createMockMinion('tank1', 'Tankylosaurus', 'zombies', 2, 6, {
+          cardId: 'zombie_tankylosaurus',
+        })
+        state.lanes[2].zombieMinion = tankyMinion
+        state.plantHero.hp = 20
+        const tankyRes = triggerDinoRoar(state, 'zombies')
+        expect(tankyRes.events.some(e => e.includes('Tankylosaurus'))).toBe(true)
+
+        // 4. Mondo Bronto: On draw destroys all plants in its lane
+        const brontoMinion = createMockMinion('bronto1', 'Mondo Bronto', 'zombies', 5, 5, {
+          cardId: 'zombie_mondo_bronto',
+        })
+        state.lanes[3].zombieMinion = brontoMinion
+        state.lanes[3].plantMinion = createMockMinion('p3', 'Sunflower', 'plants', 0, 4)
+        const brontoRes = triggerDinoRoar(state, 'zombies')
+        expect(brontoRes.updatedState.lanes[3].plantMinion).toBeNull()
+      })
+
+      it('should validate Tactical Cuke destroying all minions on ground lanes (1, 2, 3)', () => {
+        const cukeCard = getCardById('plant_tactical_cuke')
+        expect(cukeCard).toBeDefined()
+        expect(cukeCard?.cost).toBe(6)
+        expect(cukeCard?.type).toBe('trick')
+        expect(cukeCard?.rarity).toBe('Super-Rare')
+
+        const state = createInitialGameState()
+        // Heights (lane 0)
+        state.lanes[0].plantMinion = createMockMinion('p0', 'Peashooter', 'plants', 1, 1)
+        // Ground (lanes 1, 2, 3)
+        state.lanes[1].plantMinion = createMockMinion('p1', 'Repeater', 'plants', 2, 2)
+        state.lanes[2].zombieMinion = createMockMinion('z2', 'Conehead', 'zombies', 2, 2)
+        state.lanes[3].plantMinion = createMockMinion('p3', 'Wall-Nut', 'plants', 0, 6)
+        // Water (lane 4)
+        state.lanes[4].zombieMinion = createMockMinion('z4', 'Swabbie', 'zombies', 1, 1)
+
+        const trickCard: Card = convertCardDataToCard(cukeCard!, 'plants')
+        const trickRes = executeTrick(state, trickCard, 'plants')
+
+        // Heights and Water are untouched
+        expect(trickRes.updatedState.lanes[0].plantMinion).toBeDefined()
+        expect(trickRes.updatedState.lanes[4].zombieMinion).toBeDefined()
+
+        // Ground lanes (1, 2, 3) are completely cleared
+        expect(trickRes.updatedState.lanes[1].plantMinion).toBeNull()
+        expect(trickRes.updatedState.lanes[2].zombieMinion).toBeNull()
+        expect(trickRes.updatedState.lanes[3].plantMinion).toBeNull()
+      })
+
+      it('should validate Vietnamese flavor texts for all Đợt 11 new cards', () => {
+        const batch11Cards = [
+          'plant_shooting_starfruit',
+          'plant_heartichoke',
+          'plant_tricarrotops',
+          'plant_velociradish_hunters',
+          'plant_velociradish_hatchling',
+          'plant_tactical_cuke',
+          'zombie_tankylosaurus',
+          'zombie_mondo_bronto',
+          'zombie_zombot_sharktronic_sub',
+          'zombie_smashing_gargantuar',
+          'zombie_turquoise_skull_zombie',
+          'zombie_imp_throwing_gargantuar',
+        ]
+        batch11Cards.forEach(id => {
           expect(CARD_FLAVOR_TEXTS[id]).toBeDefined()
           expect(CARD_FLAVOR_TEXTS[id].length).toBeGreaterThan(15)
         })

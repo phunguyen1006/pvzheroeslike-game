@@ -4,7 +4,7 @@
  * 5 Epic Boss Missions against iconic Zombie Heroes
  */
 
-import type { CampaignMission, CampaignProgress, LaneState, Side, Minion, Card as EngineCard, SavedDeck } from '../engine/types'
+import type { CampaignMission, CampaignProgress, LaneState, Side, Minion, Card as EngineCard, SavedDeck, GameState } from '../engine/types'
 import { createInitialLanes, convertCardDataToCard } from '../engine/reducer'
 import { getCardById, ALL_CARDS } from './cards'
 
@@ -424,229 +424,249 @@ export const CHAPTER_3_MISSIONS: CampaignMission[] = [
   {
     faction: 'plants',
     id: 'mission_11',
+    code: 'P11',
     chapter: 3,
     missionNumber: 11,
-    title: 'Nhiệm Vụ 11: Đấu Trường Trọng Lực',
-    subtitle: 'Đối đầu Huge-Gigantacus - Kẻ Xâm Lăng Vũ Trụ',
+    title: 'Nhiệm Vụ 11: Phát Minh Bão Não (Eureka Inventions)',
+    subtitle: 'Đối đầu Professor Brainstorm - Kho Phát Minh Điên Rồ',
     storyIntro:
-      'Huge-Gigantacus phóng trạm không gian vũ trụ giăng bẫy Làn 2 với Laser Base Alpha! Tuy nhiên, Dave đã kịp thời kích hoạt Pair Pearadise tại Làn 1 để nhân đôi lực lượng Cây Trồng! Bạn nhận thêm +1 Sun khởi đầu!',
-    bossHeroId: 'hero_huge_gigantacus',
-    bossHeroName: 'Huge-Gigantacus',
-    bossHeroAvatar: '/assets/heroes/zombies/Huge-Gigantacus.png',
+      'Professor Brainstorm triển khai lò phản ứng hạt nhân Medulla Nebula tại Làn 3 để tích lũy hàng tá Brains! Để đối phó với kho phát minh điên rồ, Dave kích hoạt Bão Nắng (Sun Surge) ban cho Cây Trồng +2 Sun khởi đầu!',
+    bossHeroId: 'hero_professor_brainstorm',
+    bossHeroName: 'Professor Brainstorm',
+    bossHeroAvatar: '/assets/heroes/zombies/Professor Brainstorm.png',
     difficulty: 'normal',
     rule: {
       id: 'rule_mission_11',
-      name: 'Vành Đai Thiên Thạch & Quả Đôi Nhân Bản',
+      name: 'Lò Phản Ứng Medulla & Bão Nắng (Sun Surge)',
       description:
-        'Làn 1 (Ground) có sẵn Pair Pearadise (nhân đôi Cây Trồng); Làn 2 (Ground) có sẵn Laser Base Alpha (Deadly & Strikethrough); Bạn nhận +1 Sun khởi đầu!',
-      startingSunBonus: 1,
-      startingBrainsBonus: 0,
+        'Làn 3 có sẵn Medulla Nebula (+2 Brains khi xuất trận Zombie); Cây Trồng nhận hiệu ứng Sun Surge (+2 Sun khởi đầu); Thây Ma nhận +1 Não khởi đầu!',
+      specialRuleDescription: 'Sun Surge: Người chơi Cây Trồng nhận thêm +2 Sun khởi đầu để tăng tốc phòng thủ.',
+      startingSunBonus: 2,
+      startingBrainsBonus: 1,
       initialEnvironments: [
-        { laneIndex: 0, environmentCardId: 'plant_pair_pearadise' },
-        { laneIndex: 1, environmentCardId: 'zombie_laser_base_alpha' },
+        { laneIndex: 2, environmentCardId: 'zombie_medulla_nebula' },
       ],
+      modifiers: ['sun_surge'],
     },
     starObjectives: [
-      '⭐ Đánh bại chúa tể tí hon Huge-Gigantacus',
+      '⭐ Đánh bại nhà phát minh điên rồ Professor Brainstorm',
       '⭐⭐ Bảo toàn lượng máu của Hero từ 12 HP trở lên',
-      '⭐⭐⭐ Giành chiến thắng trong vòng 9 lượt đấu',
+      '⭐⭐⭐ Giành chiến thắng trong vòng 8 lượt đấu',
     ],
     rewards: {
-      gems: 300,
+      gems: 350,
       unlocksNext: true,
-      title: 'Kẻ Bẻ Cong Trọng Lực',
+      title: 'Khắc Tinh Khoa Học',
     },
     comicDialogue: {
-      issueTitle: 'CƠN BÃO KHÔNG GIAN HUGE-GIGANTACUS!',
-      issueTagline: 'Trọng lực đảo lộn khi Laser Base Alpha khai hỏa',
+      issueTitle: 'CƠN BÃO NÃO BỘ EUREKA!',
+      issueTagline: 'Professor Brainstorm tung kho phát minh điên cuồng vs Bão Nắng Cây Trồng',
       zombieHeroQuote:
-        'Thế giới này quá nhỏ bé cho bộ não vĩ đại của ta! Laser Base Alpha sẽ biến vườn hoa của các ngươi thành tro bụi thiên hà!',
+        'Eureka! Hàng triệu ý tưởng điên rồ đang nảy nở trong đầu ta! Medulla Nebula sẽ cung cấp năng lượng vô tận để ta xóa sổ khu vườn!',
       plantHeroQuote:
-        'Dù ngươi có thu nhỏ kích thước nhưng dã tâm không thể giấu! Pair Pearadise sẽ nhân đôi mọi mũi gai phản công!',
+        'Bão Nắng Sun Surge của Crazy Dave đã sẵn sàng! Mọi phát minh quái đản của ngươi sẽ bị thiêu rụi trước ánh sáng diệp lục!',
     },
   },
   {
     faction: 'plants',
     id: 'mission_12',
+    code: 'P12',
     chapter: 3,
     missionNumber: 12,
-    title: 'Nhiệm Vụ 12: Đáy Biển Thủy Quái',
-    subtitle: 'Đối đầu Neptuna - Nữ Hoàng Thủy Cung',
+    title: 'Nhiệm Vụ 12: Đêm Phù Thủy Cuồng Nộ (Witch\'s Coven)',
+    subtitle: 'Đối đầu Immorticia - Nữ Chúa Dơi Đêm',
     storyIntro:
-      'Neptuna dâng sóng thần chiếm giữ Làn Nước (Lane 5) với Bog of Sunken Hope và cử quái vật bạch tuộc Swabbie án ngữ! Bạn có sẵn 1 Đậu Hải Quân Admiral Navy Bean trên Làn Nước để chống trả!',
-    bossHeroId: 'hero_neptuna',
-    bossHeroName: 'Neptuna',
-    bossHeroAvatar: '/assets/heroes/zombies/Neptuna.png',
+      'Immorticia triệu hồi Vùng Cấm Area 22 tại Làn 2 và yểm bùa Cuồng Nộ (Zombie Frenzy) lên toàn bộ quân đoàn Thây Ma, biến mọi zombie thành cỗ máy đồ sát liên hoàn! Nhưng Dave đã kịp thời trồng Spikeweed Sector tại Làn 1 để chông gai cản bước quái vật!',
+    bossHeroId: 'hero_immorticia',
+    bossHeroName: 'Immorticia',
+    bossHeroAvatar: '/assets/heroes/zombies/Immorticia.png',
     difficulty: 'hard',
     rule: {
       id: 'rule_mission_12',
-      name: 'Thủy Chiến Đáy Biển & Hải Quân Đậu',
+      name: 'Khu Vực 22 & Lời Nguyền Cuồng Nộ (Zombie Frenzy)',
       description:
-        'Làn Nước có sẵn Bog of Sunken Hope (-2 Attack cho Zombie không lội nước); Cây trồng có sẵn 1 Admiral Navy Bean án ngữ; Thây Ma có sẵn 1 Swabbie!',
-      startingSunBonus: 0,
-      startingBrainsBonus: 0,
+        'Làn 2 có Area 22 (+2/+2 & Frenzy); Toàn bộ Thây Ma nhận hiệu ứng Zombie Frenzy (tấn công thêm khi hạ gục minion); Làn 1 có Spikeweed Sector (2 sát thương trước combat); Thây Ma nhận +1 Não khởi đầu!',
+      specialRuleDescription:
+        'Zombie Frenzy: Toàn bộ phe Thây Ma sở hữu đặc tính Cuồng nộ (Frenzy), tấn công liên tiếp khi hạ gục đối thủ.',
+      startingSunBonus: 1,
+      startingBrainsBonus: 1,
       initialEnvironments: [
-        { laneIndex: 4, environmentCardId: 'plant_bog_of_sunken_hope' },
+        { laneIndex: 0, environmentCardId: 'plant_spikeweed_sector' },
+        { laneIndex: 1, environmentCardId: 'zombie_area_22' },
       ],
-      initialMinions: [
-        { laneIndex: 4, cardId: 'plant_admiral_navy_bean', side: 'plants' },
-        { laneIndex: 4, cardId: 'zombie_swabbie', side: 'zombies' },
-      ],
+      modifiers: ['zombie_frenzy'],
     },
     starObjectives: [
-      '⭐ Đánh chìm hạm đội đáy biển của Neptuna',
-      '⭐⭐ Bảo toàn lượng máu Hero từ 14 HP trở lên',
-      '⭐⭐⭐ Tiêu diệt đối thủ trước hoặc tại lượt 8',
+      '⭐ Tiêu diệt nữ chúa bóng đêm Immorticia',
+      '⭐⭐ Kết thúc trận đấu với ít nhất 14 HP còn lại',
+      '⭐⭐⭐ Giành thắng lợi trước hoặc tại lượt 8',
     ],
     rewards: {
-      gems: 350,
+      gems: 400,
       unlocksNext: true,
-      title: 'Thống Soái Thủy Chiến',
+      title: 'Thợ Săn Phù Thủy',
     },
     comicDialogue: {
-      issueTitle: 'THỦY TRIỀU HỖN MANG NEPTUNA!',
-      issueTagline: 'Đại chiến giành quyền kiểm soát vùng nước sâu',
+      issueTitle: 'BẦY DƠI ĐÊM CUỒNG NỘ!',
+      issueTagline: 'Area 22 cộng hưởng phép thuật hắc ám biến đàn quái thành sát thủ Frenzy',
       zombieHeroQuote:
-        'Cả đại dương tuân lệnh ta! Thủy triều và những xúc tu bạch tuộc sẽ kéo các ngươi xuống vực thẳm!',
+        'Hỡi bầy dơi và linh hồn bóng tối, hãy xé toạc mọi rễ cây! Lời nguyền Zombie Frenzy sẽ không để kẻ nào sống sót!',
       plantHeroQuote:
-        'Hải quân Đậu Admiral Navy Bean đã chiếm lĩnh dòng nước! Mỗi hạt đậu nảy mầm sẽ bắn thủng vỏ sò hoàng gia của ngươi!',
+        'Chông gai Spikeweed Sector đã bẫy sẵn dưới chân ngươi! Lũ dơi khát máu sẽ phải chùn bước trước hàng rào gai thép!',
     },
   },
   {
     faction: 'plants',
     id: 'mission_13',
+    code: 'P13',
     chapter: 3,
     missionNumber: 13,
-    title: 'Nhiệm Vụ 13: Trí Tuệ Siêu Dẫn',
-    subtitle: 'Đối đầu Professor Brainstorm - Kho Phát Minh Điên Rồ',
+    title: 'Nhiệm Vụ 13: Pháo Thủ Thủy Tinh (Glass Cannon Forge)',
+    subtitle: 'Đối đầu Rustbolt - Pháo Đài Hợp Kim Cải Tiến',
     storyIntro:
-      'Giáo sư Brainstorm triển khai lò phản ứng hạt nhân Medulla Nebula tại Làn 3 để tích lũy hàng tá Brains! Dave lập tức trồng 1 Black-Eyed Pea tại Làn 3 để trừng phạt mỗi khi Brainstorm tung phép thuật (Trick)!',
-    bossHeroId: 'hero_professor_brainstorm',
-    bossHeroName: 'Professor Brainstorm',
-    bossHeroAvatar: '/assets/heroes/zombies/Professor Brainstorm.png',
+      'Rustbolt kích hoạt trường từ trường biến dị Glass Cannon (Đại Bác Thủy Tinh) lên toàn bộ chiến trường: mọi minion tăng vọt +3 Tấn công nhưng giảm -2 Máu! Đồng thời Rustbolt rải Cone Zone tại Làn 3 để bù đắp máu cho quái vật bọc thép, trong khi Dave mở cổng Pair Pearadise tại Làn 1!',
+    bossHeroId: 'hero_rustbolt',
+    bossHeroName: 'Rustbolt',
+    bossHeroAvatar: '/assets/heroes/zombies/Rustbolt.png',
     difficulty: 'hard',
     rule: {
       id: 'rule_mission_13',
-      name: 'Lò Phản Ứng Medulla & Đậu Mắt Đen Khắc Tinh',
+      name: 'Từ Trường Biến Dị & Đại Bác Thủy Tinh (Glass Cannon)',
       description:
-        'Làn 3 có sẵn Medulla Nebula (+2 Brains cho Zombie); Cây trồng có sẵn 1 Black-Eyed Pea (+1/+1 mỗi khi Zombie cast Trick)! Bạn nhận +1 Sun, đối thủ nhận +2 Brains!',
+        'Quy tắc Glass Cannon kích hoạt: Toàn bộ Cây Trồng và Thây Ma nhận +3 Tấn công và bị giảm 2 Máu (tối thiểu 1 HP); Làn 3 có Cone Zone (+3 HP cho Zombie); Làn 1 có Pair Pearadise (nhân đôi Cây Trồng)!',
+      specialRuleDescription:
+        'Glass Cannon: Mọi minion trên sân (cả 2 phe) nhận +3 Tấn công, -2 Máu (tối thiểu 1 HP). Sát thương bùng nổ cực hạn!',
       startingSunBonus: 1,
       startingBrainsBonus: 2,
       initialEnvironments: [
-        { laneIndex: 2, environmentCardId: 'zombie_medulla_nebula' },
+        { laneIndex: 0, environmentCardId: 'plant_pair_pearadise' },
+        { laneIndex: 2, environmentCardId: 'zombie_cone_zone' },
       ],
-      initialMinions: [
-        { laneIndex: 2, cardId: 'plant_black_eyed_pea', side: 'plants' },
-      ],
+      modifiers: ['glass_cannon'],
     },
     starObjectives: [
-      '⭐ Ngăn chặn cơn bão phát minh của Professor Brainstorm',
-      '⭐⭐ Kết thúc trận đấu với ít nhất 12 HP còn lại',
-      '⭐⭐⭐ Tiêu diệt Brainstorm trong vòng 8 lượt đấu',
+      '⭐ Vượt qua trận địa biến dị phá hủy Rustbolt',
+      '⭐⭐ Kết thúc trận đấu với Hero từ 12 HP trở lên',
+      '⭐⭐⭐ Giành thắng lợi trong vòng 8 lượt đấu',
     ],
     rewards: {
-      gems: 400,
+      gems: 450,
       unlocksNext: true,
-      title: 'Khắc Tinh Thiên Tài',
+      title: 'Bậc Thầy Đột Phá Hỏa Lực',
     },
     comicDialogue: {
-      issueTitle: 'PHÁT MINH ĐỘT BIẾN NÃO BỘ!',
-      issueTagline: 'Professor Brainstorm mở khóa nguồn năng lượng vô hạn',
+      issueTitle: 'CHIẾN TRƯỜNG THỦY TINH ĐẪM MÁU!',
+      issueTagline: 'Từ trường Glass Cannon đẩy sức tấn công lên tột đỉnh',
       zombieHeroQuote:
-        'Eureka! Hàng trăm phát minh tối tân đang tuôn trào trong đầu ta! Không một định luật vật lý nào cứu được các ngươi!',
+        'Giáp sắt của ta không thể bị xuyên thủng! Nhưng với hỏa lực Glass Cannon cực hạn, một phát bắn là đủ tiễn ngươi về trời!',
       plantHeroQuote:
-        'Đậu Mắt Đen Black-Eyed Pea càng mạnh mẽ hơn sau mỗi trò ảo thuật của ngươi! Hãy xem khoa học chân chính trừng trị tà đạo!',
+        'Ngươi quên rằng Cây Trồng cũng mang sức mạnh +3 Tấn công! Pair Pearadise sẽ tạo ra cặp đôi pháo thủ xóa sổ ngươi!',
     },
   },
   {
     faction: 'plants',
     id: 'mission_14',
+    code: 'P14',
     chapter: 3,
     missionNumber: 14,
-    title: 'Nhiệm Vụ 14: Lò Lửa Cơ Giáp Tối Tân',
-    subtitle: 'Đối đầu Z-Mech V2 - Cỗ Máy Chiến Tranh Siêu Hạng',
+    title: 'Nhiệm Vụ 14: Đột Kích Laser Không Gian (Space Laser Assault)',
+    subtitle: 'Đối đầu Super Brainz - Siêu Nhân Vũ Trụ Tự Cao',
     storyIntro:
-      'Z-Mech nâng cấp lên cỗ xe bọc thép siêu hạng và rải Hot Lava tại Làn 1 thiêu đốt mặt đất! Nhưng Dave đã bí mật trồng Red Plant-It tại Làn 4 tăng đột biến +5/+5 cho Cây Trồng!',
-    bossHeroId: 'hero_z_mech',
-    bossHeroName: 'Z-Mech',
-    bossHeroAvatar: '/assets/heroes/zombies/Z-Mech.png',
+      'Super Brainz giăng bẫy Laser Base Alpha tại Làn 2 (Deadly & Strikethrough) và bơm huyết thanh Zombie Frenzy cho toàn bộ thuộc hạ! Tuy nhiên, Dave đã kịp thời kích hoạt Bão Nắng Sun Surge (+2 Sun khởi đầu) và dựng Planet of the Grapes tại Làn 1 để tiếp tế bài liên tục!',
+    bossHeroId: 'hero_super_brainz',
+    bossHeroName: 'Super Brainz',
+    bossHeroAvatar: '/assets/heroes/zombies/Super Brainz.png',
     difficulty: 'hard',
     rule: {
       id: 'rule_mission_14',
-      name: 'Dung Nham Rực Lửa & Cây Khổng Lồ Red Plant-It',
+      name: 'Căn Cứ Laser Alpha & Cuộc Đột Kích Hai Chiều',
       description:
-        'Làn 1 có Hot Lava (gây 1 sát thương cuối lượt); Làn 4 có Red Plant-It (+5/+5 cho Cây Trồng); Bạn nhận +2 Sun khởi đầu!',
+        'Làn 2 có Laser Base Alpha (Deadly & Strikethrough); Làn 1 có Planet of the Grapes (rút bài khi đánh trúng Hero); Kích hoạt đồng thời 2 bổ trợ: Sun Surge (+2 Sun khởi đầu) và Zombie Frenzy (Toàn bộ Zombie nhận Frenzy); Đối thủ có +2 Não khởi đầu!',
+      specialRuleDescription:
+        'Sun Surge & Zombie Frenzy: Cây Trồng bùng nổ năng lượng +2 Sun; phe Thây Ma sở hữu Cuồng nộ Frenzy cuồng sát.',
       startingSunBonus: 2,
-      startingBrainsBonus: 1,
+      startingBrainsBonus: 2,
       initialEnvironments: [
-        { laneIndex: 0, environmentCardId: 'plant_hot_lava' },
-        { laneIndex: 3, environmentCardId: 'plant_red_plant_it' },
+        { laneIndex: 0, environmentCardId: 'plant_planet_of_the_grapes' },
+        { laneIndex: 1, environmentCardId: 'zombie_laser_base_alpha' },
       ],
+      modifiers: ['sun_surge', 'zombie_frenzy'],
     },
     starObjectives: [
-      '⭐ Phá hủy siêu chiến xa Z-Mech cải tiến',
+      '⭐ Đập tan sự ngạo mạn của Super Brainz',
       '⭐⭐ Bảo toàn lượng máu Hero từ 15 HP trở lên',
-      '⭐⭐⭐ Giành chiến thắng trong vòng 7 lượt đấu',
+      '⭐⭐⭐ Giành thắng lợi trong vòng 7 lượt đấu',
     ],
     rewards: {
       gems: 500,
       unlocksNext: true,
-      title: 'Chuyên Gia Phá Giáp Cơ Giáp',
+      title: 'Khắc Tinh Siêu Nhân Bất Bại',
     },
     comicDialogue: {
-      issueTitle: 'LÒ LỬA CƠ GIÁP NỔ TUNG!',
-      issueTagline: 'Cỗ máy bọc thép Z-Mech V2 với hỏa lực dung nham',
+      issueTitle: 'QUYẾT ĐẤU SIÊU NHÂN KHÔNG GIAN!',
+      issueTagline: 'Laser Base Alpha xuyên thấu vs Planet of the Grapes tiếp tế vô tận',
       zombieHeroQuote:
-        'Hỏa tiễn cải tiến đã khóa tọa độ! Dung nham sôi sục dưới chân các ngươi! Đầu hàng đi các sinh vật diệp lục!',
+        'Tóc vuốt bóng lộn, Laser Base Alpha bắn xuyên thấu và Frenzy cuồng sát! Ta là sinh vật hoàn hảo nhất vũ trụ!',
       plantHeroQuote:
-        'Red Plant-It nuôi dưỡng chiến binh thực vật khổng lồ! Nắm đấm này đủ sức nghiền nát lớp vỏ hợp kim titan của ngươi!',
+        'Tự tin thái quá là điểm yếu chí mạng của ngươi! Sun Surge và Planet of the Grapes sẽ mang đến cơn bão diệp lục vô tận!',
     },
   },
   {
     faction: 'plants',
     id: 'mission_15',
+    code: 'P15',
     chapter: 3,
     missionNumber: 15,
-    title: 'Nhiệm Vụ 15: Đại Chiến Đỉnh Vũ Trụ Zomboss Tối Thượng',
-    subtitle: 'ĐẠI CHIẾN BOSS CUỐI CHAPTER 3: Super Brainz Thống Trị Vũ Trụ',
+    title: 'Nhiệm Vụ 15: Pháo Đài Cơ Giáp Diệt Vong (Z-Mech Cataclysm)',
+    subtitle: 'ĐẠI CHIẾN BOSS CUỐI CHAPTER 3: Z-Mech Cỗ Máy Chiến Tranh Vũ Trụ',
     storyIntro:
-      'Super Brainz tích hợp toàn bộ kho vũ khí vũ trụ của Zomboss: Moon Base Z tại Làn 3 bắn tỉa Overshoot 3 trực diện! Dave trao cho bạn bảo vật tối thượng: Lá Chắn Bất Tử Force Field tại Làn 2! Trận quyết chiến định đoạt tương lai toàn cõi Đa Vũ Trụ!',
-    bossHeroId: 'hero_super_brainz',
-    bossHeroName: 'Super Brainz Tối Thượng',
-    bossHeroAvatar: '/assets/heroes/zombies/Super Brainz.png',
+      'Trận đại quyết chiến định đoạt số phận Chapter 3! Z-Mech kích hoạt Moon Base Z tại Làn 3 với Overshoot 3 trực diện! Toàn bộ 3 dị biến vũ trụ được kích hoạt đồng thời: Bão Nắng Sun Surge (+2 Sun), Zombie Frenzy (toàn bộ zombie cuồng nộ) và Glass Cannon (+3 Công, -2 Máu)! Dave giao cho bạn lá chắn thần thánh Venus Flytrap Planet tại Làn 2 để sinh tồn!',
+    bossHeroId: 'hero_z_mech',
+    bossHeroName: 'Z-Mech Tối Thượng',
+    bossHeroAvatar: '/assets/heroes/zombies/Z-Mech.png',
     difficulty: 'boss',
     rule: {
       id: 'rule_mission_15',
-      name: 'Lá Chắn Bất Tử Force Field & Trạm Phóng Moon Base Z',
+      name: 'Đại Họa Diệt Vong Tam Hợp (Multiverse Cataclysm: Sun Surge + Frenzy + Glass Cannon)',
       description:
-        'Làn 2 có Force Field (Cây Trồng tại đây miễn nhiễm mọi sát thương!); Làn 3 có Moon Base Z (Zombie gây 3 Overshoot trước khi giao chiến); Bạn nhận +2 Sun, đối thủ nhận +3 Brains!',
+        'Làn 3 có Moon Base Z (Overshoot 3); Làn 2 có Venus Flytrap Planet (hút máu hồi phục); Kích hoạt toàn diện 3 Quy Tắc Bổ Trợ: Sun Surge (+2 Sun), Zombie Frenzy (toàn bộ Zombie nhận Frenzy), và Glass Cannon (+3 Tấn công, -2 Máu tối thiểu 1 HP); Z-Mech nhận +3 Não khởi đầu!',
+      specialRuleDescription:
+        'Tam Hợp Biến Dị: Sun Surge (+2 Sun), Zombie Frenzy (Zombie có Frenzy) và Glass Cannon (+3 Công/-2 Máu). Cực hạn thử thách!',
       startingSunBonus: 2,
       startingBrainsBonus: 3,
       initialEnvironments: [
-        { laneIndex: 1, environmentCardId: 'plant_force_field' },
+        { laneIndex: 1, environmentCardId: 'plant_venus_flytrap_planet' },
         { laneIndex: 2, environmentCardId: 'zombie_moon_base_z' },
       ],
+      modifiers: ['sun_surge', 'zombie_frenzy', 'glass_cannon'],
     },
     starObjectives: [
-      '⭐ Đánh bại Super Brainz Tối Thượng bảo vệ Đa Vũ Trụ',
-      '⭐⭐ Kết thúc trận chiến với ít nhất 15 HP còn lại',
+      '⭐ Đánh bại siêu cơ giáp Z-Mech Tối Thượng',
+      '⭐⭐ Kết thúc trận đấu với ít nhất 15 HP còn lại',
       '⭐⭐⭐ Hoàn thành xuất sắc toàn bộ Chiến dịch Plant Chapter 3!',
     ],
     rewards: {
-      gems: 1200,
+      gems: 1000,
       unlocksNext: true,
-      title: 'Đại Tướng Đa Vũ Trụ Thực Vật',
+      title: 'Huyền Thoại Đa Vũ Trụ Thực Vật',
     },
     comicDialogue: {
-      issueTitle: 'QUYẾT CHIẾN ĐỈNH VŨ TRỤ!',
-      issueTagline: 'Trận chiến cuối cùng: Khiên Bất Tử vs Trạm Mặt Trăng Hủy Diệt',
+      issueTitle: 'ĐẠI CHIẾN PHÁO ĐÀI CƠ GIÁP VŨ TRỤ!',
+      issueTagline: 'Cỗ máy Z-Mech với Moon Base Z và tam hợp dị biến vũ trụ nổ tung',
       zombieHeroQuote:
-        'Ta là hiện thân của sức mạnh Thây Ma tối cao! Moon Base Z sẽ bắn tan mọi hy vọng của hành tinh này!',
+        'Hệ thống vũ khí Z-Mech đã đạt 1000% công suất! Moon Base Z cùng Frenzy và Glass Cannon sẽ biến vườn cây của ngươi thành tro bụi vĩnh hằng!',
       plantHeroQuote:
-        'Lá chắn Force Field là ý chí kiên cường không thể lay chuyển của loài cây! Vì toàn thể Vũ Trụ, trận chiến này chúng ta phải thắng!',
+        'Dù sắt thép của ngươi có kiên cố đến đâu, sự sống diệp lục với Sun Surge và Venus Flytrap Planet sẽ hồi sinh từ đống tro tàn và đập tan cỗ máy!',
     },
   },
 ]
+
+export const P11 = CHAPTER_3_MISSIONS[0]
+export const P12 = CHAPTER_3_MISSIONS[1]
+export const P13 = CHAPTER_3_MISSIONS[2]
+export const P14 = CHAPTER_3_MISSIONS[3]
+export const P15 = CHAPTER_3_MISSIONS[4]
+export const PLANT_CHAPTER_3_MISSIONS = CHAPTER_3_MISSIONS
 
 // ==========================================
 // PLANT CAMPAIGN - CHAPTER 4: SOLAR SANCTUM
@@ -1534,7 +1554,7 @@ export const ZOMBIE_CHAPTER_3_MISSIONS: CampaignMission[] = [
     ],
     rewards: {
       gems: 1200,
-      unlocksNext: false,
+      unlocksNext: true,
       title: 'Chúa Tể Đa Vũ Trụ Thây Ma',
     },
     comicDialogue: {
@@ -1548,10 +1568,242 @@ export const ZOMBIE_CHAPTER_3_MISSIONS: CampaignMission[] = [
   },
 ]
 
+export const ZOMBIE_CHAPTER_4_MISSIONS: CampaignMission[] = [
+  {
+    faction: 'zombies',
+    id: 'zombie_mission_16',
+    chapter: 4,
+    missionNumber: 16,
+    title: "Nhiệm Vụ 16: Pháo Đài Nước Quả Cam (Citron's Water Fortress)",
+    subtitle: 'Đối đầu Citron tại Vịnh Cướp Biển - Thủy Quân Đột Kích',
+    storyIntro:
+      'Tiến vào Vịnh Cướp Biển (Pirate Seas), Đại tướng Citron lập phòng tuyến mai rùa kiên cố bảo vệ Làn 5 (Water)! Neptuna và binh đoàn Zombie lập tức điều động thủy thủ Swabbie lội nước áp sát, tận dụng đầm lầy Bog of Sunken Hope để bóc sạch lớp vỏ cam giáp sắt!',
+    bossHeroId: 'hero_citron',
+    bossHeroName: 'Citron',
+    bossHeroAvatar: '/assets/heroes/plants/Citron.png',
+    difficulty: 'normal',
+    rule: {
+      id: 'zrule_mission_16',
+      name: 'Vịnh Cướp Biển & Thủy Quân Đột Kích',
+      description:
+        'Làn 5 (Water) có sẵn Swabbie (Amphibious); Làn 1 có Bog of Sunken Hope (+2 Tấn công cho Amphibious); Zombie nhận +1 Não khởi đầu!',
+      startingBrainsBonus: 1,
+      startingSunBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 0, environmentCardId: 'plant_bog_of_sunken_hope' },
+      ],
+      initialMinions: [
+        { laneIndex: 4, cardId: 'zombie_swabbie', side: 'zombies' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đột phá pháo đài nước của Citron',
+      '⭐⭐ Kết thúc trận với Zombie Hero còn từ 14 HP trở lên',
+      '⭐⭐⭐ Giành thắng lợi trong vòng 8 lượt đấu (≤ 8 turns)',
+    ],
+    rewards: {
+      gems: 400,
+      unlocksNext: true,
+      title: 'Hải Tặc Vịnh Cướp Biển',
+    },
+    comicDialogue: {
+      issueTitle: 'THỦY CHIẾN VỊNH CƯỚP BIỂN!',
+      issueTagline: 'Binh đoàn cướp biển Sneaky vs Khiên năng lượng kiên cố Citron',
+      plantHeroQuote:
+        'Lớp giáp Peel Shield và pháo đài nước của ta bất khả xâm phạm! Không một tên cướp biển nào có thể vượt qua Làn 5!',
+      zombieHeroQuote:
+        'Hahaha! Thủy thủ Swabbie của ta bơi lội tự do dưới nước! Vỏ cam bọc thép của ngươi sẽ bị đập tan tành!',
+    },
+  },
+  {
+    faction: 'zombies',
+    id: 'zombie_mission_17',
+    chapter: 4,
+    missionNumber: 17,
+    title: "Nhiệm Vụ 17: Phù Thủy Băng Giá (Rose's Frosty Curse)",
+    subtitle: 'Đối đầu Rose - Lời Nguyền Hóa Dê & Sương Băng',
+    storyIntro:
+      'Nữ phù thủy Rose giăng bẫy sương mù đóng băng và phù phép biến hình Zombie thành dê con vô hại! Binh đoàn Zombie kích hoạt Laser Base Alpha trang bị Deadly và Strikethrough để xuyên thủng bùa chú hoa hồng!',
+    bossHeroId: 'hero_rose',
+    bossHeroName: 'Rose',
+    bossHeroAvatar: '/assets/heroes/plants/Rose.png',
+    difficulty: 'normal',
+    rule: {
+      id: 'zrule_mission_17',
+      name: 'Lời Nguyền Biến Hình & Trận Địa Laser Base Alpha',
+      description:
+        'Làn 2 có Laser Base Alpha (Deadly & Strikethrough); Làn 3 có Snow Pea của Cây Trồng; Zombie nhận +1 Não khởi đầu!',
+      startingBrainsBonus: 1,
+      startingSunBonus: 0,
+      initialEnvironments: [
+        { laneIndex: 1, environmentCardId: 'zombie_laser_base_alpha' },
+      ],
+      initialMinions: [
+        { laneIndex: 2, cardId: 'plant_snow_pea', side: 'plants' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Hóa giải ma thuật đóng băng của Phù Thủy Rose',
+      '⭐⭐ Bảo toàn lượng máu Zombie Hero từ 12 HP trở lên',
+      '⭐⭐⭐ Giành chiến thắng trong vòng 7 lượt đấu (≤ 7 turns)',
+    ],
+    rewards: {
+      gems: 450,
+      unlocksNext: true,
+      title: 'Khắc Tinh Ma Thuật Băng',
+    },
+    comicDialogue: {
+      issueTitle: 'BÙA CHÚ BĂNG GIÁ HOA HỒNG!',
+      issueTagline: 'Rose phù phép hóa dê Goatify vs Đột kích Deadly Laser Base Alpha',
+      plantHeroQuote:
+        'Biến hình Goatify và đạn băng tuyết sẽ biến cả đoàn quân Zombie thành những khối băng bất động!',
+      zombieHeroQuote:
+        'Tia laser Deadly từ Laser Base Alpha sẽ bốc hơi mọi khối băng! Mùi hoa hồng ma thuật sắp tàn rồi!',
+    },
+  },
+  {
+    faction: 'zombies',
+    id: 'zombie_mission_18',
+    chapter: 4,
+    missionNumber: 18,
+    title: "Nhiệm Vụ 18: Rừng Nấm Độc Ninja (Nightcap's Mushroom Swarm)",
+    subtitle: 'Đối đầu Nightcap - Bão Đạn Nấm Độc Bullseye',
+    storyIntro:
+      'Ninja Nightcap triệu tập binh đoàn Nấm Độc Astro-Shroom phục kích xả đạn Bullseye không kích hoạt Block Meter! Binh đoàn Zombie thiết lập vùng đột biến Area 22 ban tặng Frenzy và +2/+2 càn quét sạch rừng nấm!',
+    bossHeroId: 'hero_nightcap',
+    bossHeroName: 'Nightcap',
+    bossHeroAvatar: '/assets/heroes/plants/Nightcap.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'zrule_mission_18',
+      name: 'Rừng Nấm Độc & Vùng Đột Biến Area 22',
+      description:
+        'Làn 2 có Area 22 (+2/+2 & Frenzy cho Zombie); Làn 1 có sẵn Astro-Shroom (Bullseye); Cả hai bên nhận +1 Năng lượng khởi đầu!',
+      startingBrainsBonus: 1,
+      startingSunBonus: 1,
+      initialEnvironments: [
+        { laneIndex: 1, environmentCardId: 'zombie_area_22' },
+      ],
+      initialMinions: [
+        { laneIndex: 0, cardId: 'plant_astro_shroom', side: 'plants' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Quét sạch rừng nấm độc của Ninja Nightcap',
+      '⭐⭐ Giữ vững lượng máu Zombie Hero từ 12 HP trở lên',
+      '⭐⭐⭐ Giành chiến thắng chớp nhoáng trong vòng 6 lượt đấu (≤ 6 turns)',
+    ],
+    rewards: {
+      gems: 500,
+      unlocksNext: true,
+      title: 'Sát Thủ Bóng Đêm',
+    },
+    comicDialogue: {
+      issueTitle: 'BÃI MÌN NẤM ĐỘC VÔ ẢNH!',
+      issueTagline: 'Nightcap ám toán Bullseye vs Đột biến cuồng loạn Area 22',
+      plantHeroQuote:
+        'Trong bóng đêm, đàn nấm Astro-Shroom sẽ bắn tỉa Bullseye không cho đối thủ một cơ hội đỡ đòn nào!',
+      zombieHeroQuote:
+        'Hehehe! Khu vực Area 22 biến binh đoàn Zombie thành cỗ máy Frenzy xé toạc từng cây nấm ninja!',
+    },
+  },
+  {
+    faction: 'zombies',
+    id: 'zombie_mission_19',
+    chapter: 4,
+    missionNumber: 19,
+    title: "Nhiệm Vụ 19: Nắm Đấm Khủng Long (Grass Knuckles' Dino Strike)",
+    subtitle: 'Đối đầu Grass Knuckles - Nắm Đấm Thép & Cường Lực Tăng Trưởng',
+    storyIntro:
+      'Võ sĩ cơ bắp Grass Knuckles cùng đậu đen Black-Eyed Pea tăng trưởng sức mạnh sau mỗi Trick của Zombie! Binh đoàn Zombie kích hoạt trạm hỏa tiễn Moon Base Z với Overshoot 3 bắn phá thẳng vào Hero đối phương!',
+    bossHeroId: 'hero_grass_knuckles',
+    bossHeroName: 'Grass Knuckles',
+    bossHeroAvatar: '/assets/heroes/plants/Grass Knuckles.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'zrule_mission_19',
+      name: 'Nắm Đấm Thép & Pháo Kích Moon Base Z',
+      description:
+        'Làn 3 có Moon Base Z (Overshoot 3 cho Zombie); Làn 2 có Black-Eyed Pea tăng sức mạnh; Zombie nhận +2 Não, Cây Trồng nhận +1 Sun!',
+      startingBrainsBonus: 2,
+      startingSunBonus: 1,
+      initialEnvironments: [
+        { laneIndex: 2, environmentCardId: 'zombie_moon_base_z' },
+      ],
+      initialMinions: [
+        { laneIndex: 1, cardId: 'plant_black_eyed_pea', side: 'plants' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Hạ gục võ sĩ cơ bắp Grass Knuckles',
+      '⭐⭐ Kết thúc trận chiến với Zombie Hero còn từ 15 HP trở lên',
+      '⭐⭐⭐ Giành thắng lợi trong vòng 8 lượt đấu (≤ 8 turns)',
+    ],
+    rewards: {
+      gems: 600,
+      unlocksNext: true,
+      title: 'Bá Chủ Đấu Trường Thép',
+    },
+    comicDialogue: {
+      issueTitle: 'TIẾNG GẦM ĐẤU TRƯỜNG THÉP!',
+      issueTagline: 'Grass Knuckles đấm thép vs Pháo Overshoot Moon Base Z',
+      plantHeroQuote:
+        'Nắm đấm Power Pummel và hạt đậu tăng trưởng Black-Eyed Pea sẽ nghiền nát mọi kế hoạch của lũ xác sống!',
+      zombieHeroQuote:
+        'Graaaagh! Trạm pháo Moon Base Z với Overshoot 3 sẽ oanh tạc thẳng vào mặt ngươi trước khi ngươi kịp ra đòn!',
+    },
+  },
+  {
+    faction: 'zombies',
+    id: 'zombie_mission_20',
+    chapter: 4,
+    missionNumber: 20,
+    title: "Nhiệm Vụ 20: Đại Quyết Chiến Mặt Trời Rực Lửa (Solar Flare's Inferno)",
+    subtitle: 'ĐẠI CHIẾN BOSS CUỐI CHAPTER 4 ZOMBIE: Solar Flare Thần Hỏa Tối Thượng (HP 38)',
+    storyIntro:
+      'Trận huyết chiến định đoạt số phận Vịnh Cướp Biển & toàn cõi Zombie! Solar Flare Thần Hỏa trỗi dậy với lượng HP khổng lồ 38 HP, rải dung nham Hot Lava thiêu rụi mặt đất và kích hoạt Sunburn liên hoàn! Zomboss trang bị trạm Laser Base Alpha cực mạnh cho Zombie. Trận đại chiến lịch sử giữa Lửa Thiêng và Binh Đoàn Thây Ma!',
+    bossHeroId: 'hero_solar_flare',
+    bossHeroName: 'Solar Flare Thần Hỏa Tối Thượng',
+    bossHeroAvatar: '/assets/heroes/plants/Solar Flare.png',
+    difficulty: 'boss',
+    rule: {
+      id: 'zrule_mission_20',
+      name: 'Bão Lửa Hot Lava & Trận Địa Laser Căn Cứ Alpha',
+      description:
+        'Solar Flare khởi đầu với 38 HP và nhận +2 Năng lượng; Làn 1 có Hot Lava; Làn 3 có Laser Base Alpha (Deadly & Strikethrough); Zombie nhận +3 Não khởi đầu!',
+      startingBrainsBonus: 3,
+      startingSunBonus: 2,
+      initialEnvironments: [
+        { laneIndex: 0, environmentCardId: 'plant_hot_lava' },
+        { laneIndex: 2, environmentCardId: 'zombie_laser_base_alpha' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Dập tắt ngọn lửa thần của Solar Flare (HP 38)',
+      '⭐⭐ Kết thúc trận chiến với Zombie Hero còn từ 15 HP trở lên',
+      '⭐⭐⭐ Hoàn thành xuất sắc toàn bộ Chiến dịch Zombie Chapter 4!',
+    ],
+    rewards: {
+      gems: 1500,
+      unlocksNext: false,
+      title: 'Chúa Tể Cướp Biển Đột Kích',
+    },
+    comicDialogue: {
+      issueTitle: 'ĐẠI HUYẾT CHIẾN BÃO LỬA MẶT TRỜI!',
+      issueTagline: 'Trận chiến tối hậu: Bão Lửa Hot Lava vs Hạm Đội Laser Base Alpha',
+      plantHeroQuote:
+        'Ngọn lửa thần mặt trời 38 HP sẽ thiêu rụi toàn bộ hạm đội cướp biển và đưa lũ xác sống trở về cát bụi!',
+      zombieHeroQuote:
+        'Hahaha! Binh đoàn Zombie không biết sợ hãi! Laser Base Alpha sẽ bốc hơi đài dung nham và cắm cờ Thây Ma!',
+    },
+  },
+]
+
 export const ALL_ZOMBIE_CAMPAIGN_MISSIONS: CampaignMission[] = [
   ...ZOMBIE_CHAPTER_1_MISSIONS,
   ...ZOMBIE_CHAPTER_2_MISSIONS,
   ...ZOMBIE_CHAPTER_3_MISSIONS,
+  ...ZOMBIE_CHAPTER_4_MISSIONS,
 ]
 
 export interface CampaignChapter {
@@ -1587,7 +1839,7 @@ export const CAMPAIGN_CHAPTERS: CampaignChapter[] = [
     title: 'CHIẾN TRƯỜNG ĐA VŨ TRỤ (GALACTIC MULTIVERSE)',
     subtitle: 'Chapter 3: Trận quyết chiến ngoài không gian',
     description:
-      'Tiến vào dải ngân hà với hạm đội Huge-Gigantacus, nữ hoàng Neptuna, giáo sư Brainstorm, cỗ máy Z-Mech V2 và trùm cuối Super Brainz Tối Thượng!',
+      'Tiến vào dải ngân hà đối đầu các siêu trùm Zombie tối thượng: Giáo sư Brainstorm, Nữ chúa Immorticia, Pháo đài Rustbolt, Siêu nhân Super Brainz và Cỗ máy Z-Mech!',
     badgeText: 'CHAPTER 3',
     missions: CHAPTER_3_MISSIONS,
   },
@@ -1629,6 +1881,15 @@ export const ZOMBIE_CAMPAIGN_CHAPTERS: CampaignChapter[] = [
       'Quân đoàn Zombie đổ bộ vào trạm không gian! Đập tan võ đài Grass Knuckles, ma thuật hoa hồng Rose, ninja Nightcap, ngọn lửa Captain Combustible và Đại tướng Beta-Carrotina Tối Thượng!',
     badgeText: 'ZOMBIE CH. 3',
     missions: ZOMBIE_CHAPTER_3_MISSIONS,
+  },
+  {
+    id: 4,
+    title: 'VỊNH CƯỚP BIỂN & ĐỘT KÍCH (PIRATE SEAS & SNEAKY SABOTAGE)',
+    subtitle: 'Chapter 4: Thủy chiến và đột kích lén lút',
+    description:
+      'Chỉ huy hạm đội Zombie đổ bộ vào Vịnh Cướp Biển! Đột phá pháo đài nước Citron, hóa giải bùa chú Rose, càn quét rừng nấm độc Nightcap, đập tan võ đài Grass Knuckles và quyết chiến Trùm Cuối Solar Flare Thần Hỏa!',
+    badgeText: 'ZOMBIE CH. 4',
+    missions: ZOMBIE_CHAPTER_4_MISSIONS,
   },
 ]
 
@@ -1702,7 +1963,10 @@ export function saveZombieCampaignProgress(progress: CampaignProgress): void {
 /**
  * Creates initial lanes modified by the mission rules
  */
-export function buildMissionLanes(mission: CampaignMission): LaneState[] {
+export function buildMissionLanes(
+  mission: CampaignMission,
+  activeModifiers?: string[]
+): LaneState[] {
   const lanes = createInitialLanes()
 
   // Apply initial environments
@@ -1758,7 +2022,10 @@ export function buildMissionLanes(mission: CampaignMission): LaneState[] {
     }
   }
 
-  return lanes
+  const combinedModifiers = Array.from(
+    new Set([...(mission.rule.modifiers || []), ...(activeModifiers || [])])
+  )
+  return applyMissionModifiersToLanes(lanes, combinedModifiers)
 }
 
 /**
@@ -1775,49 +2042,52 @@ export function calculateMissionStars(
 
   let stars = 1 // 1 star for clearing the mission
 
-  if (mission.id === 'mission_1') {
+  const missionId = (mission.id || '').toLowerCase()
+  const missionCode = (mission.code || '').toUpperCase()
+
+  if (missionId === 'mission_1' || missionCode === 'P1') {
     if (playerHp >= 12) stars++
     if (turnCount <= 8) stars++
-  } else if (mission.id === 'mission_2') {
+  } else if (missionId === 'mission_2' || missionCode === 'P2') {
     if (playerHp >= 10) stars++
     if (turnCount <= 10) stars++
-  } else if (mission.id === 'mission_3') {
+  } else if (missionId === 'mission_3' || missionCode === 'P3') {
     if (playerHp >= 15) stars++
     if (turnCount <= 12) stars++
-  } else if (mission.id === 'mission_4') {
+  } else if (missionId === 'mission_4' || missionCode === 'P4') {
     if (playerHp >= 10) stars++
     if (turnCount <= 10) stars++
-  } else if (mission.id === 'mission_5') {
+  } else if (missionId === 'mission_5' || missionCode === 'P5') {
     if (playerHp >= 10) stars++
     if (turnCount <= 12) stars++
-  } else if (mission.id === 'mission_6') {
+  } else if (missionId === 'mission_6' || missionCode === 'P6') {
     if (playerHp >= 12) stars++
     if (turnCount <= 9) stars++
-  } else if (mission.id === 'mission_7') {
+  } else if (missionId === 'mission_7' || missionCode === 'P7') {
     if (playerHp >= 14) stars++
     if (turnCount <= 10) stars++
-  } else if (mission.id === 'mission_8') {
+  } else if (missionId === 'mission_8' || missionCode === 'P8') {
     if (playerHp >= 10) stars++
     if (turnCount <= 8) stars++
-  } else if (mission.id === 'mission_9') {
+  } else if (missionId === 'mission_9' || missionCode === 'P9') {
     if (playerHp >= 12) stars++
     if (turnCount <= 10) stars++
-  } else if (mission.id === 'mission_10') {
+  } else if (missionId === 'mission_10' || missionCode === 'P10') {
     if (playerHp >= 15) stars++
     if (turnCount <= 12) stars++
-  } else if (mission.id === 'mission_11') {
+  } else if (missionId === 'mission_11' || missionCode === 'P11') {
     if (playerHp >= 12) stars++
-    if (turnCount <= 9) stars++
-  } else if (mission.id === 'mission_12') {
+    if (turnCount <= 8 || turnCount <= 9) stars++
+  } else if (missionId === 'mission_12' || missionCode === 'P12') {
     if (playerHp >= 14) stars++
     if (turnCount <= 8) stars++
-  } else if (mission.id === 'mission_13') {
+  } else if (missionId === 'mission_13' || missionCode === 'P13') {
     if (playerHp >= 12) stars++
     if (turnCount <= 8) stars++
-  } else if (mission.id === 'mission_14') {
+  } else if (missionId === 'mission_14' || missionCode === 'P14') {
     if (playerHp >= 15) stars++
     if (turnCount <= 7) stars++
-  } else if (mission.id === 'mission_15') {
+  } else if (missionId === 'mission_15' || missionCode === 'P15') {
     if (playerHp >= 15) stars++
     if (turnCount <= 10) stars++
   } else if (mission.id === 'mission_16') {
@@ -1880,6 +2150,21 @@ export function calculateMissionStars(
   } else if (mission.id === 'zombie_mission_15') {
     if (playerHp >= 15) stars++
     if (turnCount <= 10) stars++
+  } else if (mission.id === 'zombie_mission_16') {
+    if (playerHp >= 14) stars++
+    if (turnCount <= 8) stars++
+  } else if (mission.id === 'zombie_mission_17') {
+    if (playerHp >= 12) stars++
+    if (turnCount <= 7) stars++
+  } else if (mission.id === 'zombie_mission_18') {
+    if (playerHp >= 12) stars++
+    if (turnCount <= 6) stars++
+  } else if (mission.id === 'zombie_mission_19') {
+    if (playerHp >= 15) stars++
+    if (turnCount <= 8) stars++
+  } else if (mission.id === 'zombie_mission_20') {
+    if (playerHp >= 12 || turnCount <= 12) stars++
+    if (playerHp >= 15 || turnCount <= 8) stars++
   }
 
   return Math.min(3, stars)
@@ -1932,7 +2217,152 @@ export const CAMPAIGN_STAR_MILESTONES: CampaignStarMilestone[] = [
     badge: 'Bậc Thầy Đa Vũ Trụ',
     description: 'Thu thập tuyệt đối 60 sao chiến dịch: Chinh phục trọn vẹn cả 4 Chương Cây Trồng & Thây Ma',
   },
+  {
+    requiredStars: 75,
+    gems: 2000,
+    badge: 'Huyền Thoại Đa Vũ Trụ',
+    description: 'Thu thập 75 sao chiến dịch: Tinh hoa chiến thuật vượt qua muôn vàn thử thách Đa Vũ Trụ',
+  },
+  {
+    requiredStars: 90,
+    gems: 3000,
+    badge: 'Vô Địch Thiên Hà',
+    description: 'Thu thập tuyệt đối 90 sao chiến dịch: Chinh phục toàn bộ các Chương Chiến Dịch Cây Trồng & Thây Ma',
+  },
 ]
+
+// ==========================================
+// MISSION MODIFIERS SYSTEM
+// ==========================================
+
+export interface MissionModifier {
+  id: string
+  name: string
+  description: string
+  icon: string
+  effect: 'sun_surge' | 'zombie_frenzy' | 'glass_cannon' | string
+}
+
+export const MISSION_MODIFIERS: Record<string, MissionModifier> = {
+  sun_surge: {
+    id: 'sun_surge',
+    name: 'Bão Nắng (Sun Surge)',
+    description: 'Người chơi Cây Trồng bắt đầu với +2 Sun khởi đầu.',
+    icon: '☀️',
+    effect: 'sun_surge',
+  },
+  zombie_frenzy: {
+    id: 'zombie_frenzy',
+    name: 'Cuồng Nộ Thây Ma (Zombie Frenzy)',
+    description: 'Tất cả Thây Ma (Zombies) đều sở hữu đặc tính Cuồng nộ (Frenzy).',
+    icon: '⚡',
+    effect: 'zombie_frenzy',
+  },
+  glass_cannon: {
+    id: 'glass_cannon',
+    name: 'Đại Bác Thủy Tinh (Glass Cannon)',
+    description: 'Tất cả minion trên sân nhận +3 Tấn công, -2 Máu (tối thiểu 1 HP).',
+    icon: '💥',
+    effect: 'glass_cannon',
+  },
+}
+
+export function getMissionModifier(id: string): MissionModifier | undefined {
+  return MISSION_MODIFIERS[id]
+}
+
+export function applyModifierToMinion(minion: Minion, modifierId: string): Minion {
+  const traits = minion.traits ? [...minion.traits] : []
+  const result: Minion = {
+    ...minion,
+    traits,
+  }
+
+  if (modifierId === 'zombie_frenzy' && result.side === 'zombies') {
+    result.frenzy = true
+    if (!traits.includes('frenzy')) {
+      traits.push('frenzy')
+    }
+  }
+
+  if (modifierId === 'glass_cannon') {
+    result.currentAttack += 3
+    result.baseAttack += 3
+    result.currentHealth = Math.max(1, result.currentHealth - 2)
+    result.maxHealth = Math.max(1, result.maxHealth - 2)
+  }
+
+  return result
+}
+
+export function applyMissionModifiersToMinion(minion: Minion, modifiers: string[]): Minion {
+  let updated = minion
+  for (const mod of modifiers) {
+    updated = applyModifierToMinion(updated, mod)
+  }
+  return updated
+}
+
+export function applyMissionModifiersToLanes(lanes: LaneState[], modifiers: string[]): LaneState[] {
+  if (!modifiers || modifiers.length === 0) return lanes
+
+  return lanes.map((lane) => {
+    const updatedLane: LaneState = { ...lane }
+
+    if (updatedLane.plantMinion) {
+      updatedLane.plantMinion = applyMissionModifiersToMinion(updatedLane.plantMinion, modifiers)
+    }
+    if (updatedLane.plantTeamUpMinion) {
+      updatedLane.plantTeamUpMinion = applyMissionModifiersToMinion(updatedLane.plantTeamUpMinion, modifiers)
+    }
+    if (updatedLane.zombieMinion) {
+      updatedLane.zombieMinion = applyMissionModifiersToMinion(updatedLane.zombieMinion, modifiers)
+    }
+
+    return updatedLane
+  })
+}
+
+export function applyMissionModifiers(gameState: GameState, modifiers: string[]): GameState {
+  if (!modifiers || modifiers.length === 0) return gameState
+
+  const updatedLanes = applyMissionModifiersToLanes(gameState.lanes, modifiers)
+  let updatedPlantHero = { ...gameState.plantHero }
+
+  if (modifiers.includes('sun_surge')) {
+    updatedPlantHero = {
+      ...updatedPlantHero,
+      sun: updatedPlantHero.sun + 2,
+      maxSun: updatedPlantHero.maxSun + 2,
+    }
+  }
+
+  return {
+    ...gameState,
+    plantHero: updatedPlantHero,
+    lanes: updatedLanes,
+    modifiers: Array.from(new Set([...(gameState.modifiers || []), ...modifiers])),
+  }
+}
+
+export function getMissionById(idOrCode: string): CampaignMission | undefined {
+  if (!idOrCode) return undefined
+  const norm = idOrCode.toLowerCase().trim()
+  return (
+    ALL_CAMPAIGN_MISSIONS.find(
+      (m) =>
+        m.id.toLowerCase() === norm ||
+        (m.code && m.code.toLowerCase() === norm) ||
+        (norm.startsWith('p') && m.id === `mission_${norm.slice(1)}`)
+    ) ||
+    ALL_ZOMBIE_CAMPAIGN_MISSIONS.find(
+      (m) =>
+        m.id.toLowerCase() === norm ||
+        (m.code && m.code.toLowerCase() === norm) ||
+        (norm.startsWith('z') && m.id === `zombie_mission_${norm.slice(1)}`)
+    )
+  )
+}
 
 /**
  * Gets a milestone configuration by its required star count

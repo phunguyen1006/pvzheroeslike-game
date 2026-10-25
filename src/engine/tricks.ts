@@ -128,7 +128,7 @@ export function executeTrick(
     case 'plant_berry_blast': {
       // 3 damage to any zombie or zombie hero
       if (targetHero) {
-        const dmg = applyHeroDamage(updatedState.zombieHero, 3, false)
+        const dmg = applyHeroDamage(updatedState.zombieHero, 3, false, updatedState.zombieHand.length)
         updatedState.zombieHero = dmg.updatedHero
         message = `Berry Blast đánh trúng Zombie Hero gây ${dmg.actualDamage} sát thương!`
       } else if (targetLaneIndex !== undefined) {
@@ -271,6 +271,29 @@ export function executeTrick(
       break
     }
 
+    case 'plant_fertilizer': {
+      // Fertilizer: A Plant gets +3/+3
+      if (targetLaneIndex !== undefined && (updatedLanes[targetLaneIndex]?.plantMinion || updatedLanes[targetLaneIndex]?.plantTeamUpMinion)) {
+        const p = updatedLanes[targetLaneIndex].plantMinion || updatedLanes[targetLaneIndex].plantTeamUpMinion!
+        p.currentAttack += 3
+        p.baseAttack += 3
+        p.currentHealth += 3
+        p.maxHealth += 3
+        message = `Fertilizer: ${p.name} nhận +3 Tấn công và +3 Máu (+3/+3)!`
+      } else {
+        const firstPlantLane = updatedLanes.find(l => l.plantMinion || l.plantTeamUpMinion)
+        const p = firstPlantLane?.plantMinion || firstPlantLane?.plantTeamUpMinion
+        if (p) {
+          p.currentAttack += 3
+          p.baseAttack += 3
+          p.currentHealth += 3
+          p.maxHealth += 3
+          message = `Fertilizer: ${p.name} nhận +3 Tấn công và +3 Máu (+3/+3)!`
+        }
+      }
+      break
+    }
+
     // === ZOMBIE TRICKS ===
     case 'zombie_bungee_plumber': {
       // 2 damage to any plant or plant hero (x2 if Binary Stars)
@@ -281,7 +304,7 @@ export function executeTrick(
         if (spRes.absorbed) {
           message = `Bungee Plumber nhắm vào Plant Hero nhưng Soul Patch đã hấp thụ toàn bộ ${trickDmg} sát thương!`
         } else {
-          const dmg = applyHeroDamage(updatedState.plantHero, trickDmg, false)
+          const dmg = applyHeroDamage(updatedState.plantHero, trickDmg, false, updatedState.plantHand.length)
           updatedState.plantHero = dmg.updatedHero
           message = `Bungee Plumber ném thông bồn vào Plant Hero gây ${dmg.actualDamage} sát thương${zMult > 1 ? ' (x2 Binary Stars)' : ''}!`
         }
@@ -353,7 +376,7 @@ export function executeTrick(
           if (spRes.absorbed) {
             message = `Lurch for Lunch: ${z.name} tấn công bất ngờ vào Plant Hero nhưng Soul Patch đã hấp thụ toàn bộ ${effAtk} sát thương!`
           } else {
-            const dmg = applyHeroDamage(updatedState.plantHero, effAtk, Boolean(z.bullseye))
+            const dmg = applyHeroDamage(updatedState.plantHero, effAtk, Boolean(z.bullseye), updatedState.plantHand.length)
             updatedState.plantHero = dmg.updatedHero
             message = `Lurch for Lunch: ${z.name} tấn công bất ngờ vào Plant Hero gây ${dmg.actualDamage} sát thương${zMult > 1 ? ' (x2 Binary Stars)' : ''}!`
           }
@@ -418,7 +441,7 @@ export function executeTrick(
           if (spRes.absorbed) {
             message = `Final Mission: Hi sinh ${deadZombie.name} phóng tên lửa nhưng Soul Patch đã hấp thụ toàn bộ ${trickDmg} sát thương thay cho Plant Hero!`
           } else {
-            const dmg = applyHeroDamage(updatedState.plantHero, trickDmg, false)
+            const dmg = applyHeroDamage(updatedState.plantHero, trickDmg, false, updatedState.plantHand.length)
             updatedState.plantHero = dmg.updatedHero
             message = `Final Mission: Hi sinh ${deadZombie.name} phóng tên lửa ${dmg.actualDamage} dmg vào Plant Hero${zMult > 1 ? ' (x2 Binary Stars)' : ''}!`
           }
@@ -436,7 +459,7 @@ export function executeTrick(
           if (spRes.absorbed) {
             message = `Final Mission: Hi sinh ${deadZombie.name} phóng tên lửa nhưng Soul Patch đã hấp thụ toàn bộ ${trickDmg} sát thương thay cho Plant Hero!`
           } else {
-            const dmg = applyHeroDamage(updatedState.plantHero, trickDmg, false)
+            const dmg = applyHeroDamage(updatedState.plantHero, trickDmg, false, updatedState.plantHand.length)
             updatedState.plantHero = dmg.updatedHero
             message = `Final Mission: Hi sinh ${deadZombie.name} bắn ${dmg.actualDamage} dmg vào Plant Hero${zMult > 1 ? ' (x2 Binary Stars)' : ''}!`
           }

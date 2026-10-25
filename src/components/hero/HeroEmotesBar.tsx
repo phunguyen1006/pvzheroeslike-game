@@ -2,7 +2,17 @@ import React, { useState } from 'react'
 import type { Side } from '../../engine/types'
 import { soundManager } from '../../audio/SoundManager'
 
-export type EmoteType = 'hello' | 'taunt' | 'oops' | 'victory'
+export type EmoteType =
+  | 'wellplayed'
+  | 'oops'
+  | 'brains'
+  | 'gargantuar'
+  | 'thinking'
+  | 'hello'
+  | 'goodgame'
+  | 'noway'
+  | 'taunt'
+  | 'victory'
 
 export interface HeroEmoteOption {
   type: EmoteType
@@ -15,20 +25,12 @@ export interface HeroEmoteOption {
 
 export const HERO_EMOTE_OPTIONS: HeroEmoteOption[] = [
   {
-    type: 'hello',
-    label: 'Hello!',
-    emoji: '👋',
-    plantSpeech: 'Chào đối thủ! Cây cỏ đã sẵn sàng!',
-    zombieSpeech: 'Graaaagh! Chào đĩa não ngon lành!',
-    bgClass: 'emote-btn-hello',
-  },
-  {
-    type: 'taunt',
-    label: 'Taunt!',
-    emoji: '😏',
-    plantSpeech: 'Có thế thôi sao? Cỏ này không dễ xơi đâu!',
-    zombieSpeech: 'Sân cỏ này thuộc về Zombie! Đầu hàng đi!',
-    bgClass: 'emote-btn-taunt',
+    type: 'wellplayed',
+    label: 'Well Played!',
+    emoji: '👏',
+    plantSpeech: 'Nước đi hay lắm! Rất đáng khen ngợi!',
+    zombieSpeech: 'Graagh! Đánh cũng khá đấy đối thủ!',
+    bgClass: 'emote-btn-wellplayed',
   },
   {
     type: 'oops',
@@ -39,12 +41,52 @@ export const HERO_EMOTE_OPTIONS: HeroEmoteOption[] = [
     bgClass: 'emote-btn-oops',
   },
   {
-    type: 'victory',
-    label: 'Victory!',
-    emoji: '🏆',
-    plantSpeech: 'Chiến thắng nằm chắc trong tay ta!',
-    zombieSpeech: 'Tiệc mừng chiến thắng đang chờ đón!',
-    bgClass: 'emote-btn-victory',
+    type: 'brains',
+    label: 'Brains...',
+    emoji: '🧠',
+    plantSpeech: 'Không có não ở đây cho các ngươi đâu!',
+    zombieSpeech: 'Não... Não tươi ngon ngất ngây...',
+    bgClass: 'emote-btn-brains',
+  },
+  {
+    type: 'gargantuar',
+    label: 'Gargantuar Roar!',
+    emoji: '👹',
+    plantSpeech: 'Đứng im! Cột điện cũng phải gục ngã!',
+    zombieSpeech: 'GRAAAWWWRRR! Đập tan tất cả!',
+    bgClass: 'emote-btn-gargantuar',
+  },
+  {
+    type: 'thinking',
+    label: 'Thinking...',
+    emoji: '🤔',
+    plantSpeech: 'Chờ chút, đang tính toán chiến thuật...',
+    zombieSpeech: 'Để ta vắt óc suy nghĩ một phen...',
+    bgClass: 'emote-btn-thinking',
+  },
+  {
+    type: 'hello',
+    label: 'Hello!',
+    emoji: '👋',
+    plantSpeech: 'Chào đối thủ! Cây cỏ đã sẵn sàng!',
+    zombieSpeech: 'Graaaagh! Chào đĩa não ngon lành!',
+    bgClass: 'emote-btn-hello',
+  },
+  {
+    type: 'goodgame',
+    label: 'Good Game!',
+    emoji: '🤝',
+    plantSpeech: 'Trận đấu tuyệt vời! Thật khâm phục!',
+    zombieSpeech: 'Trận chiến nảy lửa! Thật sảng khoái!',
+    bgClass: 'emote-btn-goodgame',
+  },
+  {
+    type: 'noway',
+    label: 'No Way!',
+    emoji: '💢',
+    plantSpeech: 'Không thể nào! Thật không thể tin được!',
+    zombieSpeech: 'Lũ cỏ lá đáng ghét! Không thể nào!',
+    bgClass: 'emote-btn-noway',
   },
 ]
 

@@ -1,6 +1,34 @@
 import type { GameState, Side, Card, LaneState, Minion } from './types'
 import { canPlayCardToLane } from './reducer'
 import { isUntrickable } from './abilities'
+import {
+  type PriorityTarget,
+  getPriorityThreatTargets,
+  shouldHoldBackSwarm,
+  shouldAcceptChipDamageForBlock,
+} from './aiPredictive'
+
+export type {
+  PriorityTarget,
+  OpponentTrickAnticipation,
+  SuperBlockPrimingDecision,
+} from './aiPredictive'
+export {
+  evaluateMinionPriorityScore,
+  getPriorityThreatTargets,
+  rankThreatMinions,
+  anticipateOpponentTricks,
+  shouldHoldBackSwarm,
+  anticipateOpponentLethalTrick,
+  shouldAcceptChipDamageForBlock,
+  evaluateSuperBlockPriming,
+  isDinoRoarMinion,
+  isDoubleStrikeMinion,
+  isFrenzyMinion,
+  isDeadlyMinion,
+  isStrikethroughMinion,
+  isBullseyeMinion,
+} from './aiPredictive'
 
 export interface AIDecision {
   action: 'PLAY_MINION' | 'PLAY_TRICK' | 'PLAY_SUPERPOWER' | 'SAVE_SUPERPOWER' | 'PASS'
@@ -13,7 +41,7 @@ export interface AIDecision {
 
 export type AIDifficulty = 'easy' | 'normal' | 'hard' | 'expert'
 
-export type AIArchetype = 'aggro' | 'control' | 'tempo' | 'combo'
+export type AIArchetype = 'aggro' | 'control' | 'tempo' | 'combo' | 'tournament_grandmaster'
 
 export interface AIPerformanceMetrics {
   turnsElapsed: number
@@ -472,6 +500,23 @@ export function evaluateBoardState(
         enemyTotalAttack * 2.0
       break
 
+    case 'tournament_grandmaster':
+      // Tournament Grandmaster evaluates holistic board state:
+      // High reward for finding lethal (700) & high penalty for being threatened (650),
+      // Tempo differential, Super-Block priming bonus (+15 when 6/8 or 7/8), and resource/card efficiency.
+      score =
+        (friendlyTotalAttack - enemyTotalAttack) * 3.0 +
+        (friendlyTotalHealth - enemyTotalHealth) * 2.2 +
+        friendlyFaceThreat * 3.0 -
+        enemyFaceThreat * 3.5 +
+        hpDiff * 1.8 +
+        cardAdvantage * 3.0 +
+        environmentAdvantage * 2.5 +
+        (friendlyHero.blockMeter >= 6 && friendlyHero.blockCount < 3 ? 15 : 0) +
+        (hasLethal ? 700 : 0) -
+        (threatensLethal ? 650 : 0)
+      break
+
     case 'tempo':
     default:
       score =
@@ -506,6 +551,248 @@ export function evaluateBoardState(
     environmentAdvantage,
     score: Math.round(score * 10) / 10,
   }
+}
+
+/**
+ * Counter-pick matchups for AI (Expert difficulty).
+ * Maps opponent Hero to the strategic counter-hero for the AI.
+ */
+export const PLANT_TO_ZOMBIE_COUNTERS: Record<string, string> = {
+  hero_solar_flare: 'hero_rustbolt', // Armored, Weed Spray destroys swarm <= 2 ATK, Rocket Science vs buffed
+  hero_wall_knight: 'hero_super_brainz', // Anti-Hero, Deadly Strikethrough, fast face pressure vs heal stall
+  hero_green_shadow: 'hero_smash', // Heavy board control, Nibble, big Frenzy presence
+  hero_spudow: 'hero_professor_brainstorm', // Swarm clear, Bungee, explosive science trick combos
+  hero_chompzilla: 'hero_immorticia', // Bat pets, Freeze tricks, hard removal vs big strikes
+  hero_nightcap: 'hero_z_mech', // Missile Madness, Weed Spray against swarm mushrooms
+  hero_citron: 'hero_neptuna', // Octo-pet, water lane dominance, Laser Base Alpha
+  hero_grass_knuckles: 'hero_brain_freeze', // Freeze, Acid Rain debuff, Deadly pets vs tempo
+  hero_rose: 'hero_electric_boogaloo', // Direct face burn, dance aggro bypassing freeze stall
+  hero_captain_combustible: 'hero_rustbolt', // Cut Down to Size, Rocket Science vs OTK strength
+  hero_beta_carrotina: 'hero_huge_gigantacus', // Ramp environments, cheap science units
+}
+
+export const ZOMBIE_TO_PLANT_COUNTERS: Record<string, string> = {
+  hero_super_brainz: 'hero_spudow', // Spudow traps, Hot Lava, Spikeweed against anti-hero/deadly
+  hero_smash: 'hero_chompzilla', // Shamrocket, Squash, big tempo strikes vs Frenzy
+  hero_rustbolt: 'hero_solar_flare', // Direct face burn, Sunburn bypassing armor
+  hero_impfinity: 'hero_solar_flare', // Berry Blast, Sour Grapes, Sunburn clears imp swarm
+  hero_professor_brainstorm: 'hero_wall_knight', // High sustain, heal stall, Geyser, Uncrackable
+  hero_electric_boogaloo: 'hero_wall_knight', // High sustain healing, high health blockers
+  hero_brain_freeze: 'hero_grass_knuckles', // Bullseye tempo without triggering block
+  hero_immorticia: 'hero_green_shadow', // Precision sniping, Cool Bean anti-grave
+  hero_z_mech: 'hero_rose', // Goatify, Freeze, Big minion removal vs heavy armor
+  hero_neptuna: 'hero_citron', // Grave Buster, amphibious water lane supremacy, Peel Shield
+  hero_huge_gigantacus: 'hero_nightcap', // Fast Cyclecap mushroom swarm before HG ramps
+}
+
+export const HERO_COUNTER_MATCHUPS = {
+  plantsToZombies: PLANT_TO_ZOMBIE_COUNTERS,
+  zombiesToPlants: ZOMBIE_TO_PLANT_COUNTERS,
+}
+
+/**
+ * Returns the recommended counter-pick hero against an opponent hero.
+ * Expert AI uses this to gain a strategic archetype matchup advantage.
+ */
+export function getHeroCounterPick(opponentHeroId: string, aiSide: Side): string {
+  const cleanId = opponentHeroId.toLowerCase().replace(/[\s-]/g, '_')
+  const standardKey = cleanId.startsWith('hero_') ? cleanId : `hero_${cleanId}`
+
+  if (aiSide === 'zombies') {
+    return PLANT_TO_ZOMBIE_COUNTERS[standardKey] || PLANT_TO_ZOMBIE_COUNTERS[cleanId] || 'hero_rustbolt'
+  } else {
+    return ZOMBIE_TO_PLANT_COUNTERS[standardKey] || ZOMBIE_TO_PLANT_COUNTERS[cleanId] || 'hero_green_shadow'
+  }
+}
+
+/**
+ * 1-Turn Lookahead Simulation for Hard/Expert AI.
+ * Evaluates minion trades, damage dealt to enemy minion/face, damage taken by friendly minion/face,
+ * and board presence survival after 1 turn of combat.
+ */
+export function simulate1TurnLookahead(
+  state: GameState,
+  side: Side,
+  candidateAction: AIDecision
+): number {
+  if (candidateAction.action === 'PASS') {
+    return 0
+  }
+
+  const isZombie = side === 'zombies'
+  const enemyHero = isZombie ? state.plantHero : state.zombieHero
+  let score = 0
+
+  if (candidateAction.action === 'PLAY_MINION' && candidateAction.card && candidateAction.laneIndex !== undefined) {
+    const card = candidateAction.card
+    const laneIdx = candidateAction.laneIndex
+    const targetLane = state.lanes[laneIdx]
+    const enemyMinion = isZombie ? targetLane.plantMinion : targetLane.zombieMinion
+
+    let attack = card.attack
+    let health = card.health
+    const hasBullseye = hasCardTrait(card, 'bullseye')
+    const hasStrikethrough = hasCardTrait(card, 'strikethrough')
+    const hasDeadly = hasCardTrait(card, 'deadly')
+    const hasArmored = hasCardTrait(card, 'armored') ? 1 : 0
+
+    // Heights lane bonus for Cabbage-Pult
+    if (laneIdx === 0 && card.id === 'plant_cabbage_pult') {
+      attack += 1
+      health += 1
+    }
+
+    if (!enemyMinion) {
+      // Open lane: direct face damage!
+      const faceDamage = attack
+      score += faceDamage * 3
+      if (hasBullseye) score += 2
+      if (faceDamage >= enemyHero.hp) {
+        score += 1000 // 1-turn direct lethal
+      }
+    } else {
+      // Contested lane trade
+      const enemyAtk = enemyMinion.currentAttack
+      const enemyHp = enemyMinion.currentHealth
+      const enemyDeadly = enemyMinion.deadly || (enemyMinion.traits?.includes('deadly') ?? false)
+      const enemyArmored = enemyMinion.armored || 0
+
+      // Effective damage AI minion deals to enemy minion
+      const netDamageToEnemy = Math.max(0, attack - enemyArmored)
+      const killsEnemy = hasDeadly || netDamageToEnemy >= enemyHp
+
+      // Effective damage enemy deals to AI minion
+      const netDamageToAI = Math.max(0, enemyAtk - hasArmored)
+      const aiMinionSurvives = !enemyDeadly && netDamageToAI < health
+
+      if (killsEnemy) {
+        score += 8 + enemyAtk * 2 + (enemyHp >= 4 ? 4 : 0) // Highly reward eliminating enemy threat
+      } else {
+        score += netDamageToEnemy * 1.5
+      }
+
+      if (aiMinionSurvives) {
+        score += 6 + (health - netDamageToAI) * 1.5 // Reward minion survival
+      } else {
+        score -= 2 // Minion lost in trade
+      }
+
+      // Strikethrough hits enemy face even when blocked
+      if (hasStrikethrough) {
+        score += attack * 2.5
+        if (attack >= enemyHero.hp) score += 1000
+      }
+
+      // If enemy was threatening face, blocking it prevents damage to hero
+      score += enemyAtk * 2
+    }
+  } else if (candidateAction.action === 'PLAY_TRICK' && candidateAction.card) {
+    const card = candidateAction.card
+    if (candidateAction.targetHero) {
+      // Direct face burn
+      const burnDmg = card.attack > 0 ? card.attack : 3
+      score += burnDmg * 3.5
+      if (burnDmg >= enemyHero.hp) score += 1000
+    } else if (candidateAction.laneIndex !== undefined) {
+      const targetLane = state.lanes[candidateAction.laneIndex]
+      const enemyMinion = isZombie ? targetLane.plantMinion : targetLane.zombieMinion
+      if (enemyMinion) {
+        score += 6 + enemyMinion.currentAttack * 2.5 + enemyMinion.currentHealth
+      }
+    }
+  }
+
+  return score
+}
+
+/**
+ * 2-Turn Lookahead Simulation for Expert AI.
+ * Evaluates board state and face damage projected across 2 turns.
+ * Key capabilities:
+ * 1. 2-Turn Lethal Detection: Projects cumulative face damage over turns 1 and 2.
+ * 2. Persistent Threat Scaling: Values surviving minions with Frenzy, Strikethrough, Bullseye, Double-Strike.
+ * 3. 2-Turn Trade Advantage: Evaluates multi-turn survival and snowball potential.
+ */
+export function simulate2TurnLookahead(
+  state: GameState,
+  side: Side,
+  candidateAction: AIDecision
+): number {
+  if (candidateAction.action === 'PASS') {
+    return 0
+  }
+
+  // Baseline 1-turn evaluation
+  const turn1Score = simulate1TurnLookahead(state, side, candidateAction)
+  let turn2Score = 0
+
+  const isZombie = side === 'zombies'
+  const enemyHero = isZombie ? state.plantHero : state.zombieHero
+
+  if (candidateAction.action === 'PLAY_MINION' && candidateAction.card && candidateAction.laneIndex !== undefined) {
+    const card = candidateAction.card
+    const laneIdx = candidateAction.laneIndex
+    const targetLane = state.lanes[laneIdx]
+    const enemyMinion = isZombie ? targetLane.plantMinion : targetLane.zombieMinion
+
+    const attack = card.attack
+    const health = card.health
+    const hasBullseye = hasCardTrait(card, 'bullseye')
+    const hasStrikethrough = hasCardTrait(card, 'strikethrough')
+    const hasFrenzy = hasCardTrait(card, 'frenzy')
+    const hasDoubleStrike = hasCardTrait(card, 'doubleStrike')
+    const antiHero = card.antiHero || 0
+
+    // Effective attack when unblocked
+    const unblockedAttack = attack + antiHero
+
+    if (!enemyMinion) {
+      // Turn 1 face damage + Projected Turn 2 face damage!
+      const total2TurnDamage = unblockedAttack * 2 * (hasDoubleStrike ? 2 : 1)
+
+      // 2-Turn Lethal Setup Detection:
+      if (total2TurnDamage >= enemyHero.hp) {
+        turn2Score += 800 // High priority: sets up 2-turn lethal!
+      } else {
+        turn2Score += unblockedAttack * 3.5 * (hasDoubleStrike ? 2 : 1)
+      }
+
+      if (hasBullseye) turn2Score += 4
+      if (hasStrikethrough) turn2Score += 5
+      if (hasDoubleStrike) turn2Score += 5
+    } else {
+      // If AI minion kills enemy minion and survives turn 1:
+      const enemyAtk = enemyMinion.currentAttack
+      const enemyHp = enemyMinion.currentHealth
+      const enemyDeadly = enemyMinion.deadly || (enemyMinion.traits?.includes('deadly') ?? false)
+      const hasArmored = hasCardTrait(card, 'armored') ? 1 : 0
+      const netDamageToAI = Math.max(0, enemyAtk - hasArmored)
+
+      const killsEnemy = hasCardTrait(card, 'deadly') || attack >= (enemyMinion.armored ? enemyHp + enemyMinion.armored : enemyHp)
+      const aiMinionSurvives = !enemyDeadly && netDamageToAI < health
+
+      if (killsEnemy && aiMinionSurvives) {
+        // Lane becomes open for turn 2!
+        const turn2FaceDamage = attack + antiHero
+        turn2Score += 12 + turn2FaceDamage * 3
+        if (hasFrenzy) turn2Score += 6 // Frenzy bonus
+        if (turn2FaceDamage >= enemyHero.hp) {
+          turn2Score += 600 // 2-turn lethal achieved by clearing blocker
+        }
+      }
+    }
+  } else if (candidateAction.action === 'PLAY_TRICK' && candidateAction.card) {
+    if (candidateAction.targetHero) {
+      const burnDmg = candidateAction.card.attack > 0 ? candidateAction.card.attack : 3
+      if (burnDmg >= enemyHero.hp) {
+        turn2Score += 1000 // Immediate lethal
+      } else if (burnDmg * 2 >= enemyHero.hp) {
+        turn2Score += 400 // Sets up 2-turn burn lethal
+      }
+    }
+  }
+
+  return turn1Score + turn2Score
 }
 
 /**
@@ -639,6 +926,39 @@ export function getAIMulliganDecision(
       return
     }
 
+    // Tournament Grandmaster Curve Rules:
+    // Flawless curve assembly: guarantees early tempo (1-2 drops), keeps priority threat engines,
+    // and retains 1 high-efficiency removal if early presence is secured.
+    if (archetype === 'tournament_grandmaster') {
+      const isPriorityEngine =
+        card.id.includes('tricarrotops') ||
+        card.id.includes('spacetime') ||
+        card.id.includes('repeater') ||
+        card.id === 'zombie_going_viral' ||
+        card.id === 'plant_black_eyed_pea'
+
+      const isKeyRemoval =
+        card.id === 'zombie_rocket_science' ||
+        card.id === 'plant_shamrocket' ||
+        card.id === 'plant_berry_blast' ||
+        card.id === 'zombie_bungee_plumber'
+
+      const hasEarlyCurve = keepIndices.some((i) => hand[i].cost <= 2)
+
+      if (card.cost <= 2) {
+        keepIndices.push(idx)
+      } else if (isPriorityEngine && hasEarlyCurve) {
+        keepIndices.push(idx)
+      } else if (card.cost === 3 && card.type === 'minion') {
+        keepIndices.push(idx)
+      } else if (isKeyRemoval && hasEarlyCurve) {
+        keepIndices.push(idx)
+      } else {
+        swapIndices.push(idx)
+      }
+      return
+    }
+
     // Standard Curve Rules (Tempo, Combo):
     if (card.cost <= 3) {
       // Curve 1-3: Keep
@@ -689,141 +1009,175 @@ export function getAISuperpowerDecision(
   state: GameState,
   side: Side,
   superpower: Card,
-  archetype: AIArchetype = 'tempo'
+  archetypeOrOptions: AIArchetype | AIDecisionOptions = 'tempo'
 ): SuperpowerDecision {
+  const isOptions = typeof archetypeOrOptions === 'object'
+  const archetype: AIArchetype =
+    isOptions && archetypeOrOptions.archetype
+      ? archetypeOrOptions.archetype
+      : typeof archetypeOrOptions === 'string'
+        ? archetypeOrOptions
+        : 'tempo'
+  const difficulty: AIDifficulty =
+    isOptions && archetypeOrOptions.difficulty
+      ? archetypeOrOptions.difficulty
+      : 'normal'
+  const options: AIDecisionOptions = isOptions ? archetypeOrOptions : {}
+
   const isZombie = side === 'zombies'
   const lanes = state.lanes
   const spId = superpower.id.toLowerCase()
   const enemyHero = isZombie ? state.plantHero : state.zombieHero
 
+  // Anti-Frustration & Easy difficulty lethal bypass:
+  // Easy AI skips lethal calculations.
+  // In Easy / Normal difficulty with Player HP <= 5, AI intentionally misses lethal on turn % 3 === 0
+  const isAntiFrustrationTurn = options.forceMissLethal || ((options.turnCount ?? state.turn) % 3 === 0)
+  const shouldSkipLethal =
+    difficulty === 'easy' ||
+    (difficulty === 'normal' && enemyHero.hp <= 5 && isAntiFrustrationTurn)
+
   // =========================================================================
   // 0. IMMEDIATE SUPERPOWER LETHAL CALCULATION
   // If the Superpower directly or combo-finishes the enemy hero, play immediately!
   // =========================================================================
-
-  // A. Direct Face Burn Superpowers
-  if (spId.includes('stayin_alive') && enemyHero.hp <= 3) {
-    return {
-      action: 'PLAY_SUPERPOWER',
-      superpowerId: superpower.id,
-      targetHero: true,
-      reason: `Lethal Stayin' Alive burns Plant Hero (${enemyHero.hp} HP) for 3 fatal damage!`,
-    }
-  }
-
-  if (spId.includes('sunburn') && enemyHero.hp <= 2) {
-    return {
-      action: 'PLAY_SUPERPOWER',
-      superpowerId: superpower.id,
-      targetHero: true,
-      reason: `Lethal Sunburn strikes Zombie Hero (${enemyHero.hp} HP) for 2 fatal damage!`,
-    }
-  }
-
-  if (spId.includes('missile_madness') && enemyHero.hp <= 3) {
-    return {
-      action: 'PLAY_SUPERPOWER',
-      superpowerId: superpower.id,
-      targetHero: true,
-      reason: `Lethal Missile Madness delivers 3 fatal burst damage directly to Plant Hero!`,
-    }
-  }
-
-  if (spId.includes('precision_blast')) {
-    const middleLane = lanes[2]
-    if (!middleLane.zombieMinion && enemyHero.hp <= 5) {
+  if (!shouldSkipLethal) {
+    // A. Direct Face Burn Superpowers
+    if (spId.includes('stayin_alive') && enemyHero.hp <= 3) {
       return {
         action: 'PLAY_SUPERPOWER',
         superpowerId: superpower.id,
-        targetLaneIndex: 2,
-        reason: `Lethal Precision Blast fires 5 burst damage in middle lane to finish Zombie Hero!`,
+        targetHero: true,
+        reason: `Lethal Stayin' Alive burns Plant Hero (${enemyHero.hp} HP) for 3 fatal damage!`,
       }
     }
-  }
 
-  if (spId.includes('power_pummel')) {
-    const openGroundLanes = [1, 2, 3].filter((idx) => !lanes[idx].zombieMinion)
-    if (openGroundLanes.length > 0 && openGroundLanes.length * 2 >= enemyHero.hp) {
+    if (spId.includes('sunburn') && enemyHero.hp <= 2) {
       return {
         action: 'PLAY_SUPERPOWER',
         superpowerId: superpower.id,
-        reason: `Lethal Power Pummel strikes through ${openGroundLanes.length} open ground lanes for ${openGroundLanes.length * 2} face damage to win!`,
+        targetHero: true,
+        reason: `Lethal Sunburn strikes Zombie Hero (${enemyHero.hp} HP) for 2 fatal damage!`,
       }
     }
-  }
 
-  // B. Minion Buff / Bonus Attack Lethal Superpowers
-  if (spId.includes('blazing_bark')) {
-    const unblockedPlant = lanes
-      .map((l, idx) => ({ l, idx }))
-      .find(
-        (x) =>
-          x.l.plantMinion &&
-          !x.l.zombieMinion &&
-          !x.l.plantMinion.isFrozen &&
-          x.l.plantMinion.currentAttack + 4 >= enemyHero.hp
+    if (spId.includes('missile_madness') && enemyHero.hp <= 3) {
+      return {
+        action: 'PLAY_SUPERPOWER',
+        superpowerId: superpower.id,
+        targetHero: true,
+        reason: `Lethal Missile Madness delivers 3 fatal burst damage directly to Plant Hero!`,
+      }
+    }
+
+    if (spId.includes('precision_blast')) {
+      const middleLane = lanes[2]
+      if (!middleLane.zombieMinion && enemyHero.hp <= 5) {
+        return {
+          action: 'PLAY_SUPERPOWER',
+          superpowerId: superpower.id,
+          targetLaneIndex: 2,
+          reason: `Lethal Precision Blast fires 5 burst damage in middle lane to finish Zombie Hero!`,
+        }
+      }
+    }
+
+    if (spId.includes('power_pummel')) {
+      const openGroundLanes = [1, 2, 3].filter((idx) => !lanes[idx].zombieMinion)
+      if (openGroundLanes.length > 0 && openGroundLanes.length * 2 >= enemyHero.hp) {
+        return {
+          action: 'PLAY_SUPERPOWER',
+          superpowerId: superpower.id,
+          reason: `Lethal Power Pummel strikes through ${openGroundLanes.length} open ground lanes for ${openGroundLanes.length * 2} face damage to win!`,
+        }
+      }
+    }
+
+    // B. Minion Buff / Bonus Attack Lethal Superpowers
+    if (spId.includes('blazing_bark')) {
+      const unblockedPlant = lanes
+        .map((l, idx) => ({ l, idx }))
+        .find(
+          (x) =>
+            x.l.plantMinion &&
+            !x.l.zombieMinion &&
+            !x.l.plantMinion.isFrozen &&
+            x.l.plantMinion.currentAttack + 4 >= enemyHero.hp
+        )
+      if (unblockedPlant) {
+        return {
+          action: 'PLAY_SUPERPOWER',
+          superpowerId: superpower.id,
+          targetLaneIndex: unblockedPlant.idx,
+          reason: `Lethal Blazing Bark grants +4 attack to ${unblockedPlant.l.plantMinion!.name} for lethal face damage!`,
+        }
+      }
+    }
+
+    if (spId.includes('time_to_shine')) {
+      const unblockedPlant = lanes
+        .map((l, idx) => ({ l, idx }))
+        .find(
+          (x) =>
+            x.l.plantMinion &&
+            !x.l.zombieMinion &&
+            !x.l.plantMinion.isFrozen &&
+            x.l.plantMinion.currentAttack >= enemyHero.hp
+        )
+      if (unblockedPlant) {
+        return {
+          action: 'PLAY_SUPERPOWER',
+          superpowerId: superpower.id,
+          targetLaneIndex: unblockedPlant.idx,
+          reason: `Lethal Time to Shine bonus attack deals fatal blow of ${unblockedPlant.l.plantMinion!.currentAttack} to Zombie Hero!`,
+        }
+      }
+    }
+
+    if (spId.includes('brute_strength')) {
+      const unblockedZombie = lanes
+        .map((l, idx) => ({ l, idx }))
+        .find(
+          (x) =>
+            x.l.zombieMinion &&
+            !x.l.plantMinion &&
+            !x.l.zombieMinion.isFrozen &&
+            x.l.zombieMinion.currentAttack + 3 >= enemyHero.hp
+        )
+      if (unblockedZombie) {
+        return {
+          action: 'PLAY_SUPERPOWER',
+          superpowerId: superpower.id,
+          targetLaneIndex: unblockedZombie.idx,
+          reason: `Lethal Brute Strength buffs ${unblockedZombie.l.zombieMinion!.name} for game-ending face damage!`,
+        }
+      }
+    }
+
+    if (spId.includes('carried_away')) {
+      const openLaneIdx = lanes.findIndex((l) => !l.plantMinion)
+      const strongZombie = lanes.find(
+        (l) => l.zombieMinion && !l.zombieMinion.isFrozen && l.zombieMinion.currentAttack >= enemyHero.hp
       )
-    if (unblockedPlant) {
-      return {
-        action: 'PLAY_SUPERPOWER',
-        superpowerId: superpower.id,
-        targetLaneIndex: unblockedPlant.idx,
-        reason: `Lethal Blazing Bark grants +4 attack to ${unblockedPlant.l.plantMinion!.name} for lethal face damage!`,
+      if (openLaneIdx !== -1 && strongZombie) {
+        return {
+          action: 'PLAY_SUPERPOWER',
+          superpowerId: superpower.id,
+          targetLaneIndex: openLaneIdx,
+          reason: `Lethal Carried Away moves ${strongZombie.zombieMinion!.name} to open lane for direct lethal strike!`,
+        }
       }
     }
-  }
-
-  if (spId.includes('time_to_shine')) {
-    const unblockedPlant = lanes
-      .map((l, idx) => ({ l, idx }))
-      .find(
-        (x) =>
-          x.l.plantMinion &&
-          !x.l.zombieMinion &&
-          !x.l.plantMinion.isFrozen &&
-          x.l.plantMinion.currentAttack >= enemyHero.hp
-      )
-    if (unblockedPlant) {
+  } else if ((difficulty === 'easy' || difficulty === 'normal') && enemyHero.hp <= 5 && isAntiFrustrationTurn) {
+    const hasPotentialLethal =
+      (spId.includes('stayin_alive') && enemyHero.hp <= 3) ||
+      (spId.includes('sunburn') && enemyHero.hp <= 2) ||
+      (spId.includes('missile_madness') && enemyHero.hp <= 3)
+    if (hasPotentialLethal) {
       return {
-        action: 'PLAY_SUPERPOWER',
+        action: 'SAVE_SUPERPOWER',
         superpowerId: superpower.id,
-        targetLaneIndex: unblockedPlant.idx,
-        reason: `Lethal Time to Shine bonus attack deals fatal blow of ${unblockedPlant.l.plantMinion!.currentAttack} to Zombie Hero!`,
-      }
-    }
-  }
-
-  if (spId.includes('brute_strength')) {
-    const unblockedZombie = lanes
-      .map((l, idx) => ({ l, idx }))
-      .find(
-        (x) =>
-          x.l.zombieMinion &&
-          !x.l.plantMinion &&
-          !x.l.zombieMinion.isFrozen &&
-          x.l.zombieMinion.currentAttack + 3 >= enemyHero.hp
-      )
-    if (unblockedZombie) {
-      return {
-        action: 'PLAY_SUPERPOWER',
-        superpowerId: superpower.id,
-        targetLaneIndex: unblockedZombie.idx,
-        reason: `Lethal Brute Strength buffs ${unblockedZombie.l.zombieMinion!.name} for game-ending face damage!`,
-      }
-    }
-  }
-
-  if (spId.includes('carried_away')) {
-    const openLaneIdx = lanes.findIndex((l) => !l.plantMinion)
-    const strongZombie = lanes.find(
-      (l) => l.zombieMinion && !l.zombieMinion.isFrozen && l.zombieMinion.currentAttack >= enemyHero.hp
-    )
-    if (openLaneIdx !== -1 && strongZombie) {
-      return {
-        action: 'PLAY_SUPERPOWER',
-        superpowerId: superpower.id,
-        targetLaneIndex: openLaneIdx,
-        reason: `Lethal Carried Away moves ${strongZombie.zombieMinion!.name} to open lane for direct lethal strike!`,
+        reason: 'Anti-Frustration: Intentionally missed superpower lethal on low Player HP (turn % 3 === 0)',
       }
     }
   }
@@ -2007,11 +2361,36 @@ export function reserveBrainsForTricks(
 
     // Check Going Viral (cost 3)
     const viral = playableTricks.find((c) => c.id === 'zombie_going_viral' && c.cost <= resource)
-    if (viral && (archetype === 'tempo' || archetype === 'combo' || archetype === 'aggro')) {
+    if (viral && (archetype === 'tempo' || archetype === 'combo' || archetype === 'aggro' || archetype === 'tournament_grandmaster')) {
       return {
         reservedBrains: viral.cost,
         targetTrick: viral,
         reason: 'Reserving brains for Going Viral team-wide frenzy buff',
+      }
+    }
+  }
+
+  // Grandmaster Predictive Threat Reservation:
+  // Identify high-priority threats (Double Strike, Dino-Roar, Frenzy, Deadly) and hold removal tricks
+  if (archetype === 'tournament_grandmaster') {
+    const priorityTargets = getPriorityThreatTargets(state, 'zombies')
+    const highThreat = priorityTargets.find((t: PriorityTarget) => t.isHighPriority && !isUntrickable(t.minion))
+    if (highThreat) {
+      const rocket = playableTricks.find((c) => c.id === 'zombie_rocket_science' && c.cost <= resource)
+      const locust = playableTricks.find((c) => c.id === 'zombie_locust_swarm' && c.cost <= resource)
+      if (rocket && highThreat.minion.currentAttack >= 4) {
+        return {
+          reservedBrains: rocket.cost,
+          targetTrick: rocket,
+          reason: `Grandmaster reserving brains for Rocket Science against high-priority threat ${highThreat.minion.name} (${highThreat.priorityScore} score)`,
+        }
+      }
+      if (locust) {
+        return {
+          reservedBrains: locust.cost,
+          targetTrick: locust,
+          reason: `Grandmaster reserving brains for Locust Swarm against high-priority threat ${highThreat.minion.name} (${highThreat.priorityScore} score)`,
+        }
       }
     }
   }
@@ -2108,37 +2487,59 @@ export function getAIDecision(
     ['easy', 'normal', 'hard', 'expert'].includes(difficultyOrOptions)
   const isArchetype =
     typeof difficultyOrOptions === 'string' &&
-    ['aggro', 'control', 'tempo', 'combo'].includes(difficultyOrOptions)
+    ['aggro', 'control', 'tempo', 'combo', 'tournament_grandmaster'].includes(difficultyOrOptions)
 
-  const difficulty: AIDifficulty = isDifficulty
-    ? (difficultyOrOptions as AIDifficulty)
-    : typeof difficultyOrOptions === 'object' && difficultyOrOptions.difficulty
-      ? difficultyOrOptions.difficulty
-      : 'normal'
+  const options: AIDecisionOptions =
+    typeof difficultyOrOptions === 'object'
+      ? difficultyOrOptions
+      : {
+          difficulty: isDifficulty ? (difficultyOrOptions as AIDifficulty) : 'normal',
+          archetype: isArchetype ? (difficultyOrOptions as AIArchetype) : 'tempo',
+        }
 
+  const decision = computeAIDecision(state, side, options)
+
+  if (options.metricsTracker) {
+    const reasonLower = (decision.reason || '').toLowerCase()
+    const isMissedLethal = reasonLower.includes('missed lethal')
+    const isLethal = !isMissedLethal && reasonLower.includes('lethal')
+    const isSuboptimal = reasonLower.includes('suboptimal')
+
+    options.metricsTracker.recordDecision(decision, state, {
+      isLethal,
+      isMissedLethal,
+      isSuboptimal,
+    })
+  }
+
+  return decision
+}
+
+function computeAIDecision(
+  state: GameState,
+  side: Side,
+  options: AIDecisionOptions
+): AIDecision {
+  const difficulty: AIDifficulty = options.difficulty ?? 'normal'
   const isZombie = side === 'zombies'
   const myHero = isZombie ? state.zombieHero : state.plantHero
 
   // When archetype is explicitly provided (as string or in options), use it.
   // In bossMode without explicit archetype, infer from hero.
   // Otherwise, default to 'tempo' (balanced tactical baseline) for backwards compatibility.
-  const archetype: AIArchetype = isArchetype
-    ? (difficultyOrOptions as AIArchetype)
-    : typeof difficultyOrOptions === 'object' && difficultyOrOptions.archetype
-      ? difficultyOrOptions.archetype
-      : typeof difficultyOrOptions === 'object' && difficultyOrOptions.bossMode
-        ? getHeroDefaultArchetype(myHero.id)
-        : 'tempo'
+  const archetype: AIArchetype =
+    options.archetype ??
+    (options.bossMode ? getHeroDefaultArchetype(myHero.id) : 'tempo')
 
   const hand = isZombie ? state.zombieHand : state.plantHand
   const resource = isZombie ? myHero.brains : myHero.sun
   const enemyHero = isZombie ? state.plantHero : state.zombieHero
-  const isAggroAllOut = enemyHero.hp <= 10 || archetype === 'aggro'
+  const isAggroAllOut = difficulty !== 'easy' && (enemyHero.hp <= 10 || archetype === 'aggro')
   const isDefensiveSurvival = myHero.hp <= 8
 
   // Handle pending Super-Block trigger if active
   if (state.pendingSuperBlock && state.pendingSuperBlock.side === side) {
-    const spDecision = getAISuperpowerDecision(state, side, state.pendingSuperBlock.superpower, archetype)
+    const spDecision = getAISuperpowerDecision(state, side, state.pendingSuperBlock.superpower, options)
     return spDecision
   }
 
@@ -2149,29 +2550,55 @@ export function getAIDecision(
   }
 
   // ========================================================
-  // EASY DIFFICULTY: Relaxed, partially random behavior
+  // EASY DIFFICULTY & SUBOPTIMAL PLAY CALCULATION
+  // Base suboptimal rate = 40% (0.40)
+  // If Player has 3+ consecutive losses: +20% (+0.20) -> 60%
   // ========================================================
-  if (difficulty === 'easy') {
-    if (Math.random() < 0.25) {
-      return { action: 'PASS', reason: 'Easy AI random pass' }
+  const playerConsecutiveLosses = options.playerConsecutiveLosses ?? 0
+  const baseSuboptimalRate =
+    options.suboptimalRate !== undefined
+      ? options.suboptimalRate
+      : difficulty === 'easy'
+        ? 0.4 + (playerConsecutiveLosses >= 3 ? 0.2 : 0)
+        : 0
+
+  const isSuboptimalDecision =
+    options.forceSuboptimal === true ||
+    (difficulty === 'easy' && options.forceSuboptimal !== false && Math.random() < baseSuboptimalRate)
+
+  if (isSuboptimalDecision) {
+    // 50% chance: Random pass early without spending resources
+    if (Math.random() < 0.5) {
+      return { action: 'PASS', reason: 'Easy AI: Suboptimal randomized pass' }
     }
 
+    // 50% chance: Play a random playable card to a random valid lane
     const randomCard = playableCards[Math.floor(Math.random() * playableCards.length)]
     if (isMinionCard(randomCard)) {
-      const openLanes = state.lanes
+      const validLanes = state.lanes
         .map((lane, idx) => ({ lane, idx }))
         .filter(({ lane }) => canPlayCardToLane(randomCard, lane, side).allowed)
 
-      if (openLanes.length > 0) {
-        const target = openLanes[Math.floor(Math.random() * openLanes.length)]
-        return { action: 'PLAY_MINION', card: randomCard, laneIndex: target.idx }
+      if (validLanes.length > 0) {
+        const target = validLanes[Math.floor(Math.random() * validLanes.length)]
+        return {
+          action: 'PLAY_MINION',
+          card: randomCard,
+          laneIndex: target.idx,
+          reason: `Easy AI: Suboptimal randomized minion deployment on lane ${target.idx + 1}`,
+        }
       }
     } else if (randomCard.type === 'trick' || randomCard.type === 'environment') {
       const targetLane = Math.floor(Math.random() * state.lanes.length)
-      return { action: 'PLAY_TRICK', card: randomCard, laneIndex: targetLane }
+      return {
+        action: 'PLAY_TRICK',
+        card: randomCard,
+        laneIndex: targetLane,
+        reason: `Easy AI: Suboptimal randomized trick play on lane ${targetLane + 1}`,
+      }
     }
 
-    return { action: 'PASS' }
+    return { action: 'PASS', reason: 'Easy AI: Suboptimal pass fallback' }
   }
 
   // ========================================================
@@ -2190,6 +2617,18 @@ export function getAIDecision(
         reason: hasHighValueTricks
           ? 'Preserving brains for high-value Tricks in ZOMBIE_TRICKS phase'
           : 'No playable minions during ZOMBIE_PLAY',
+      }
+    }
+
+    // Predictive Board Wipe Restraint:
+    // If opponent has 4+ or 5+ Sun, hold back swarm to avoid Doom-Shroom / Cherry Bomb / Tactical Cuke wipes
+    if (archetype === 'tournament_grandmaster' || difficulty === 'expert') {
+      const swarmCheck = shouldHoldBackSwarm(state, 'zombies')
+      if (swarmCheck.hold && state.lanes.filter((l) => l.zombieMinion).length >= 2) {
+        return {
+          action: 'PASS',
+          reason: swarmCheck.reason || 'Predictive Restraint: Holding back swarm into potential board wipe',
+        }
       }
     }
 
@@ -2224,6 +2663,8 @@ export function getAIDecision(
       const unblockedPlants = state.lanes
         .map((lane, idx) => ({ lane, idx, plant: lane.plantMinion }))
         .filter((x): x is { lane: LaneState; idx: number; plant: Minion } => Boolean(x.plant && !x.lane.zombieMinion))
+        // Super-Block Priming: If primed at 6/8 or 7/8, intentionally skip blocking chip damage to trigger shield
+        .filter((x) => !shouldAcceptChipDamageForBlock(state, 'zombies', x.idx).acceptChip)
         .sort((a, b) => b.plant.currentAttack - a.plant.currentAttack)
 
       if (unblockedPlants.length > 0 && playableMinions.length > 0) {
@@ -2376,10 +2817,66 @@ export function getAIDecision(
       }
     }
 
+    // TOURNAMENT GRANDMASTER ARCHETYPE:
+    // Flawless positioning & threat neutralization:
+    // 1. Water lane: Amphibious minions take Lane 4
+    // 2. Heights: Arm Wrestler takes Lane 0
+    // 3. Threat containment: Identifies high priority plant threats (Double Strike, Dino-Roar, Frenzy, Deadly).
+    //    If not intentionally priming Super-Block, blocks highest priority threat.
+    // 4. Left-to-right initiative: Earlier lanes attack first, deploying highest attack minions into early open lanes.
+    if (archetype === 'tournament_grandmaster') {
+      const priorityTargets = getPriorityThreatTargets(state, 'zombies')
+      const unblockedHighThreat = priorityTargets.find(
+        (t) => !state.lanes[t.laneIndex].zombieMinion && t.isHighPriority
+      )
+
+      if (unblockedHighThreat) {
+        // Super-Block Priming Check: Intentionally skip blocking if chip damage will trigger shield before later threat
+        const priming = shouldAcceptChipDamageForBlock(state, 'zombies', unblockedHighThreat.laneIndex)
+        if (!priming.acceptChip) {
+          const blockers = [...playableMinions].sort((a, b) => {
+            const aBonus = (hasCardTrait(a, 'deadly') ? 10 : 0) + (hasCardTrait(a, 'armored') ? 5 : 0)
+            const bBonus = (hasCardTrait(b, 'deadly') ? 10 : 0) + (hasCardTrait(b, 'armored') ? 5 : 0)
+            return (b.health + bBonus) - (a.health + aBonus)
+          })
+
+          for (const blocker of blockers) {
+            if (canPlayCardToLane(blocker, state.lanes[unblockedHighThreat.laneIndex], 'zombies').allowed) {
+              return {
+                action: 'PLAY_MINION',
+                card: blocker,
+                laneIndex: unblockedHighThreat.laneIndex,
+                reason: `Tournament Grandmaster: Deploys ${blocker.name} to neutralize priority threat ${unblockedHighThreat.minion.name} (${unblockedHighThreat.reasons[0] || 'threat score ' + unblockedHighThreat.priorityScore}) in lane ${unblockedHighThreat.laneIndex + 1}`,
+              }
+            }
+          }
+        }
+      }
+
+      // Left-to-right initiative: place highest attack minion into earliest open lane
+      if (openLanes.length > 0) {
+        const topAttacker = [...playableMinions].sort((a, b) => b.attack - a.attack)[0]
+        const earliestOpenLane = [...openLanes].sort((a, b) => a.idx - b.idx)[0]
+        if (canPlayCardToLane(topAttacker, earliestOpenLane.lane, 'zombies').allowed) {
+          return {
+            action: 'PLAY_MINION',
+            card: topAttacker,
+            laneIndex: earliestOpenLane.idx,
+            reason: `Tournament Grandmaster: Left-to-right combat initiative deploys ${topAttacker.name} (${topAttacker.attack} ATK) into open lane ${earliestOpenLane.idx + 1}`,
+          }
+        }
+      }
+    }
+
     // D. Threat Mitigation: Block unblocked dangerous Plant lanes
     const threatenedLanes = state.lanes
       .map((lane, idx) => ({ lane, idx, threat: evaluateMinionThreat(lane, 'plants') }))
-      .filter(({ lane }) => lane.plantMinion && !lane.zombieMinion)
+      .filter(({ lane, idx }) => {
+        if (!lane.plantMinion || lane.zombieMinion) return false
+        // Super-Block Priming Check: If primed at 6/8 or 7/8, intentionally skip blocking chip damage
+        if (shouldAcceptChipDamageForBlock(state, 'zombies', idx).acceptChip) return false
+        return true
+      })
       .sort((a, b) => b.threat - a.threat)
 
     if (threatenedLanes.length > 0 && threatenedLanes[0].threat >= 3) {
@@ -2449,12 +2946,24 @@ export function getAIDecision(
     if (playableTricks.length === 0) return { action: 'PASS' }
 
     const enemyHero = state.plantHero
-    const isAggroAllOut = enemyHero.hp <= 10 || archetype === 'aggro'
+    const isAggroAllOut = difficulty !== 'easy' && (enemyHero.hp <= 10 || archetype === 'aggro')
     const isDefensiveSurvival = myHero.hp <= 8
 
     // A. Check Lethal
-    const lethal = checkLethalPossibility(state, 'zombies', playableTricks, resource)
-    if (lethal) return lethal
+    if (difficulty !== 'easy') {
+      const lethal = checkLethalPossibility(state, 'zombies', playableTricks, resource)
+      if (lethal) {
+        const isPlayerLowHp = enemyHero.hp <= 5
+        const isAntiFrustrationTurn = options.forceMissLethal || ((options.turnCount ?? state.turn) % 3 === 0)
+        if (isPlayerLowHp && isAntiFrustrationTurn && difficulty === 'normal') {
+          return {
+            action: 'PASS',
+            reason: 'Anti-Frustration: Intentionally missed lethal on low Player HP (turn % 3 === 0)',
+          }
+        }
+        return lethal
+      }
+    }
 
     // S2. DEFENSIVE SURVIVAL MODE: Prioritize removal on attacking plants & heal tricks when HP <= 8
     if (isDefensiveSurvival) {
@@ -2612,42 +3121,34 @@ export function getAIDecision(
       }
     }
 
-    // C. Hard Removal: Rocket Science on highest threat plant with >= 4 Attack
+    // C. Hard Removal: Rocket Science on highest priority threat plant with >= 4 Attack
     const rocket = playableTricks.find((c) => c.id === 'zombie_rocket_science')
     if (rocket) {
-      const highAtkPlantIdx = state.lanes.reduce((best, lane, idx) => {
-        if (!lane.plantMinion || lane.plantMinion.currentAttack < 4 || isUntrickable(lane.plantMinion)) return best
-        if (best === -1) return idx
-        return evaluateMinionThreat(lane, 'plants') > evaluateMinionThreat(state.lanes[best], 'plants')
-          ? idx
-          : best
-      }, -1)
-      if (highAtkPlantIdx !== -1) {
+      const priorityTargets = getPriorityThreatTargets(state, 'zombies')
+      const target = priorityTargets.find(
+        (t) => t.minion.currentAttack >= 4 && !isUntrickable(t.minion)
+      )
+      if (target) {
         return {
           action: 'PLAY_TRICK',
           card: rocket,
-          laneIndex: highAtkPlantIdx,
-          reason: `Rocket Science destroys highest threat 4+ attack plant ${state.lanes[highAtkPlantIdx].plantMinion!.name} in lane ${highAtkPlantIdx + 1}`,
+          laneIndex: target.laneIndex,
+          reason: `Rocket Science destroys highest threat 4+ attack plant ${target.minion.name} (threat score: ${target.priorityScore}) in lane ${target.laneIndex + 1}`,
         }
       }
     }
 
-    // D. Hard Removal: Locust Swarm on highest threat Plant minion
+    // D. Hard Removal: Locust Swarm on highest priority threat Plant minion
     const locust = playableTricks.find((c) => c.id === 'zombie_locust_swarm')
     if (locust) {
-      const strongestPlantIdx = state.lanes.reduce((best, lane, idx) => {
-        if (!lane.plantMinion || isUntrickable(lane.plantMinion)) return best
-        if (best === -1) return idx
-        return evaluateMinionThreat(lane, 'plants') > evaluateMinionThreat(state.lanes[best], 'plants')
-          ? idx
-          : best
-      }, -1)
-      if (strongestPlantIdx !== -1) {
+      const priorityTargets = getPriorityThreatTargets(state, 'zombies')
+      const target = priorityTargets.find((t) => !isUntrickable(t.minion))
+      if (target) {
         return {
           action: 'PLAY_TRICK',
           card: locust,
-          laneIndex: strongestPlantIdx,
-          reason: `Locust Swarm destroys highest threat plant ${state.lanes[strongestPlantIdx].plantMinion!.name}`,
+          laneIndex: target.laneIndex,
+          reason: `Locust Swarm destroys highest threat plant ${target.minion.name} (threat score: ${target.priorityScore}) in lane ${target.laneIndex + 1}`,
         }
       }
     }
@@ -2714,18 +3215,19 @@ export function getAIDecision(
       }
     }
 
-    // H. Direct Damage: Bungee Plumber to eliminate low HP plant or push face
+    // H. Direct Damage: Bungee Plumber to eliminate priority low HP plant or push face
     const bungee = playableTricks.find((c) => c.id === 'zombie_bungee_plumber')
     if (bungee) {
-      const killablePlantIdx = state.lanes.findIndex(
-        (l) => l.plantMinion && l.plantMinion.currentHealth <= 2 && !isUntrickable(l.plantMinion)
+      const priorityTargets = getPriorityThreatTargets(state, 'zombies')
+      const killableTarget = priorityTargets.find(
+        (t) => t.minion.currentHealth <= 2 && !isUntrickable(t.minion)
       )
-      if (killablePlantIdx !== -1) {
+      if (killableTarget) {
         return {
           action: 'PLAY_TRICK',
           card: bungee,
-          laneIndex: killablePlantIdx,
-          reason: 'Bungee Plumber finishes off low health plant',
+          laneIndex: killableTarget.laneIndex,
+          reason: `Bungee Plumber eliminates priority plant ${killableTarget.minion.name} (threat score: ${killableTarget.priorityScore}) in lane ${killableTarget.laneIndex + 1}`,
         }
       }
       if (archetype === 'aggro' && state.plantHero.hp <= 6) {
@@ -2796,8 +3298,43 @@ export function getAIDecision(
   // ========================================================
   if (!isZombie && state.phase === 'PLANT_PLAY') {
     // A. Check Lethal
-    const lethal = checkLethalPossibility(state, 'plants', playableCards, resource)
-    if (lethal) return lethal
+    if (difficulty !== 'easy') {
+      const lethal = checkLethalPossibility(state, 'plants', playableCards, resource)
+      if (lethal) {
+        const isPlayerLowHp = enemyHero.hp <= 5
+        const isAntiFrustrationTurn = options.forceMissLethal || ((options.turnCount ?? state.turn) % 3 === 0)
+        if (isPlayerLowHp && isAntiFrustrationTurn && difficulty === 'normal') {
+          return {
+            action: 'PASS',
+            reason: 'Anti-Frustration: Intentionally missed lethal on low Player HP (turn % 3 === 0)',
+          }
+        }
+        return lethal
+      }
+    }
+
+    // Predictive Trick Restraint for Plant AI:
+    // If Zombie opponent has 3+ Brains (anticipating Weed Spray), hold back small swarm plants (<= 2 ATK)
+    if (archetype === 'tournament_grandmaster' || difficulty === 'expert') {
+      const swarmCheck = shouldHoldBackSwarm(state, 'plants')
+      if (swarmCheck.hold) {
+        const livingPlants = state.lanes.filter((l) => l.plantMinion).length
+        const smallMinions = playableCards.filter(
+          (c) => isMinionCard(c) && c.attack <= 2 && !c.untrickable && !hasCardTrait(c, 'untrickable')
+        )
+        if (smallMinions.length > 0 && livingPlants >= 2) {
+          const nonSwarmCards = playableCards.filter(
+            (c) => !isMinionCard(c) || c.attack > 2 || Boolean(c.untrickable) || hasCardTrait(c, 'untrickable')
+          )
+          if (nonSwarmCards.length === 0) {
+            return {
+              action: 'PASS',
+              reason: swarmCheck.reason || 'Plant Predictive Restraint: Holding back small plants into Weed Spray Brains',
+            }
+          }
+        }
+      }
+    }
 
     // S1. DEFENSIVE SURVIVAL MODE: Prioritize heal tricks and emergency removal when HP <= 8
     if (isDefensiveSurvival) {
@@ -2906,55 +3443,47 @@ export function getAIDecision(
     }
 
     // C. Removal Tricks (Squash, Shamrocket, Cherry Bomb, Berry Blast)
+    const plantPriorityTargets = getPriorityThreatTargets(state, 'plants')
+
     const squash = playableCards.find((c) => c.id === 'plant_squash')
     if (squash) {
-      const highestThreatZombieIdx = state.lanes.reduce((best, lane, idx) => {
-        if (!lane.zombieMinion || isUntrickable(lane.zombieMinion)) return best
-        if (best === -1) return idx
-        return evaluateMinionThreat(lane, 'zombies') > evaluateMinionThreat(state.lanes[best], 'zombies')
-          ? idx
-          : best
-      }, -1)
-      if (highestThreatZombieIdx !== -1 && evaluateMinionThreat(state.lanes[highestThreatZombieIdx], 'zombies') >= 5) {
+      const target = plantPriorityTargets.find((t) => !isUntrickable(t.minion))
+      if (target && (target.priorityScore >= 8 || target.isHighPriority)) {
         return {
           action: 'PLAY_TRICK',
           card: squash,
-          laneIndex: highestThreatZombieIdx,
-          reason: `Squash crushes high threat zombie ${state.lanes[highestThreatZombieIdx].zombieMinion!.name} in lane ${highestThreatZombieIdx + 1}`,
+          laneIndex: target.laneIndex,
+          reason: `Squash crushes high priority zombie ${target.minion.name} (threat score: ${target.priorityScore}) in lane ${target.laneIndex + 1}`,
         }
       }
     }
 
     const shamrocket = playableCards.find((c) => c.id === 'plant_shamrocket')
     if (shamrocket) {
-      const bigZombieIdx = state.lanes.reduce((best, lane, idx) => {
-        if (!lane.zombieMinion || lane.zombieMinion.currentAttack < 4 || isUntrickable(lane.zombieMinion)) return best
-        if (best === -1) return idx
-        return evaluateMinionThreat(lane, 'zombies') > evaluateMinionThreat(state.lanes[best], 'zombies')
-          ? idx
-          : best
-      }, -1)
-      if (bigZombieIdx !== -1) {
+      const target = plantPriorityTargets.find(
+        (t) => t.minion.currentAttack >= 4 && !isUntrickable(t.minion)
+      )
+      if (target) {
         return {
           action: 'PLAY_TRICK',
           card: shamrocket,
-          laneIndex: bigZombieIdx,
-          reason: `Shamrocket destroys 4+ attack zombie ${state.lanes[bigZombieIdx].zombieMinion!.name} in lane ${bigZombieIdx + 1}`,
+          laneIndex: target.laneIndex,
+          reason: `Shamrocket destroys 4+ attack priority zombie ${target.minion.name} (${target.minion.currentAttack} ATK, threat score: ${target.priorityScore}) in lane ${target.laneIndex + 1}`,
         }
       }
     }
 
     const berryBlast = playableCards.find((c) => c.id === 'plant_berry_blast')
     if (berryBlast) {
-      const targetZombieIdx = state.lanes.findIndex(
-        (l) => l.zombieMinion && l.zombieMinion.currentHealth <= 3 && !isUntrickable(l.zombieMinion)
+      const target = plantPriorityTargets.find(
+        (t) => t.minion.currentHealth <= 3 && !isUntrickable(t.minion)
       )
-      if (targetZombieIdx !== -1) {
+      if (target) {
         return {
           action: 'PLAY_TRICK',
           card: berryBlast,
-          laneIndex: targetZombieIdx,
-          reason: 'Berry Blast snipes zombie',
+          laneIndex: target.laneIndex,
+          reason: `Berry Blast snipes priority zombie ${target.minion.name} (threat score: ${target.priorityScore}) in lane ${target.laneIndex + 1}`,
         }
       }
     }
@@ -2983,6 +3512,41 @@ export function getAIDecision(
     // E. Minions Placement
     const playableMinions = playableCards.filter(isMinionCard)
     if (playableMinions.length > 0) {
+      // Hard / Expert Lookahead Minion Evaluation
+      // Lookahead for Expert difficulty
+    if (difficulty === 'expert') {
+        const candidates: { decision: AIDecision; score: number }[] = []
+        for (const card of playableMinions) {
+          for (let idx = 0; idx < state.lanes.length; idx++) {
+            const lane = state.lanes[idx]
+            if (canPlayCardToLane(card, lane, 'plants').allowed) {
+              const decision: AIDecision = {
+                action: 'PLAY_MINION',
+                card,
+                laneIndex: idx,
+                reason: `${difficulty === 'expert' ? 'Expert (2-turn)' : 'Hard (1-turn)'} Lookahead evaluates ${card.name} on lane ${idx + 1}`,
+              }
+              const score =
+                difficulty === 'expert'
+                  ? simulate2TurnLookahead(state, 'plants', decision)
+                  : simulate1TurnLookahead(state, 'plants', decision)
+              candidates.push({ decision, score })
+            }
+          }
+        }
+
+        if (candidates.length > 0) {
+          candidates.sort((a, b) => b.score - a.score)
+          if (candidates[0].score > 0) {
+            const best = candidates[0]
+            if (best.score >= 500) {
+              best.decision.reason = `${best.decision.reason} for lethal advantage`
+            }
+            return best.decision
+          }
+        }
+      }
+
       // 1. Environment Synergy: Pair Pearadise (Duplicates Plant with Team-Up!)
       const pairPearadiseLaneIdx = state.lanes.findIndex(
         (l) => l.environment?.id.includes('pair_pearadise') && !l.plantMinion
@@ -3061,10 +3625,41 @@ export function getAIDecision(
         }
       }
 
+      // TOURNAMENT GRANDMASTER PLANT ARCHETYPE:
+      // Priority threat blocking and positioning
+      if (archetype === 'tournament_grandmaster') {
+        const priorityTargets = getPriorityThreatTargets(state, 'plants')
+        const unblockedThreat = priorityTargets.find(
+          (t) => !state.lanes[t.laneIndex].plantMinion && t.isHighPriority
+        )
+
+        if (unblockedThreat) {
+          const priming = shouldAcceptChipDamageForBlock(state, 'plants', unblockedThreat.laneIndex)
+          if (!priming.acceptChip) {
+            const blockers = [...playableMinions].sort((a, b) => b.health - a.health)
+            for (const blocker of blockers) {
+              if (canPlayCardToLane(blocker, state.lanes[unblockedThreat.laneIndex], 'plants').allowed) {
+                return {
+                  action: 'PLAY_MINION',
+                  card: blocker,
+                  laneIndex: unblockedThreat.laneIndex,
+                  reason: `Tournament Grandmaster Plant AI: Deploys ${blocker.name} to neutralize priority threat ${unblockedThreat.minion.name} in lane ${unblockedThreat.laneIndex + 1}`,
+                }
+              }
+            }
+          }
+        }
+      }
+
       // Counter Zombies in lane
       for (let i = 0; i < state.lanes.length; i++) {
         const lane = state.lanes[i]
         if (lane.zombieMinion && !lane.plantMinion) {
+          // Super-Block Priming Check: If primed at 6/8 or 7/8, skip blocking chip damage to trigger shield!
+          if (shouldAcceptChipDamageForBlock(state, 'plants', i).acceptChip) {
+            continue
+          }
+
           const sortedMinions = [...playableMinions].sort((a, b) => b.health - a.health)
           for (const candidate of sortedMinions) {
             if (canPlayCardToLane(candidate, lane, 'plants').allowed) {

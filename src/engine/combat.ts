@@ -156,6 +156,47 @@ export function getPendingSuperBlockForHero(hero: HeroState, side: Side): { side
 }
 
 /**
+ * Calculates the dynamic Anti-Hero bonus for a minion in a given lane.
+ * An Anti-Hero minion gains +X Attack against the enemy Hero only when
+ * no opposing enemy minions are present in the lane.
+ */
+export function getAntiHeroBonus(minion: Minion | null | undefined, lane?: LaneState | null): number {
+  if (!minion) return 0
+  if (lane) {
+    if (minion.side === 'plants') {
+      if (lane.zombieMinion && lane.zombieMinion.currentHealth > 0) return 0
+    } else {
+      if (
+        (lane.plantMinion && lane.plantMinion.currentHealth > 0) ||
+        (lane.plantTeamUpMinion && lane.plantTeamUpMinion.currentHealth > 0)
+      ) {
+        return 0
+      }
+    }
+  }
+
+  let bonus = minion.antiHero ?? 0
+  if (!bonus && minion.traits) {
+    const trait = minion.traits.find(
+      t => typeof t === 'string' && (t.toLowerCase().includes('anti-hero') || t.toLowerCase().includes('antihero'))
+    )
+    if (trait) {
+      const match = (trait as string).match(/\d+/)
+      bonus = match ? parseInt(match[0], 10) : 2
+    }
+  }
+  return bonus
+}
+
+/**
+ * Calculates the effective attack for a minion in a given lane, incorporating Anti-Hero bonus if applicable.
+ */
+export function getEffectiveAttack(minion: Minion | null | undefined, lane?: LaneState | null): number {
+  if (!minion) return 0
+  return minion.currentAttack + getAntiHeroBonus(minion, lane)
+}
+
+/**
  * Checks if Binary Stars is active (unhidden/not in gravestone) on the zombie side.
  * Doubles all zombie damage dealt (combat attacks, traits, frenzy, overshoot, tricks).
  */
@@ -365,6 +406,28 @@ export function resolveSingleLaneCombat(
   const events: CombatEvent[] = []
   const deadUnits: { minion: Minion; laneIndex: number }[] = []
 
+  // Normalize single plant in plantTeamUp slot to plantMinion
+  if (!plant && plantTeamUp) {
+    plant = plantTeamUp
+    plantTeamUp = null
+  }
+
+  // Team-Up Targeting: enemy minion MUST attack the non-Team-Up minion first
+  let targetIsTeamUpSlot = false
+
+  if (plant && plantTeamUp) {
+    const plantHasTU = hasTeamUp(plant)
+    const teamUpHasTU = hasTeamUp(plantTeamUp)
+
+    if (plantHasTU && !teamUpHasTU) {
+      // Swap internally so 'plant' is always the primary non-Team-Up defender
+      const temp = plant
+      plant = plantTeamUp
+      plantTeamUp = temp
+      targetIsTeamUpSlot = true
+    }
+  }
+
   // ========================================================
   // 1. PRE-COMBAT ENVIRONMENT TRIGGERS
   // ========================================================
@@ -431,6 +494,7 @@ export function resolveSingleLaneCombat(
   // 2. FREEZE CHECK (Frozen minions skip attack & unfreeze)
   // ========================================================
   const plantCanAttack = plant !== null && !plant.isFrozen && plant.currentAttack > 0
+  const plantTeamUpCanAttack = plantTeamUp !== null && !plantTeamUp.isFrozen && plantTeamUp.currentAttack > 0
   if (plant?.isFrozen) {
     plant.isFrozen = false
     events.push({
@@ -485,7 +549,7 @@ export function resolveSingleLaneCombat(
     const zombieArmored = zombie.armored ?? (zombie.traits?.includes('armored') ? 1 : 0)
 
     let totalPlantAtk = plantCanAttack ? plant.currentAttack : 0
-    if (plantTeamUp && !plantTeamUp.isFrozen && plantTeamUp.currentAttack > 0) {
+    if (plantTeamUp && plantTeamUpCanAttack) {
       totalPlantAtk += plantTeamUp.currentAttack
     }
 
@@ -623,6 +687,21 @@ export function resolveSingleLaneCombat(
       isLethal: zombie.currentHealth <= 0,
       description: `${plant.name} dealt ${dmgToZombie} damage to ${zombie.name}${zombie.currentHealth <= 0 ? ' (Destroyed)' : ''}`,
     })
+
+    if (plantTeamUp && plantTeamUpCanAttack) {
+      events.push({
+        laneIndex,
+        attackerSide: 'plants',
+        attackerName: `${plantTeamUp.name} (Team-Up)`,
+        target: 'minion',
+        targetSide: 'zombies',
+        damageDealt: plantTeamUp.currentAttack,
+        isBlocked: false,
+        isLethal: zombie.currentHealth <= 0,
+        traitsTriggered: ['teamUp'],
+        description: `🤝 ${plantTeamUp.name} (Team-Up) đồng thời tấn công ${zombie.name} gây ${plantTeamUp.currentAttack} damage${zombie.currentHealth <= 0 ? ' (Destroyed)' : ''}!`,
+      })
+    }
 
     events.push({
       laneIndex,
@@ -926,8 +1005,9 @@ export function resolveSingleLaneCombat(
       if (plantTeamUp && plantTeamUp.currentHealth > 0) {
         // Frenzy bonus attack targets the Team-Up plant in the same lane!
         const teamUpArmored = plantTeamUp.armored ?? (plantTeamUp.traits?.includes('armored') ? 1 : 0)
-        const frenzyDmg = Math.max(0, effectiveFrenzyAtk - teamUpArmored)
-        plantTeamUp.currentHealth = zombieHasDeadly ? 0 : Math.max(0, plantTeamUp.currentHealth - frenzyDmg)
+        const isSecInv = Boolean(plantTeamUp.isInvulnerable || plantTeamUp.invulnerableThisTurn)
+        const frenzyDmg = isSecInv ? 0 : Math.max(0, effectiveFrenzyAtk - teamUpArmored)
+        plantTeamUp.currentHealth = isSecInv ? plantTeamUp.currentHealth : (zombieHasDeadly ? 0 : Math.max(0, plantTeamUp.currentHealth - frenzyDmg))
         events.push({
           laneIndex,
           attackerSide: 'zombies',
@@ -1077,20 +1157,13 @@ export function resolveSingleLaneCombat(
     if (plantCanAttack) {
       const plantHasBullseye = Boolean(plant.bullseye || plant.traits?.includes('bullseye'))
       const plantHasDoubleStrike = Boolean(plant.doubleStrike || plant.traits?.includes('doubleStrike'))
-      let plantAntiHero = plant.antiHero ?? 0
-      if (!plantAntiHero && plant.traits) {
-        const trait = plant.traits.find(t => t.toLowerCase().includes('anti-hero') || t.toLowerCase().includes('antihero'))
-        if (trait) {
-          const match = trait.match(/\d+/)
-          plantAntiHero = match ? parseInt(match[0], 10) : 2
-        }
-      }
+      const plantAntiHero = getAntiHeroBonus(plant, lane)
       let totalDmg = plant.currentAttack + plantAntiHero
-      if (plantTeamUp && !plantTeamUp.isFrozen) {
+      if (plantTeamUp && plantTeamUpCanAttack) {
         totalDmg += plantTeamUp.currentAttack
       }
 
-      const res = applyHeroDamage(currentZombieHero, totalDmg, plantHasBullseye)
+      const res = applyHeroDamage(currentZombieHero, totalDmg, plantHasBullseye, updatedZombieHand.length)
       currentZombieHero = res.updatedHero
       events.push({
         laneIndex,
@@ -1174,7 +1247,7 @@ export function resolveSingleLaneCombat(
 
       // Double Strike bonus direct attack in open lane
       if (plantHasDoubleStrike && plant.currentHealth > 0) {
-        const doubleRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+        const doubleRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
         currentZombieHero = doubleRes.updatedHero
         events.push({
           laneIndex,
@@ -1238,7 +1311,7 @@ export function resolveSingleLaneCombat(
               adjLane.zombieMinion = null
             }
           } else {
-            const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+            const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
             currentZombieHero = res.updatedHero
             events.push({
               laneIndex: adjIdx,
@@ -1260,6 +1333,8 @@ export function resolveSingleLaneCombat(
 
       // Shooting Starfruit: Attacks in ALL 5 lanes simultaneously (Open lane)!
       if ((plant.cardId === 'plant_shooting_starfruit' || plant.name.toLowerCase().includes('shooting starfruit')) && plantCanAttack) {
+        const plantHasDeadly = Boolean(plant.deadly || plant.traits?.some(t => t.toLowerCase().includes('deadly')))
+        const plantHasStrikethrough = Boolean(plant.strikethrough || plant.traits?.some(t => t.toLowerCase().includes('strikethrough')))
         for (let targetLaneIdx = 0; targetLaneIdx < updatedLanes.length; targetLaneIdx++) {
           if (targetLaneIdx === laneIndex) continue
           const targetLane = updatedLanes[targetLaneIdx]
@@ -1333,18 +1408,11 @@ export function resolveSingleLaneCombat(
     // ========================================================
     if (zombieCanAttack) {
       const zombieHasBullseye = Boolean(zombie.bullseye || zombie.traits?.includes('bullseye'))
-      let zombieAntiHero = zombie.antiHero ?? 0
-      if (!zombieAntiHero && zombie.traits) {
-        const trait = zombie.traits.find(t => t.toLowerCase().includes('anti-hero') || t.toLowerCase().includes('antihero'))
-        if (trait) {
-          const match = trait.match(/\d+/)
-          zombieAntiHero = match ? parseInt(match[0], 10) : 2
-        }
-      }
+      const zombieAntiHero = getAntiHeroBonus(zombie, lane)
       const totalAttack = (zombie.currentAttack + zombieAntiHero) * (hasBinaryStars(updatedLanes) ? 2 : 1)
       const spRes = redirectHeroDamageToSoulPatch(updatedLanes, totalAttack, events, laneIndex, zombie.name)
       if (!spRes.absorbed) {
-        const res = applyHeroDamage(currentPlantHero, totalAttack, zombieHasBullseye)
+        const res = applyHeroDamage(currentPlantHero, totalAttack, zombieHasBullseye, updatedPlantHand.length)
         currentPlantHero = res.updatedHero
         if (res.actualDamage > 0) {
           zombieHurtPlantHero = true
@@ -1438,9 +1506,92 @@ export function resolveSingleLaneCombat(
     }
   }
 
+  // Smashing Gargantuar: When a Plant is destroyed, deal 2 damage to all other Plants on board
+  const isSmashingGarg = Boolean(
+    zombie && zombie.currentHealth > 0 && (
+      zombie.cardId === 'zombie_smashing_gargantuar' ||
+      zombie.name.toLowerCase().includes('smashing gargantuar')
+    )
+  )
+  const plantDestroyedInLane = (plant && plant.currentHealth <= 0) || (plantTeamUp && plantTeamUp.currentHealth <= 0)
+  if (isSmashingGarg && plantDestroyedInLane) {
+    updatedLanes.forEach((otherLane, otherIdx) => {
+      const checkAndHitPlant = (targetPlant: Minion | null | undefined, isTeamUp: boolean) => {
+        if (!targetPlant || targetPlant.currentHealth <= 0) return
+        if (otherIdx === laneIndex && targetPlant.instanceId === plant?.instanceId) return
+        if (otherIdx === laneIndex && targetPlant.instanceId === plantTeamUp?.instanceId) return
+
+        const plantArmor = targetPlant.armored ?? (targetPlant.traits?.some(t => t.toLowerCase().includes('armored')) ? 1 : 0)
+        const dmg = Math.max(0, 2 - plantArmor)
+        targetPlant.currentHealth = Math.max(0, targetPlant.currentHealth - dmg)
+        events.push({
+          laneIndex: otherIdx,
+          attackerSide: 'zombies',
+          attackerName: `${zombie!.name} (Chấn động)`,
+          target: 'minion',
+          targetSide: 'plants',
+          damageDealt: dmg,
+          isBlocked: false,
+          isLethal: targetPlant.currentHealth <= 0,
+          description: `💥 ${zombie!.name} tiêu diệt đối thủ: Gây ${dmg} sát thương chấn động lên ${targetPlant.name} tại làn ${otherIdx + 1}!`,
+        })
+        if (targetPlant.currentHealth <= 0) {
+          deadUnits.push({ minion: targetPlant, laneIndex: otherIdx })
+          if (isTeamUp) otherLane.plantTeamUpMinion = null
+          else otherLane.plantMinion = null
+        }
+      }
+      checkAndHitPlant(otherLane.plantMinion, false)
+      checkAndHitPlant(otherLane.plantTeamUpMinion, true)
+    })
+  }
+
+  // Imp-Throwing Gargantuar: When damaging Plant Hero, summons a 1/1 Imp in a random empty lane
+  const isImpThrowingGarg = Boolean(
+    zombie && zombie.currentHealth > 0 && (
+      zombie.cardId === 'zombie_imp_throwing_gargantuar' ||
+      zombie.name.toLowerCase().includes('imp-throwing gargantuar')
+    )
+  )
+  if (isImpThrowingGarg && zombieHurtPlantHero) {
+    const emptyLanes = updatedLanes
+      .map((l, idx) => ({ lane: l, idx }))
+      .filter(({ lane: l }) => !l.zombieMinion && l.type !== 'water')
+    if (emptyLanes.length > 0) {
+      const chosen = emptyLanes[Math.floor(Math.random() * emptyLanes.length)]
+      chosen.lane.zombieMinion = {
+        instanceId: `imp_${Date.now()}_${chosen.idx}`,
+        cardId: 'zombie_swabbie',
+        name: 'Imp',
+        side: 'zombies',
+        currentAttack: 1,
+        baseAttack: 1,
+        currentHealth: 1,
+        maxHealth: 1,
+        image: '/assets/cards/zombies/Swabbie.png',
+      }
+      events.push({
+        laneIndex: chosen.idx,
+        attackerSide: 'zombies',
+        attackerName: zombie!.name,
+        target: 'minion',
+        targetSide: 'zombies',
+        damageDealt: 0,
+        isBlocked: false,
+        isLethal: false,
+        description: `🧟 ${zombie!.name} đánh trúng Plant Hero: Ném 1 Imp (1/1) vào làn ${chosen.idx + 1}!`,
+      })
+    }
+  }
+
   // Update lane state, clearing defeated minions
-  lane.plantMinion = plant && plant.currentHealth > 0 ? plant : null
-  lane.plantTeamUpMinion = plantTeamUp && plantTeamUp.currentHealth > 0 ? plantTeamUp : null
+  if (targetIsTeamUpSlot) {
+    lane.plantTeamUpMinion = plant && plant.currentHealth > 0 ? plant : null
+    lane.plantMinion = plantTeamUp && plantTeamUp.currentHealth > 0 ? plantTeamUp : null
+  } else {
+    lane.plantMinion = plant && plant.currentHealth > 0 ? plant : null
+    lane.plantTeamUpMinion = plantTeamUp && plantTeamUp.currentHealth > 0 ? plantTeamUp : null
+  }
   if (!cowboyMoved) {
     lane.zombieMinion = zombie && zombie.currentHealth > 0 ? zombie : null
   }
@@ -1568,7 +1719,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
         const overshootDmg = hasBinaryStars(updatedLanes) ? 6 : 3
         const spRes = redirectHeroDamageToSoulPatch(updatedLanes, overshootDmg, events, i, `${zombie.name} (Moon Base Z)`)
         if (!spRes.absorbed) {
-          const overshootRes = applyHeroDamage(currentPlantHero, overshootDmg, false)
+          const overshootRes = applyHeroDamage(currentPlantHero, overshootDmg, false, updatedPlantHand.length)
           currentPlantHero = overshootRes.updatedHero
           plantHeroDamageTaken += overshootRes.actualDamage
           events.push({
@@ -1924,7 +2075,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
               adjLane.zombieMinion = null
             }
           } else {
-            const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+            const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
             currentZombieHero = res.updatedHero
             zombieHeroDamageTaken += res.actualDamage
             events.push({
@@ -1943,6 +2094,79 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
             }
           }
         })
+      }
+
+      // Shooting Starfruit: Attacks in ALL 5 lanes simultaneously!
+      if ((plant.cardId === 'plant_shooting_starfruit' || plant.name.toLowerCase().includes('shooting starfruit')) && plantCanAttack) {
+        const plantHasDeadly = Boolean(plant.deadly || plant.traits?.some(t => t.toLowerCase().includes('deadly')))
+        const plantHasStrikethrough = Boolean(plant.strikethrough || plant.traits?.some(t => t.toLowerCase().includes('strikethrough')))
+        for (let targetLaneIdx = 0; targetLaneIdx < updatedLanes.length; targetLaneIdx++) {
+          if (targetLaneIdx === i) continue
+          const targetLane = updatedLanes[targetLaneIdx]
+          if (targetLane.zombieMinion && targetLane.zombieMinion.currentHealth > 0) {
+            const isTargetInv = Boolean(targetLane.zombieMinion.isInvulnerable || targetLane.zombieMinion.invulnerableThisTurn)
+            const targetArmor = targetLane.zombieMinion.armored ?? (targetLane.zombieMinion.traits?.some(t => t.toLowerCase().includes('armored')) ? 1 : 0)
+            const dmg = isTargetInv ? 0 : Math.max(0, plant.currentAttack - targetArmor)
+            if (!isTargetInv && dmg > 0) {
+              targetLane.zombieMinion = {
+                ...targetLane.zombieMinion,
+                currentHealth: plantHasDeadly ? 0 : Math.max(0, targetLane.zombieMinion.currentHealth - dmg),
+              }
+            }
+            events.push({
+              laneIndex: targetLaneIdx,
+              attackerSide: 'plants',
+              attackerName: `${plant.name} (Bắn 5 làn)`,
+              target: 'minion',
+              targetSide: 'zombies',
+              damageDealt: dmg,
+              isBlocked: false,
+              isLethal: targetLane.zombieMinion.currentHealth <= 0,
+              description: `⭐ ${plant.name} xạ kích sang làn ${targetLaneIdx + 1} gây ${dmg} sát thương lên ${targetLane.zombieMinion.name}!`,
+            })
+            if (targetLane.zombieMinion.currentHealth <= 0) {
+              deadUnitsThisLane.push({ minion: targetLane.zombieMinion, laneIndex: targetLaneIdx })
+              targetLane.zombieMinion = null
+            }
+            if (plantHasStrikethrough) {
+              const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
+              currentZombieHero = res.updatedHero
+              zombieHeroDamageTaken += res.actualDamage
+              events.push({
+                laneIndex: targetLaneIdx,
+                attackerSide: 'plants',
+                attackerName: `${plant.name} (Bắn 5 làn - Strikethrough)`,
+                target: 'hero',
+                targetSide: 'zombies',
+                damageDealt: res.actualDamage,
+                isBlocked: res.blocked,
+                isLethal: currentZombieHero.hp <= 0,
+                description: `⭐ ${plant.name} bắn xuyên thấu làn ${targetLaneIdx + 1} trúng Zombie Hero gây ${res.actualDamage} sát thương!`,
+              })
+              if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+                pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+              }
+            }
+          } else {
+            const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
+            currentZombieHero = res.updatedHero
+            zombieHeroDamageTaken += res.actualDamage
+            events.push({
+              laneIndex: targetLaneIdx,
+              attackerSide: 'plants',
+              attackerName: `${plant.name} (Bắn 5 làn)`,
+              target: 'hero',
+              targetSide: 'zombies',
+              damageDealt: res.actualDamage,
+              isBlocked: res.blocked,
+              isLethal: currentZombieHero.hp <= 0,
+              description: `⭐ ${plant.name} bắn thẳng qua làn ${targetLaneIdx + 1} trúng Zombie Hero gây ${res.actualDamage} sát thương!`,
+            })
+            if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+              pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+            }
+          }
+        }
       }
 
       // Cob Cannon: deals 4 damage to enemy Zombie Hero when attacking
@@ -1967,7 +2191,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
 
       // Strikethrough handling
       if (plantHasStrikethrough && plantCanAttack) {
-        const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+        const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
         currentZombieHero = res.updatedHero
         zombieHeroDamageTaken += res.actualDamage
         events.push({
@@ -2010,7 +2234,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
         const strikeDmg = zombie.currentAttack * (hasBinaryStars(updatedLanes) ? 2 : 1)
         const spRes = redirectHeroDamageToSoulPatch(updatedLanes, strikeDmg, events, i, `${zombie.name} (Strikethrough)`)
         if (!spRes.absorbed) {
-          const res = applyHeroDamage(currentPlantHero, strikeDmg, zombieHasBullseye)
+          const res = applyHeroDamage(currentPlantHero, strikeDmg, zombieHasBullseye, updatedPlantHand.length)
           currentPlantHero = res.updatedHero
           plantHeroDamageTaken += res.actualDamage
           if (res.actualDamage > 0) {
@@ -2040,7 +2264,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
         const effectiveFrenzyAtk = zombie.currentAttack * frenzyMult
         const spRes = redirectHeroDamageToSoulPatch(updatedLanes, effectiveFrenzyAtk, events, i, `${zombie.name} (Frenzy)`)
         if (!spRes.absorbed) {
-          const frenzyRes = applyHeroDamage(currentPlantHero, effectiveFrenzyAtk, zombieHasBullseye)
+          const frenzyRes = applyHeroDamage(currentPlantHero, effectiveFrenzyAtk, zombieHasBullseye, updatedPlantHand.length)
           currentPlantHero = frenzyRes.updatedHero
           plantHeroDamageTaken += frenzyRes.actualDamage
           events.push({
@@ -2064,7 +2288,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
       // Plant Frenzy handling (if Plant destroyed Zombie and survived)
       const plantHasFrenzy = Boolean(plant.frenzy || plant.traits?.includes('frenzy'))
       if (plantHasFrenzy && plantCanAttack && plant.currentHealth > 0 && zombie.currentHealth <= 0) {
-        const frenzyRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+        const frenzyRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
         currentZombieHero = frenzyRes.updatedHero
         zombieHeroDamageTaken += frenzyRes.actualDamage
         events.push({
@@ -2088,7 +2312,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
       if (plantHasDoubleStrike && plantCanAttack && plant.currentHealth > 0) {
         if (zombie.currentHealth <= 0) {
           // Zombie destroyed, Double Strike attacks Zombie Hero directly
-          const doubleRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+          const doubleRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
           currentZombieHero = doubleRes.updatedHero
           zombieHeroDamageTaken += doubleRes.actualDamage
           events.push({
@@ -2149,7 +2373,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
               : `⚡ ${plant.name} kích hoạt Double Strike gây thêm ${secondDmg} damage lên ${zombie.name}${zombie.currentHealth <= 0 ? ' (Tiêu diệt!)' : ''}`,
           })
           if (plantHasStrikethrough) {
-            const doubleStrikeRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+            const doubleStrikeRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
             currentZombieHero = doubleStrikeRes.updatedHero
             zombieHeroDamageTaken += doubleStrikeRes.actualDamage
             events.push({
@@ -2177,12 +2401,13 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
       if (plantCanAttack) {
         const plantHasBullseye = Boolean(plant.bullseye || plant.traits?.includes('bullseye'))
         const plantHasDoubleStrike = Boolean(plant.doubleStrike || plant.traits?.includes('doubleStrike'))
-        let totalDmg = plant.currentAttack
+        const plantAntiHero = getAntiHeroBonus(plant, lane)
+        let totalDmg = plant.currentAttack + plantAntiHero
         if (plantTeamUp && !plantTeamUp.isFrozen) {
           totalDmg += plantTeamUp.currentAttack
         }
 
-        const res = applyHeroDamage(currentZombieHero, totalDmg, plantHasBullseye)
+        const res = applyHeroDamage(currentZombieHero, totalDmg, plantHasBullseye, updatedZombieHand.length)
         currentZombieHero = res.updatedHero
         zombieHeroDamageTaken += res.actualDamage
         events.push({
@@ -2267,7 +2492,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
 
         // Double Strike bonus direct attack in open lane
         if (plantHasDoubleStrike && plant.currentHealth > 0) {
-          const doubleRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+          const doubleRes = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
           currentZombieHero = doubleRes.updatedHero
           zombieHeroDamageTaken += doubleRes.actualDamage
           events.push({
@@ -2331,7 +2556,7 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
                 adjLane.zombieMinion = null
               }
             } else {
-              const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye)
+              const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
               currentZombieHero = res.updatedHero
               zombieHeroDamageTaken += res.actualDamage
               events.push({
@@ -2351,6 +2576,79 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
             }
           })
         }
+
+        // Shooting Starfruit: Attacks in ALL 5 lanes simultaneously (Open lane)!
+        if ((plant.cardId === 'plant_shooting_starfruit' || plant.name.toLowerCase().includes('shooting starfruit')) && plantCanAttack) {
+          const plantHasDeadly = Boolean(plant.deadly || plant.traits?.some(t => t.toLowerCase().includes('deadly')))
+          const plantHasStrikethrough = Boolean(plant.strikethrough || plant.traits?.some(t => t.toLowerCase().includes('strikethrough')))
+          for (let targetLaneIdx = 0; targetLaneIdx < updatedLanes.length; targetLaneIdx++) {
+            if (targetLaneIdx === i) continue
+            const targetLane = updatedLanes[targetLaneIdx]
+            if (targetLane.zombieMinion && targetLane.zombieMinion.currentHealth > 0) {
+              const isTargetInv = Boolean(targetLane.zombieMinion.isInvulnerable || targetLane.zombieMinion.invulnerableThisTurn)
+              const targetArmor = targetLane.zombieMinion.armored ?? (targetLane.zombieMinion.traits?.some(t => t.toLowerCase().includes('armored')) ? 1 : 0)
+              const dmg = isTargetInv ? 0 : Math.max(0, plant.currentAttack - targetArmor)
+              if (!isTargetInv && dmg > 0) {
+                targetLane.zombieMinion = {
+                  ...targetLane.zombieMinion,
+                  currentHealth: plantHasDeadly ? 0 : Math.max(0, targetLane.zombieMinion.currentHealth - dmg),
+                }
+              }
+              events.push({
+                laneIndex: targetLaneIdx,
+                attackerSide: 'plants',
+                attackerName: `${plant.name} (Bắn 5 làn)`,
+                target: 'minion',
+                targetSide: 'zombies',
+                damageDealt: dmg,
+                isBlocked: false,
+                isLethal: targetLane.zombieMinion.currentHealth <= 0,
+                description: `⭐ ${plant.name} xạ kích sang làn ${targetLaneIdx + 1} gây ${dmg} sát thương lên ${targetLane.zombieMinion.name}!`,
+              })
+              if (targetLane.zombieMinion.currentHealth <= 0) {
+                deadUnitsThisLane.push({ minion: targetLane.zombieMinion, laneIndex: targetLaneIdx })
+                targetLane.zombieMinion = null
+              }
+              if (plantHasStrikethrough) {
+                const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
+                currentZombieHero = res.updatedHero
+                zombieHeroDamageTaken += res.actualDamage
+                events.push({
+                  laneIndex: targetLaneIdx,
+                  attackerSide: 'plants',
+                  attackerName: `${plant.name} (Bắn 5 làn - Strikethrough)`,
+                  target: 'hero',
+                  targetSide: 'zombies',
+                  damageDealt: res.actualDamage,
+                  isBlocked: res.blocked,
+                  isLethal: currentZombieHero.hp <= 0,
+                  description: `⭐ ${plant.name} bắn xuyên thấu làn ${targetLaneIdx + 1} trúng Zombie Hero gây ${res.actualDamage} sát thương!`,
+                })
+                if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+                  pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+                }
+              }
+            } else {
+              const res = applyHeroDamage(currentZombieHero, plant.currentAttack, plantHasBullseye, updatedZombieHand.length)
+              currentZombieHero = res.updatedHero
+              zombieHeroDamageTaken += res.actualDamage
+              events.push({
+                laneIndex: targetLaneIdx,
+                attackerSide: 'plants',
+                attackerName: `${plant.name} (Bắn 5 làn)`,
+                target: 'hero',
+                targetSide: 'zombies',
+                damageDealt: res.actualDamage,
+                isBlocked: res.blocked,
+                isLethal: currentZombieHero.hp <= 0,
+                description: `⭐ ${plant.name} bắn thẳng qua làn ${targetLaneIdx + 1} trúng Zombie Hero gây ${res.actualDamage} sát thương!`,
+              })
+              if (res.isSuperBlockTriggered && !pendingSuperBlock) {
+                pendingSuperBlock = getPendingSuperBlockForHero(currentZombieHero, 'zombies')
+              }
+            }
+          }
+        }
       }
     } else if (!plant && zombie) {
       // ========================================================
@@ -2358,10 +2656,11 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
       // ========================================================
       if (zombieCanAttack) {
         const zombieHasBullseye = Boolean(zombie.bullseye || zombie.traits?.includes('bullseye'))
-        const totalAttack = zombie.currentAttack * (hasBinaryStars(updatedLanes) ? 2 : 1)
+        const zombieAntiHero = getAntiHeroBonus(zombie, lane)
+        const totalAttack = (zombie.currentAttack + zombieAntiHero) * (hasBinaryStars(updatedLanes) ? 2 : 1)
         const spRes = redirectHeroDamageToSoulPatch(updatedLanes, totalAttack, events, i, zombie.name)
         if (!spRes.absorbed) {
-          const res = applyHeroDamage(currentPlantHero, totalAttack, zombieHasBullseye)
+          const res = applyHeroDamage(currentPlantHero, totalAttack, zombieHasBullseye, updatedPlantHand.length)
           currentPlantHero = res.updatedHero
           plantHeroDamageTaken += res.actualDamage
           if (res.actualDamage > 0) {
@@ -2449,6 +2748,84 @@ export function resolveCombat(gameState: GameState): { updatedState: GameState; 
           isBlocked: false,
           isLethal: false,
           description: `🤠 ${zombie.name} gây sát thương lên Plant Hero và tự động di chuyển sang làn ${nextLaneIdx + 1}!`,
+        })
+      }
+    }
+
+    // Smashing Gargantuar: When a Plant is destroyed, deal 2 damage to all other Plants on board
+    const isSmashingGarg = Boolean(
+      zombie && zombie.currentHealth > 0 && (
+        zombie.cardId === 'zombie_smashing_gargantuar' ||
+        zombie.name.toLowerCase().includes('smashing gargantuar')
+      )
+    )
+    const plantDestroyedInLane = (plant && plant.currentHealth <= 0) || (plantTeamUp && plantTeamUp.currentHealth <= 0)
+    if (isSmashingGarg && plantDestroyedInLane) {
+      updatedLanes.forEach((otherLane, otherIdx) => {
+        const checkAndHitPlant = (targetPlant: Minion | null | undefined, isTeamUp: boolean) => {
+          if (!targetPlant || targetPlant.currentHealth <= 0) return
+          if (otherIdx === i && targetPlant.instanceId === plant?.instanceId) return
+          if (otherIdx === i && targetPlant.instanceId === plantTeamUp?.instanceId) return
+
+          const plantArmor = targetPlant.armored ?? (targetPlant.traits?.some(t => t.toLowerCase().includes('armored')) ? 1 : 0)
+          const dmg = Math.max(0, 2 - plantArmor)
+          targetPlant.currentHealth = Math.max(0, targetPlant.currentHealth - dmg)
+          events.push({
+            laneIndex: otherIdx,
+            attackerSide: 'zombies',
+            attackerName: `${zombie!.name} (Chấn động)`,
+            target: 'minion',
+            targetSide: 'plants',
+            damageDealt: dmg,
+            isBlocked: false,
+            isLethal: targetPlant.currentHealth <= 0,
+            description: `💥 ${zombie!.name} tiêu diệt đối thủ: Gây ${dmg} sát thương chấn động lên ${targetPlant.name} tại làn ${otherIdx + 1}!`,
+          })
+          if (targetPlant.currentHealth <= 0) {
+            deadUnitsThisLane.push({ minion: targetPlant, laneIndex: otherIdx })
+            if (isTeamUp) otherLane.plantTeamUpMinion = null
+            else otherLane.plantMinion = null
+          }
+        }
+        checkAndHitPlant(otherLane.plantMinion, false)
+        checkAndHitPlant(otherLane.plantTeamUpMinion, true)
+      })
+    }
+
+    // Imp-Throwing Gargantuar: When damaging Plant Hero, summons a 1/1 Imp in a random empty lane
+    const isImpThrowingGarg = Boolean(
+      zombie && zombie.currentHealth > 0 && (
+        zombie.cardId === 'zombie_imp_throwing_gargantuar' ||
+        zombie.name.toLowerCase().includes('imp-throwing gargantuar')
+      )
+    )
+    if (isImpThrowingGarg && zombieHurtPlantHeroThisLane) {
+      const emptyLanes = updatedLanes
+        .map((l, idx) => ({ lane: l, idx }))
+        .filter(({ lane: l }) => !l.zombieMinion && l.type !== 'water')
+      if (emptyLanes.length > 0) {
+        const chosen = emptyLanes[Math.floor(Math.random() * emptyLanes.length)]
+        chosen.lane.zombieMinion = {
+          instanceId: `imp_${Date.now()}_${chosen.idx}`,
+          cardId: 'zombie_swabbie',
+          name: 'Imp',
+          side: 'zombies',
+          currentAttack: 1,
+          baseAttack: 1,
+          currentHealth: 1,
+          maxHealth: 1,
+          image: '/assets/cards/zombies/Swabbie.png',
+        }
+        events.push({
+          laneIndex: chosen.idx,
+          attackerSide: 'zombies',
+          attackerName: zombie!.name,
+          target: 'minion',
+          targetSide: 'zombies',
+          damageDealt: 0,
+          isBlocked: false,
+          isLethal: false,
+          description: `🧟 ${zombie!.name} đánh trúng Plant Hero: Ném 1 Imp (1/1) vào làn ${chosen.idx + 1}!`,
         })
       }
     }
@@ -2630,7 +3007,7 @@ export function triggerBonusAttack(
         lane.zombieMinion = null
         if (attackerHasFrenzy) {
           // Frenzy follow-up attack directly to Zombie Hero
-          const frenzyRes = applyHeroDamage(updatedState.zombieHero, attacker.currentAttack, attackerHasBullseye)
+          const frenzyRes = applyHeroDamage(updatedState.zombieHero, attacker.currentAttack, attackerHasBullseye, updatedState.zombieHand.length)
           updatedState.zombieHero = frenzyRes.updatedHero
           events.push({
             laneIndex,
@@ -2652,7 +3029,7 @@ export function triggerBonusAttack(
       }
 
       if (attackerHasStrikethrough) {
-        const res = applyHeroDamage(updatedState.zombieHero, attacker.currentAttack, attackerHasBullseye)
+        const res = applyHeroDamage(updatedState.zombieHero, attacker.currentAttack, attackerHasBullseye, updatedState.zombieHand.length)
         updatedState.zombieHero = res.updatedHero
         events.push({
           laneIndex,
@@ -2672,7 +3049,9 @@ export function triggerBonusAttack(
       }
     } else {
       // Direct attack to Zombie Hero
-      const res = applyHeroDamage(updatedState.zombieHero, attacker.currentAttack, attackerHasBullseye)
+      const plantAntiHero = getAntiHeroBonus(attacker, lane)
+      const totalAttack = attacker.currentAttack + plantAntiHero
+      const res = applyHeroDamage(updatedState.zombieHero, totalAttack, attackerHasBullseye, updatedState.zombieHand.length)
       updatedState.zombieHero = res.updatedHero
       events.push({
         laneIndex,
@@ -2762,7 +3141,7 @@ export function triggerBonusAttack(
           } else {
             const spRes = redirectHeroDamageToSoulPatch(updatedState.lanes, effectiveBonusAtk, events, laneIndex, `${attacker.name} (Frenzy)`)
             if (!spRes.absorbed) {
-              const frenzyRes = applyHeroDamage(updatedState.plantHero, effectiveBonusAtk, attackerHasBullseye)
+              const frenzyRes = applyHeroDamage(updatedState.plantHero, effectiveBonusAtk, attackerHasBullseye, updatedState.plantHand.length)
               updatedState.plantHero = frenzyRes.updatedHero
               events.push({
                 laneIndex,
@@ -2788,7 +3167,7 @@ export function triggerBonusAttack(
       if (attackerHasStrikethrough) {
         const spRes = redirectHeroDamageToSoulPatch(updatedState.lanes, effectiveBonusAtk, events, laneIndex, `${attacker.name} (Strikethrough)`)
         if (!spRes.absorbed) {
-          const res = applyHeroDamage(updatedState.plantHero, effectiveBonusAtk, attackerHasBullseye)
+          const res = applyHeroDamage(updatedState.plantHero, effectiveBonusAtk, attackerHasBullseye, updatedState.plantHand.length)
           updatedState.plantHero = res.updatedHero
           if (res.actualDamage > 0) {
             zombieHurtPlantHeroBonus = true
@@ -2812,9 +3191,11 @@ export function triggerBonusAttack(
       }
     } else {
       // Direct attack to Plant Hero
-      const spRes = redirectHeroDamageToSoulPatch(updatedState.lanes, effectiveBonusAtk, events, laneIndex, `${attacker.name} (Bonus Attack)`)
+      const zombieAntiHero = getAntiHeroBonus(attacker, lane)
+      const totalBonusAtk = (attacker.currentAttack + zombieAntiHero) * zombieBonusMult
+      const spRes = redirectHeroDamageToSoulPatch(updatedState.lanes, totalBonusAtk, events, laneIndex, `${attacker.name} (Bonus Attack)`)
       if (!spRes.absorbed) {
-        const res = applyHeroDamage(updatedState.plantHero, effectiveBonusAtk, attackerHasBullseye)
+        const res = applyHeroDamage(updatedState.plantHero, totalBonusAtk, attackerHasBullseye, updatedState.plantHand.length)
         updatedState.plantHero = res.updatedHero
         if (res.actualDamage > 0) {
           zombieHurtPlantHeroBonus = true

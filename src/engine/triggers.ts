@@ -229,7 +229,7 @@ export function triggerOnDeath(
     }
 
     // 1 damage to Plant Hero
-    const heroRes = applyHeroDamage(updatedState.plantHero, 1, false)
+    const heroRes = applyHeroDamage(updatedState.plantHero, 1, false, updatedState.plantHand.length)
     updatedState.plantHero = heroRes.updatedHero
     if (heroRes.isSuperBlockTriggered && !updatedState.pendingSuperBlock) {
       updatedState.pendingSuperBlock = getPendingSuperBlockForHero(updatedState.plantHero, 'plants')
@@ -302,9 +302,9 @@ export function triggerOnDeath(
       logs.push(...cascadeRes.logs)
     }
 
-    const plantHeroDmg = applyHeroDamage(updatedState.plantHero, 1, true)
+    const plantHeroDmg = applyHeroDamage(updatedState.plantHero, 1, true, updatedState.plantHand.length)
     updatedState.plantHero = plantHeroDmg.updatedHero
-    const zombieHeroDmg = applyHeroDamage(updatedState.zombieHero, 1, true)
+    const zombieHeroDmg = applyHeroDamage(updatedState.zombieHero, 1, true, updatedState.zombieHand.length)
     updatedState.zombieHero = zombieHeroDmg.updatedHero
     events.push({
       laneIndex: deadLaneIndex,
@@ -449,7 +449,7 @@ export function triggerOnDeath(
 
       if (targetType === 'hero') {
         // Punish-Shroom deals 2 damage to Zombie Hero
-        const heroRes = applyHeroDamage(updatedState.zombieHero, 2, false)
+        const heroRes = applyHeroDamage(updatedState.zombieHero, 2, false, updatedState.zombieHand.length)
         updatedState.zombieHero = heroRes.updatedHero
         if (heroRes.isSuperBlockTriggered && !updatedState.pendingSuperBlock) {
           updatedState.pendingSuperBlock = getPendingSuperBlockForHero(updatedState.zombieHero, 'zombies')

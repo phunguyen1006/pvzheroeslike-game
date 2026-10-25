@@ -100,6 +100,14 @@ export const CARD_FLAVOR_TEXTS: Record<string, string> = {
   zombie_zombot_sharktronic_sub: '"Tàu ngầm cá mập cơ giới lặn sâu đáy nước, ngoạm nát quân địch và bổ sung vô số tài nguyên khi săn mồi thành công."',
   zombie_smashing_gargantuar: '"Cú đập cột điện sấm sét nghiền nát con mồi, sóng chấn động lan tỏa gây chấn thương cho toàn bộ thực vật trên sân."',
   zombie_turquoise_skull_zombie: '"Hộp sọ ma thuật cổ xưa tỏa ánh sáng lam ngọc, hồi sinh và nhân bản toàn bộ binh đoàn thây ma thành bản sao hùng mạnh."',
+  plant_velociradish_hunter: '"Thợ săn củ cải tiền sử nhanh nhẹn, gầm vang tăng sức tấn công theo từng lượt rút bài."',
+  plant_tankylosaurus: '"Khủng long thiết giáp kiên cố, mỗi đợt rút bài lại kích hoạt cơ chế hồi phục 2 Máu dẻo dai."',
+  plant_mondo_bronto: '"Khủng long cổ dài hộ mệnh khổng lồ, tiếng gầm Dino-Roar dội thẳng 2 sát thương vào Zombie Hero."',
+  plant_doom_shroom: '"Vụ nổ hạt nhân nấm tối thượng xóa sổ toàn bộ minion trên sân và gây 4 sát thương cho cả hai bên."',
+  plant_puff_shroom: '"Bào tử nấm tí hon xuất hiện không tốn một chút ánh sáng Mặt Trời nào."',
+  plant_kernel_corn: '"Cơn bão bắp rang bơ quét sạch chiến trường, trừng phạt toàn bộ quân đoàn Zombie."',
+  zombie_barrel_of_deadbeards: '"Thùng thuốc nổ chôn giấu thuyền trưởng hải tặc khét tiếng sẵn sàng bùng nổ khi bị phá hủy."',
+  zombie_octo_zombie: '"Bạch tuộc khổng lồ kéo lê bất kỳ Cây Trồng nào vào làn nước sâu để quyết chiến sinh tử."',
   zombie_imp_throwing_gargantuar: '"Gã khổng lồ nổi cáu ném tiểu quỷ bay vèo qua chiến tuyến mỗi khi tung đòn trúng mặt đối thủ."',
 }
 

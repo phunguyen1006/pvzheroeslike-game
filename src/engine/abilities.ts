@@ -1137,7 +1137,7 @@ export function triggerDinoRoar(state: GameState, side: Side): AbilityTriggerRes
       }
 
       // Velociradish Hunters & Hatchling: Dino-Roar: +1 Attack!
-      const isVR = (m: Minion | null | undefined) => Boolean(m && (m.cardId === 'plant_velociradish_hunters' || m.cardId === 'plant_velociradish_hatchling'))
+      const isVR = (m: Minion | null | undefined) => Boolean(m && (m.cardId === 'plant_velociradish_hunters' || m.cardId === 'plant_velociradish_hunter' || m.cardId === 'plant_velociradish_hatchling'))
       if (isVR(l.plantMinion)) {
         l.plantMinion = {
           ...l.plantMinion!,
@@ -1151,6 +1151,33 @@ export function triggerDinoRoar(state: GameState, side: Side): AbilityTriggerRes
           currentAttack: l.plantTeamUpMinion!.currentAttack + 1,
         }
         events.push(`🦖 ${l.plantTeamUpMinion.name} Team-Up gầm vang (Dino-Roar): Nhận +1 Tấn công (hiện có ${l.plantTeamUpMinion.currentAttack} ATK)!`)
+      }
+
+      // Tankylosaurus (Plant, Guardian): Dino-Roar: gain 2 Health
+      const isPlantTanky = (m: Minion | null | undefined) => Boolean(m && m.cardId === 'plant_tankylosaurus')
+      if (isPlantTanky(l.plantMinion)) {
+        l.plantMinion = {
+          ...l.plantMinion!,
+          currentHealth: l.plantMinion!.currentHealth + 2,
+          maxHealth: l.plantMinion!.maxHealth + 2,
+        }
+        events.push(`🦕 Tankylosaurus gầm vang (Dino-Roar): Nhận +2 Máu (hiện có ${l.plantMinion!.currentHealth} HP)!`)
+      }
+      if (isPlantTanky(l.plantTeamUpMinion)) {
+        l.plantTeamUpMinion = {
+          ...l.plantTeamUpMinion!,
+          currentHealth: l.plantTeamUpMinion!.currentHealth + 2,
+          maxHealth: l.plantTeamUpMinion!.maxHealth + 2,
+        }
+        events.push(`🦕 Tankylosaurus Team-Up gầm vang (Dino-Roar): Nhận +2 Máu (hiện có ${l.plantTeamUpMinion!.currentHealth} HP)!`)
+      }
+
+      // Mondo Bronto (Plant, Guardian): Dino-Roar: 2 damage to Zombie Hero
+      const isPlantMondo = (m: Minion | null | undefined) => Boolean(m && m.cardId === 'plant_mondo_bronto')
+      if (isPlantMondo(l.plantMinion) || isPlantMondo(l.plantTeamUpMinion)) {
+        const dmg = applyHeroDamage(updatedState.zombieHero, 2, false)
+        updatedState.zombieHero = dmg.updatedHero
+        events.push(`🦕 Mondo Bronto gầm vang (Dino-Roar): Gây 2 sát thương lên Zombie Hero (HP còn ${updatedState.zombieHero.hp})!`)
       }
     })
 
@@ -1783,7 +1810,7 @@ export function triggerWhenHealed(
 
   if (heartichokeCount > 0) {
     const totalDmg = healAmount * heartichokeCount
-    const dmgRes = applyHeroDamage(updatedState.zombieHero, totalDmg, false)
+    const dmgRes = applyHeroDamage(updatedState.zombieHero, totalDmg, false, updatedState.zombieHand.length)
     updatedState.zombieHero = dmgRes.updatedHero
     events.push(`❤️ Heartichoke phản ứng khi ${targetName} được hồi ${healAmount} máu: Gây ${totalDmg} sát thương vào Zombie Hero (máu còn ${updatedState.zombieHero.hp})!`)
   }
@@ -1804,7 +1831,13 @@ export function triggerWhenFrozen(
  */
 export function isUntrickable(unit: Minion | HeroState | null | undefined): boolean {
   if (!unit) return false
-  if ('traits' in unit && Array.isArray(unit.traits) && unit.traits.includes('untrickable')) return true
+  if (
+    'traits' in unit &&
+    Array.isArray(unit.traits) &&
+    unit.traits.some(t => typeof t === 'string' && t.toLowerCase() === 'untrickable')
+  ) {
+    return true
+  }
   return Boolean(unit.untrickable)
 }
 

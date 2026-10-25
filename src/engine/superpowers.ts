@@ -66,7 +66,7 @@ export function executeSuperpower(
         if (isUntrickable(updatedState.zombieHero)) {
           message = `Zombie Hero có đặc tính Untrickable, Precision Blast bị vô hiệu hóa!`
         } else {
-          const res = applyHeroDamage(updatedState.zombieHero, 5, false)
+          const res = applyHeroDamage(updatedState.zombieHero, 5, false, updatedState.zombieHand.length)
           updatedState.zombieHero = res.updatedHero
           message = `Precision Blast bắn thẳng vào Zombie Hero gây ${res.actualDamage} sát thương!`
         }
@@ -90,7 +90,7 @@ export function executeSuperpower(
           }
         }
       } else {
-        const res = applyHeroDamage(updatedState.zombieHero, 2, false)
+        const res = applyHeroDamage(updatedState.zombieHero, 2, false, updatedState.zombieHand.length)
         updatedState.zombieHero = res.updatedHero
         message = `Sunburn thiêu đốt Zombie Hero 2 dmg!`
       }
@@ -258,7 +258,7 @@ export function executeSuperpower(
             }
             if (l.zombieMinion.currentHealth <= 0) l.zombieMinion = null
           } else {
-            const dmg = applyHeroDamage(updatedState.zombieHero, 2, false)
+            const dmg = applyHeroDamage(updatedState.zombieHero, 2, false, updatedState.zombieHand.length)
             updatedState.zombieHero = dmg.updatedHero
           }
         }
@@ -422,7 +422,7 @@ export function executeSuperpower(
             destLane.plantMinion = null
           }
         } else {
-          const res = applyHeroDamage(updatedState.plantHero, z.currentAttack, Boolean(z.bullseye))
+          const res = applyHeroDamage(updatedState.plantHero, z.currentAttack, Boolean(z.bullseye), updatedState.plantHand.length)
           updatedState.plantHero = res.updatedHero
           message = `Carried Away nhấc bổng ${z.name} sang ${destLane.name} và kích hoạt Bonus Attack ${res.actualDamage} sát thương vào Plant Hero!`
         }

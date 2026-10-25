@@ -508,9 +508,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         image: card.image,
         tribe: card.tribe,
         traits: card.traits,
-        amphibious: card.amphibious,
+        amphibious: card.amphibious || card.laneRequirement === 'water' || card.traits?.some((t: any) => typeof t === 'string' && t.toLowerCase().includes('amphibious')),
         bullseye: card.bullseye,
-        teamUp: card.teamUp,
+        teamUp: card.teamUp || card.traits?.some((t: any) => typeof t === 'string' && (t.toLowerCase().includes('teamup') || t.toLowerCase().includes('team-up'))),
         frenzy: card.frenzy,
         deadly: card.deadly,
         strikethrough: card.strikethrough,
@@ -579,7 +579,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           if (isEvolved) {
             return { ...l, plantMinion: minion }
           }
-          if (l.plantMinion && (minion.teamUp || l.plantMinion.teamUp)) {
+          const hasTeamUpTrait = Boolean(
+            minion.teamUp ||
+            minion.traits?.some((t: any) => typeof t === 'string' && (t.toLowerCase().includes('teamup') || t.toLowerCase().includes('team-up'))) ||
+            l.plantMinion?.teamUp ||
+            l.plantMinion?.traits?.some((t: any) => typeof t === 'string' && (t.toLowerCase().includes('teamup') || t.toLowerCase().includes('team-up')))
+          )
+          if (l.plantMinion && hasTeamUpTrait) {
             return { ...l, plantTeamUpMinion: minion }
           }
           return { ...l, plantMinion: minion }

@@ -23,6 +23,9 @@ export interface HeroTopArenaProps {
   activeEmote?: { text: string; emoji?: string } | null
   onDismissEmote?: () => void
   onReturnHome?: () => void
+  winner?: Side | null
+  isWinner?: boolean
+  isDefeated?: boolean
 }
 
 export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
@@ -44,6 +47,9 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
   activeEmote,
   onDismissEmote,
   onReturnHome,
+  winner,
+  isWinner = winner === side,
+  isDefeated = Boolean(winner && winner !== side),
 }) => {
   const isZombie = side === 'zombies'
   const isLowHp = hero.hp <= 5 && hero.hp > 0
@@ -193,8 +199,32 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
             isHurt ? 'hero-portrait-hurt-shake' : ''
           } ${isUsingSuperpower ? 'hero-portrait-superpower-glow' : ''} ${
             isLowHp ? 'hero-portrait-low-hp' : ''
+          } ${isWinner ? 'hero-winner-radiance' : ''} ${
+            isDefeated ? 'hero-defeated-gloom' : ''
           }`}
         >
+          {/* Victory Gold Aura & Crown */}
+          {isWinner && (
+            <div className="hero-victory-crown-wrapper" aria-hidden="true">
+              <div className="hero-victory-crown" title="Chiến thắng!">👑</div>
+              <div className="hero-victory-aura" />
+              <div className="hero-winner-halo" />
+            </div>
+          )}
+
+          {/* Defeat Screen Crack Overlay */}
+          {isDefeated && (
+            <div className="hero-defeat-cracked-overlay" aria-hidden="true">
+              <div className="crack-line crack-line-1" />
+              <div className="crack-line crack-line-2" />
+              <div className="crack-line crack-line-3" />
+              <div className="defeat-skull-badge">☠️</div>
+            </div>
+          )}
+
+          {/* Hurt Red Glowing Rim Flash */}
+          {isHurt && <div className="hero-hurt-red-rim-flash" aria-hidden="true" />}
+
           {/* Low HP Red Pulsating Danger Vignette & Alarm */}
           {isLowHp && (
             <div className="hero-danger-vignette-overlay" aria-hidden="true">
@@ -250,7 +280,9 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
 
           {/* Floating Damage Number */}
           {floatingDamage && (
-            <div className="hero-floating-damage-burst">{floatingDamage}</div>
+            <div className="hero-floating-damage-burst">
+              {floatingDamage.startsWith('-') ? floatingDamage : `-${floatingDamage}`}
+            </div>
           )}
 
           {/* Opponent Comic Speech Bubble */}

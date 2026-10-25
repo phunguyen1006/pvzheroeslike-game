@@ -980,6 +980,10 @@ export function App() {
             isHurt={zombieHeroHurt}
             isUsingSuperpower={zombieUsingSuperpower}
             isSuperBlockTriggered={Boolean(gameState.pendingSuperBlock && gameState.pendingSuperBlock.side === 'zombies')}
+            floatingDamage={zombieHeroHurt ? '2' : undefined}
+            winner={gameState.winner}
+            isWinner={gameState.winner === 'zombies'}
+            isDefeated={gameState.winner === 'plants'}
             isTargetable={Boolean(selectedCard && selectedCard.type === 'trick' && isPlayerPlantTurn)}
             onHeroClick={() => {
               if (selectedCard && selectedCard.type === 'trick' && isPlayerPlantTurn) {
@@ -1038,6 +1042,10 @@ export function App() {
             isHurt={plantHeroHurt}
             isUsingSuperpower={plantUsingSuperpower}
             isSuperBlockTriggered={Boolean(gameState.pendingSuperBlock && gameState.pendingSuperBlock.side === 'plants')}
+            floatingDamage={plantHeroHurt ? '2' : undefined}
+            winner={gameState.winner}
+            isWinner={gameState.winner === 'plants'}
+            isDefeated={gameState.winner === 'zombies'}
             activeEmote={playerEmote}
             onDismissEmote={() => setPlayerEmote(null)}
             onSuperBlockClick={() => {

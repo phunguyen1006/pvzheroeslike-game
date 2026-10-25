@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react'
-import type { GameState, Side, ReplaySnapshot, Card as CardType } from '../../engine/types'
-import { getCardById } from '../../data/cards'
+import type { GameState, Side, ReplaySnapshot } from '../../engine/types'
 
 export interface MatchStatsData {
   winner: Side
@@ -50,6 +49,32 @@ export interface MatchStatsModalProps {
   onMainMenu?: () => void
 }
 
+function getDefaultMvpCard(winner: Side) {
+  if (winner === 'plants') {
+    return {
+      id: 'plant_repeater',
+      name: 'Repeater',
+      side: 'plants' as Side,
+      cost: 3,
+      attack: 4,
+      health: 4,
+      image: '/assets/cards/plants/Repeater.png',
+      reason: 'Sát thương 2 phát liên tiếp áp đảo toàn bộ tiền tuyến Zombie!',
+    }
+  } else {
+    return {
+      id: 'zombie_all_star',
+      name: 'All-Star Zombie',
+      side: 'zombies' as Side,
+      cost: 5,
+      attack: 4,
+      health: 6,
+      image: '/assets/cards/zombies/Arm Wrestler.png',
+      reason: 'Lớp giáp Armored 1 và Frenzy càn quét xuyên thủng hàng phòng thủ thực vật!',
+    }
+  }
+}
+
 /**
  * Computes consolidated match statistics from GameState and Replay History.
  */
@@ -60,6 +85,7 @@ export function deriveMatchStats(
   forcedWinner?: Side
 ): MatchStatsData {
   const winner = customStats?.winner || forcedWinner || gameState?.winner || 'plants'
+  const resolvedMvpCard = customStats?.mvpCard || getDefaultMvpCard(winner)
   const turnCount =
     customStats?.turnCount ??
     gameState?.turn ??
@@ -104,7 +130,7 @@ export function deriveMatchStats(
       zombieSuperBlocksTriggered: customStats.zombieSuperBlocksTriggered ?? 1,
       plantMinionsDefeated: customStats.plantMinionsDefeated ?? Math.floor(turnCount * 1.5),
       zombieMinionsDefeated: customStats.zombieMinionsDefeated ?? Math.floor(turnCount * 1.2),
-      mvpCard: customStats.mvpCard,
+      mvpCard: resolvedMvpCard,
     }
   }
 
@@ -168,34 +194,6 @@ export function deriveMatchStats(
     zMinionsDefeated = Math.max(1, Math.floor(turnCount * 1.3))
   }
 
-  // Derive MVP Card
-  let mvpCard = customStats?.mvpCard
-  if (!mvpCard) {
-    if (winner === 'plants') {
-      mvpCard = {
-        id: 'plant_repeater',
-        name: 'Repeater',
-        side: 'plants',
-        cost: 3,
-        attack: 4,
-        health: 4,
-        image: '/assets/cards/plants/Repeater.png',
-        reason: 'Sát thương 2 phát liên tiếp áp đảo toàn bộ tiền tuyến Zombie!',
-      }
-    } else {
-      mvpCard = {
-        id: 'zombie_all_star',
-        name: 'All-Star Zombie',
-        side: 'zombies',
-        cost: 5,
-        attack: 4,
-        health: 6,
-        image: '/assets/cards/zombies/Arm Wrestler.png',
-        reason: 'Lớp giáp Armored 1 và Frenzy càn quét xuyên thủng hàng phòng thủ thực vật!',
-      }
-    }
-  }
-
   return {
     winner,
     plantHeroName,
@@ -213,7 +211,7 @@ export function deriveMatchStats(
     zombieSuperBlocksTriggered: customStats?.zombieSuperBlocksTriggered ?? zSuperBlocks,
     plantMinionsDefeated: customStats?.plantMinionsDefeated ?? pMinionsDefeated,
     zombieMinionsDefeated: customStats?.zombieMinionsDefeated ?? zMinionsDefeated,
-    mvpCard,
+    mvpCard: resolvedMvpCard,
   }
 }
 

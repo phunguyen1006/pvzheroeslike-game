@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'
+import { soundManager } from '../../audio/SoundManager'
 
 export interface ComicSpeechBubbleProps {
   text: string
   emoji?: string
   side: 'plants' | 'zombies'
   onDismiss?: () => void
-  duration?: number // default 3500ms
+  duration?: number // default 2500ms (Round 12 standard)
 }
 
 export const ComicSpeechBubble: React.FC<ComicSpeechBubbleProps> = ({
@@ -13,14 +14,16 @@ export const ComicSpeechBubble: React.FC<ComicSpeechBubbleProps> = ({
   emoji = '💬',
   side,
   onDismiss,
-  duration = 3500,
+  duration = 2500,
 }) => {
   const [isFadingOut, setIsFadingOut] = useState(false)
 
   useEffect(() => {
+    soundManager.playBubblePop()
+
     const fadeTimer = setTimeout(() => {
       setIsFadingOut(true)
-    }, duration - 400)
+    }, Math.max(100, duration - 400))
 
     const dismissTimer = setTimeout(() => {
       if (onDismiss) {
