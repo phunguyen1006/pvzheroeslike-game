@@ -280,7 +280,9 @@ export function App() {
         // 3. Campaign Victory Cinematic Trigger on Final Chapter Bosses
         const isChapterClimaxBoss =
           activeCampaignMission.difficulty === 'boss' &&
-          (activeCampaignMission.missionNumber === 10 || activeCampaignMission.missionNumber === 15)
+          (activeCampaignMission.missionNumber === 10 ||
+            activeCampaignMission.missionNumber === 15 ||
+            activeCampaignMission.missionNumber === 20)
         if (isChapterClimaxBoss && gameState.winner === playerSide) {
           setShowCinematicVictory(true)
         }
@@ -966,6 +968,7 @@ export function App() {
             phase={gameState.phase}
             isHurt={zombieHeroHurt}
             isUsingSuperpower={zombieUsingSuperpower}
+            isSuperBlockTriggered={Boolean(gameState.pendingSuperBlock && gameState.pendingSuperBlock.side === 'zombies')}
             isTargetable={Boolean(selectedCard && selectedCard.type === 'trick' && isPlayerPlantTurn)}
             onHeroClick={() => {
               if (selectedCard && selectedCard.type === 'trick' && isPlayerPlantTurn) {
@@ -1023,6 +1026,7 @@ export function App() {
             phase={gameState.phase}
             isHurt={plantHeroHurt}
             isUsingSuperpower={plantUsingSuperpower}
+            isSuperBlockTriggered={Boolean(gameState.pendingSuperBlock && gameState.pendingSuperBlock.side === 'plants')}
             activeEmote={playerEmote}
             onDismissEmote={() => setPlayerEmote(null)}
             onSuperBlockClick={() => {

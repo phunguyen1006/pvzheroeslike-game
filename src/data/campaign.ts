@@ -10,6 +10,7 @@ import { getCardById, ALL_CARDS } from './cards'
 
 export const CHAPTER_1_MISSIONS: CampaignMission[] = [
   {
+    faction: 'plants',
     id: 'mission_1',
     chapter: 1,
     missionNumber: 1,
@@ -46,6 +47,7 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
     },
   },
   {
+    faction: 'plants',
     id: 'mission_2',
     chapter: 1,
     missionNumber: 2,
@@ -86,6 +88,7 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
     },
   },
   {
+    faction: 'plants',
     id: 'mission_3',
     chapter: 1,
     missionNumber: 3,
@@ -125,6 +128,7 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
     },
   },
   {
+    faction: 'plants',
     id: 'mission_4',
     chapter: 1,
     missionNumber: 4,
@@ -164,6 +168,7 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
     },
   },
   {
+    faction: 'plants',
     id: 'mission_5',
     chapter: 1,
     missionNumber: 5,
@@ -206,6 +211,7 @@ export const CHAPTER_1_MISSIONS: CampaignMission[] = [
 
 export const CHAPTER_2_MISSIONS: CampaignMission[] = [
   {
+    faction: 'plants',
     id: 'mission_6',
     chapter: 2,
     missionNumber: 6,
@@ -246,6 +252,7 @@ export const CHAPTER_2_MISSIONS: CampaignMission[] = [
     },
   },
   {
+    faction: 'plants',
     id: 'mission_7',
     chapter: 2,
     missionNumber: 7,
@@ -288,6 +295,7 @@ export const CHAPTER_2_MISSIONS: CampaignMission[] = [
     },
   },
   {
+    faction: 'plants',
     id: 'mission_8',
     chapter: 2,
     missionNumber: 8,
@@ -330,6 +338,7 @@ export const CHAPTER_2_MISSIONS: CampaignMission[] = [
     },
   },
   {
+    faction: 'plants',
     id: 'mission_9',
     chapter: 2,
     missionNumber: 9,
@@ -369,6 +378,7 @@ export const CHAPTER_2_MISSIONS: CampaignMission[] = [
     },
   },
   {
+    faction: 'plants',
     id: 'mission_10',
     chapter: 2,
     missionNumber: 10,
@@ -412,6 +422,7 @@ export const CHAPTER_2_MISSIONS: CampaignMission[] = [
 
 export const CHAPTER_3_MISSIONS: CampaignMission[] = [
   {
+    faction: 'plants',
     id: 'mission_11',
     chapter: 3,
     missionNumber: 11,
@@ -455,6 +466,7 @@ export const CHAPTER_3_MISSIONS: CampaignMission[] = [
     },
   },
   {
+    faction: 'plants',
     id: 'mission_12',
     chapter: 3,
     missionNumber: 12,
@@ -501,6 +513,7 @@ export const CHAPTER_3_MISSIONS: CampaignMission[] = [
     },
   },
   {
+    faction: 'plants',
     id: 'mission_13',
     chapter: 3,
     missionNumber: 13,
@@ -546,6 +559,7 @@ export const CHAPTER_3_MISSIONS: CampaignMission[] = [
     },
   },
   {
+    faction: 'plants',
     id: 'mission_14',
     chapter: 3,
     missionNumber: 14,
@@ -589,6 +603,7 @@ export const CHAPTER_3_MISSIONS: CampaignMission[] = [
     },
   },
   {
+    faction: 'plants',
     id: 'mission_15',
     chapter: 3,
     missionNumber: 15,
@@ -619,7 +634,7 @@ export const CHAPTER_3_MISSIONS: CampaignMission[] = [
     ],
     rewards: {
       gems: 1200,
-      unlocksNext: false,
+      unlocksNext: true,
       title: 'Đại Tướng Đa Vũ Trụ Thực Vật',
     },
     comicDialogue: {
@@ -633,10 +648,234 @@ export const CHAPTER_3_MISSIONS: CampaignMission[] = [
   },
 ]
 
+// ==========================================
+// PLANT CAMPAIGN - CHAPTER 4: SOLAR SANCTUM
+// ==========================================
+export const CHAPTER_4_MISSIONS: CampaignMission[] = [
+  {
+    faction: 'plants',
+    id: 'mission_16',
+    chapter: 4,
+    missionNumber: 16,
+    title: 'Nhiệm Vụ 16: Vườn Hoa Hướng Dương (Sunflower\'s Garden)',
+    subtitle: 'Đối đầu Zombie Bossbot (HP 30) - Thánh Địa Ánh Dương',
+    storyIntro:
+      'Bước vào Thánh Địa Ánh Dương (Solar Sanctum), Zombie Bossbot khổng lồ với 30 HP xuất hiện nhằm hủy diệt nguồn năng lượng Mặt trời! Cây Trồng điều động binh đoàn Solar tinh nhuệ bảo vệ thánh địa trong trận chiến 3 làn đất linh thiêng!',
+    bossHeroId: 'hero_z_mech',
+    bossHeroName: 'Zombie Bossbot',
+    bossHeroAvatar: '/assets/heroes/zombies/Z-Mech.png',
+    difficulty: 'normal',
+    rule: {
+      id: 'rule_mission_16',
+      name: 'Vườn Hoa Hướng Dương (Sunflower\'s Garden)',
+      description:
+        'Zombie Bossbot khởi đầu với 30 HP; Chiến trường 3 làn đất trung tâm; Cây Trồng sử dụng bộ bài hệ Solar và nhận +1 Sun khởi đầu!',
+      startingSunBonus: 1,
+      startingBrainsBonus: 0,
+      initialMinions: [
+        { laneIndex: 2, cardId: 'plant_sunflower', side: 'plants' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Chiến thắng trận đấu: Giảm HP Zombie Bossbot về 0',
+      '⭐⭐ Bảo toàn toàn bộ Cây Trồng (Win without losing a plant)',
+      '⭐⭐⭐ Giành chiến thắng chớp nhoáng trong vòng 6 lượt đấu (≤ 6 turns)',
+    ],
+    rewards: {
+      gems: 400,
+      unlocksNext: true,
+      title: 'Người Giữ Vườn Ánh Dương',
+    },
+    comicDialogue: {
+      issueTitle: 'TIẾNG GẦM CỦA CỖ MÁY BOSSBOT!',
+      issueTagline: 'Zombie Bossbot 30 HP tấn công Thánh Địa Ánh Dương',
+      zombieHeroQuote:
+        'Cỗ máy Bossbot tối tân của ta với 30 HP và lớp giáp thép siêu dày sẽ san bằng vườn hoa hướng dương của các ngươi!',
+      plantHeroQuote:
+        'Ánh sáng mặt trời rực rỡ từ Solar Sanctum sẽ nung chảy mọi bánh răng gỉ sét của ngươi! Hãy xem sức mạnh Solar bùng cháy!',
+    },
+  },
+  {
+    faction: 'plants',
+    id: 'mission_17',
+    chapter: 4,
+    missionNumber: 17,
+    title: 'Nhiệm Vụ 17: Phục Kích Song Dương (Twin Sun Ambush)',
+    subtitle: 'Đối đầu Impfinity (HP 25) - Bão Lửa Kabloom',
+    storyIntro:
+      'Impfinity với 25 HP cùng đám phân thân tinh quái đã bí mật phục kích sẵn với 2 tên quỷ lùn Imp cắm chốt trên sân! Hãy dùng hỏa lực bùng nổ của bộ bài Kabloom để thiêu rụi vòng vây kẻ thù!',
+    bossHeroId: 'hero_impfinity',
+    bossHeroName: 'Impfinity',
+    bossHeroAvatar: '/assets/heroes/zombies/Impfinity.png',
+    difficulty: 'normal',
+    rule: {
+      id: 'rule_mission_17',
+      name: 'Phục Kích Song Dương & Bầy Quỷ Lùn',
+      description:
+        'Impfinity có 25 HP; Zombies khởi đầu với 2 tên Swabbie phục kích sẵn tại Làn 2 và Làn 4; Cây Trồng dùng bộ bài Kabloom nhận +1 Sun!',
+      startingSunBonus: 1,
+      startingBrainsBonus: 0,
+      initialMinions: [
+        { laneIndex: 1, cardId: 'zombie_swabbie', side: 'zombies' },
+        { laneIndex: 3, cardId: 'zombie_swabbie', side: 'zombies' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đánh bại Impfinity (HP 25)',
+      '⭐⭐ Gây ít nhất 15 sát thương trong một lượt đấu (Deal 15+ damage in one turn)',
+      '⭐⭐⭐ Giành thắng lợi trong vòng 5 lượt đấu (≤ 5 turns)',
+    ],
+    rewards: {
+      gems: 450,
+      unlocksNext: true,
+      title: 'Kẻ Phá Bẫy Phục Kích',
+    },
+    comicDialogue: {
+      issueTitle: 'BẪY PHỤC KÍCH SONG DƯƠNG!',
+      issueTagline: 'Impfinity 25 HP và bầy quỷ lùn đánh lén',
+      zombieHeroQuote:
+        'Hehehe! Bọn ta đã giăng sẵn 2 tên Imp phục kích trước khi các ngươi kịp trở tay! Hãy nếm mùi biển quỷ tí hon!',
+      plantHeroQuote:
+        'Kabloom bùng cháy! Hỏa tiễn Berry Blast và nấm lửa sẽ thổi bay toàn bộ đám tiểu quỷ chỉ trong một lượt đấu!',
+    },
+  },
+  {
+    faction: 'plants',
+    id: 'mission_18',
+    chapter: 4,
+    missionNumber: 18,
+    title: 'Nhiệm Vụ 18: Đấu Trường Thảm Gai (Spikeweed Showdown)',
+    subtitle: 'Đối đầu Super Brainz (HP 28) - Trận Địa Mega-Grow',
+    storyIntro:
+      'Super Brainz với 28 HP và năng lực phi thường lao vào quấy phá! Dave đã kích hoạt 2 thảm gai Spikeweed Sector tại Làn 2 và Làn 3 để liên tục chọc thủng bước tiến kẻ thù. Hãy tận dụng sức mạnh bộc phá của bộ bài Mega-Grow để đè bẹp đối thủ!',
+    bossHeroId: 'hero_super_brainz',
+    bossHeroName: 'Super Brainz',
+    bossHeroAvatar: '/assets/heroes/zombies/Super Brainz.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'rule_mission_18',
+      name: 'Đấu Trường Thảm Gai Spikeweed Showdown',
+      description:
+        'Super Brainz có 28 HP; Làn 2 và Làn 3 có sẵn 2 môi trường Spikeweed Sector (gây 2 sát thương cho Zombie); Cây Trồng sử dụng bộ bài Mega-Grow nhận +1 Sun!',
+      startingSunBonus: 1,
+      startingBrainsBonus: 1,
+      initialEnvironments: [
+        { laneIndex: 1, environmentCardId: 'plant_spikeweed_sector' },
+        { laneIndex: 2, environmentCardId: 'plant_spikeweed_sector' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đánh bại Super Brainz (HP 28)',
+      '⭐⭐ Giành chiến thắng mà không dùng thêm thẻ Môi trường (Win without using environments)',
+      '⭐⭐⭐ Giành thắng lợi sinh tử khi lượng máu Hero còn ≤ 8 HP (Win with ≤ 8 HP remaining)',
+    ],
+    rewards: {
+      gems: 500,
+      unlocksNext: true,
+      title: 'Bậc Thầy Trận Địa Gai',
+    },
+    comicDialogue: {
+      issueTitle: 'ĐẤU TRƯỜNG THẢM GAI NẢY LỬA!',
+      issueTagline: 'Super Brainz 28 HP vs Thảm Gai Spikeweed Sector',
+      zombieHeroQuote:
+        'Dù có gai nhọn dưới chân thì siêu nắm đấm và mái tóc hoàn hảo của Super Brainz vẫn sẽ nghiền nát mọi chướng ngại!',
+      plantHeroQuote:
+        'Spikeweed Sector sẽ đâm thủng đôi giày bay của ngươi! Sức mạnh tăng trưởng Mega-Grow sẽ kết liễu trận chiến!',
+    },
+  },
+  {
+    faction: 'plants',
+    id: 'mission_19',
+    chapter: 4,
+    missionNumber: 19,
+    title: 'Nhiệm Vụ 19: Phòng Tuyến Hoa Cỏ (Floral Defense)',
+    subtitle: 'Đối đầu Electric Boogaloo (HP 30) - Bão Điện Strikethrough',
+    storyIntro:
+      'Electric Boogaloo với 30 HP đem dàn âm thanh cuồng loạn cùng sát thủ Space Cowboy mang đặc tính Xuyên Thấu (Strikethrough) tấn công phòng tuyến! Sử dụng bộ bài phối hợp Solar + Guardian kiên cường để tạo lá chắn chặn đứng mọi đòn đánh xuyên giáp!',
+    bossHeroId: 'hero_electric_boogaloo',
+    bossHeroName: 'Electric Boogaloo',
+    bossHeroAvatar: '/assets/heroes/zombies/Electric Boogaloo.png',
+    difficulty: 'hard',
+    rule: {
+      id: 'rule_mission_19',
+      name: 'Phòng Tuyến Hoa Cỏ & Sát Thủ Strikethrough',
+      description:
+        'Electric Boogaloo có 30 HP; Làn 3 có sẵn 1 Zombie Xuyên thấu Space Cowboy (Strikethrough); Cây Trồng phối hợp bộ bài Solar + Guardian nhận +1 Sun!',
+      startingSunBonus: 1,
+      startingBrainsBonus: 1,
+      initialMinions: [
+        { laneIndex: 2, cardId: 'zombie_space_cowboy', side: 'zombies' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đánh bại Electric Boogaloo (HP 30)',
+      '⭐⭐ Chặn đứng tổng cộng từ 10 sát thương trở lên (Block 10+ total damage)',
+      '⭐⭐⭐ Giành chiến thắng trong vòng 7 lượt đấu (≤ 7 turns)',
+    ],
+    rewards: {
+      gems: 600,
+      unlocksNext: true,
+      title: 'Bức Tường Hoa Cỏ Bất Hoại',
+    },
+    comicDialogue: {
+      issueTitle: 'ĐIỆU NHẢY XUYÊN THẤU SẤM SÉT!',
+      issueTagline: 'Electric Boogaloo 30 HP cùng dàn quân Strikethrough công phá',
+      zombieHeroQuote:
+        'Đòn Strikethrough từ quân đoàn Boogaloo sẽ xuyên thẳng qua đám rễ cây và giật điện trực tiếp vào Hero của ngươi!',
+      plantHeroQuote:
+        'Bức tường Guardian vững chắc kết hợp hồi phục Solar sẽ hấp thụ toàn bộ tia sét! Vũ điệu của ngươi kết thúc tại đây!',
+    },
+  },
+  {
+    faction: 'plants',
+    id: 'mission_20',
+    chapter: 4,
+    missionNumber: 20,
+    title: 'Nhiệm Vụ 20: Cơn Thịnh Nộ Của Solar Flare (Solar Flare\'s Revenge)',
+    subtitle: 'ĐẠI CHIẾN BOSS CUỐI CHAPTER 4: Bản Sao Tối Thượng Solar Flare (HP 35)',
+    storyIntro:
+      'Trận quyết chiến tối hậu tại trung tâm Solar Sanctum! Một bản sao hắc hóa hùng mạnh của Solar Flare với 35 HP trỗi dậy từ tâm hạch dung nham. Lời nguyền phong ấn toàn bộ Phép thuật (No Tricks allowed for Plants) — Cây Trồng chỉ có thể trông cậy vào ý chí và sức mạnh quân cờ Minion trên đài Pair Pearadise để giành chiến thắng!',
+    bossHeroId: 'hero_solar_flare',
+    bossHeroName: 'Solar Flare Thần Hỏa',
+    bossHeroAvatar: '/assets/heroes/plants/Solar Flare.png',
+    difficulty: 'boss',
+    rule: {
+      id: 'rule_mission_20',
+      name: 'Thần Hỏa Tối Thượng & Lời Nguyền Cấm Phép (No Tricks)',
+      description:
+        'Solar Flare có 35 HP và nhận +2 Não/Năng lượng; Cấm Cây Trồng dùng thẻ Phép (No Tricks allowed for Plants); Làn 3 có sẵn Pair Pearadise nhân đôi Cây Trồng!',
+      startingSunBonus: 2,
+      startingBrainsBonus: 2,
+      initialEnvironments: [
+        { laneIndex: 2, environmentCardId: 'plant_pair_pearadise' },
+      ],
+    },
+    starObjectives: [
+      '⭐ Đánh bại Solar Flare Thần Hỏa (HP 35) cấm dùng Phép',
+      '⭐⭐ Chinh phục cấp độ Thử Thách Khắc Nghiệt (Tier 2 Clear)',
+      '⭐⭐⭐ Hoàn thành xuất sắc toàn bộ Chiến dịch Plant Chapter 4 Solar Sanctum!',
+    ],
+    rewards: {
+      gems: 1500,
+      unlocksNext: false,
+      title: 'Chúa Tể Thánh Địa Ánh Dương',
+    },
+    comicDialogue: {
+      issueTitle: 'QUYẾT CHIẾN THẦN HỎA TỐI THƯỢNG!',
+      issueTagline: 'Solar Flare 35 HP bùng cháy vs Lời nguyền Cấm Phép No Tricks',
+      zombieHeroQuote:
+        'Nhiệt lượng vô tận từ lõi Solar Sanctum là của ta! Không một lá bài Phép nào được phép thi triển trước mặt Thần Hỏa!',
+      plantHeroQuote:
+        'Sức mạnh chân chính không nằm ở ảo thuật mà ở sự kiên cường của từng mầm cây! Pair Pearadise sẽ cùng ta đập tan bóng tối!',
+    },
+  },
+]
+
 export const ALL_CAMPAIGN_MISSIONS: CampaignMission[] = [
   ...CHAPTER_1_MISSIONS,
   ...CHAPTER_2_MISSIONS,
   ...CHAPTER_3_MISSIONS,
+  ...CHAPTER_4_MISSIONS,
 ]
 
 // ==========================================
@@ -1352,6 +1591,15 @@ export const CAMPAIGN_CHAPTERS: CampaignChapter[] = [
     badgeText: 'CHAPTER 3',
     missions: CHAPTER_3_MISSIONS,
   },
+  {
+    id: 4,
+    title: 'THÁNH ĐỊA ÁNH DƯƠNG (SOLAR SANCTUM)',
+    subtitle: 'Chapter 4: Khai phá cội nguồn ánh sáng mặt trời',
+    description:
+      'Bảo vệ Thánh Địa Ánh Dương thiêng liêng trước Zombie Bossbot, bầy quỷ Imp phục kích, đấu trường thảm gai Super Brainz, sát thủ xuyên thấu Boogaloo và bản sao hắc hóa Solar Flare tối thượng!',
+    badgeText: 'CHAPTER 4',
+    missions: CHAPTER_4_MISSIONS,
+  },
 ]
 
 export const ZOMBIE_CAMPAIGN_CHAPTERS: CampaignChapter[] = [
@@ -1572,6 +1820,21 @@ export function calculateMissionStars(
   } else if (mission.id === 'mission_15') {
     if (playerHp >= 15) stars++
     if (turnCount <= 10) stars++
+  } else if (mission.id === 'mission_16') {
+    if (playerHp >= 15) stars++
+    if (turnCount <= 6) stars++
+  } else if (mission.id === 'mission_17') {
+    if (playerHp >= 12) stars++
+    if (turnCount <= 5) stars++
+  } else if (mission.id === 'mission_18') {
+    if (playerHp <= 8 && playerHp > 0) stars++
+    if (turnCount <= 8) stars++
+  } else if (mission.id === 'mission_19') {
+    if (playerHp >= 14) stars++
+    if (turnCount <= 7) stars++
+  } else if (mission.id === 'mission_20') {
+    if (playerHp >= 12 || turnCount <= 12) stars++
+    if (playerHp >= 15 || turnCount <= 8) stars++
   } else if (mission.id === 'zombie_mission_1') {
     if (playerHp >= 12) stars++
     if (turnCount <= 8) stars++
