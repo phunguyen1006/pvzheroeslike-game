@@ -88,6 +88,19 @@ export const CARD_FLAVOR_TEXTS: Record<string, string> = {
   zombie_jester: '"Tên hề xiếc quái đản luôn cười khúc khích. Đánh hắn một cú ư? Hắn sẽ ném trả lại chính xác lượng sát thương đó vào mặt bạn!"',
   zombie_zombot_plank_walker: '"Chiến hạm hải tặc tương lai khổng lồ lướt trên mặt nước. Một khi cập bến, mọi công trình cảnh quan môi trường xung quanh đều sụp đổ tan tành."',
   zombie_haunted_castle: '"Lâu đài ma quái rùng rợn chứa đầy lời nguyền u ám, tiếp thêm dũng khí và sức tấn công mãnh liệt cho bất kỳ thây ma nào bước vào."',
+  plant_astro_shroom: '"Bắn chuẩn không cần chỉnh. Cứ mỗi mầm cây mọc lên là một tia laser từ nấm vũ trụ phóng thẳng vào mặt đối thủ."',
+  plant_shooting_starfruit: '"Năm cánh sao tỏa sáng rực rỡ, xạ kích cuồng phong đồng loạt vào cả 5 làn chiến đấu không chừa một ngóc ngách."',
+  plant_heartichoke: '"Mỗi giọt nhựa sống hồi phục cho đồng đội lại chuyển hóa thành năng lượng hủy diệt dội thẳng vào Zombie Hero."',
+  plant_tricarrotops: '"Chú khủng long cà rốt ba sừng cứng cỏi, càng rút nhiều bài trí tuệ thì lớp vỏ sừng lại càng kiên cố và dũng mãnh."',
+  plant_velociradish_hunters: '"Đội thợ săn củ cải tốc độ, đi săn theo bầy và bùng nổ sức mạnh theo từng đợt rút bài."',
+  plant_velociradish_hatchling: '"Củ cải con mới nở nhưng tiếng gầm tiền sử đã đủ khiến kẻ thù phải khiếp sợ."',
+  plant_tactical_cuke: '"Tên lửa dưa chuột hủy diệt chiến thuật rơi từ quỹ đạo, xóa sổ toàn bộ chiến trường đất liền trong nháy mắt."',
+  zombie_tankylosaurus: '"Cỗ xe tăng bọc giáp thời tiền sử, mỗi lần rút bài là đuôi búa tạ lại quăng đá nổ tung một mục tiêu ngẫu nhiên."',
+  zombie_mondo_bronto: '"Bước chân dậm đất của siêu bạo long khổng lồ nghiền nát mọi chồi non rễ cây trong cùng một làn nước hoặc đất."',
+  zombie_zombot_sharktronic_sub: '"Tàu ngầm cá mập cơ giới lặn sâu đáy nước, ngoạm nát quân địch và bổ sung vô số tài nguyên khi săn mồi thành công."',
+  zombie_smashing_gargantuar: '"Cú đập cột điện sấm sét nghiền nát con mồi, sóng chấn động lan tỏa gây chấn thương cho toàn bộ thực vật trên sân."',
+  zombie_turquoise_skull_zombie: '"Hộp sọ ma thuật cổ xưa tỏa ánh sáng lam ngọc, hồi sinh và nhân bản toàn bộ binh đoàn thây ma thành bản sao hùng mạnh."',
+  zombie_imp_throwing_gargantuar: '"Gã khổng lồ nổi cáu ném tiểu quỷ bay vèo qua chiến tuyến mỗi khi tung đòn trúng mặt đối thủ."',
 }
 
 export function getCardFlavorText(cardId: string, cardName: string): string {

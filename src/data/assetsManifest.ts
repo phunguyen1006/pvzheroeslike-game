@@ -124,7 +124,13 @@ export const ASSET_MANIFEST = {
       "Onion Rings": "/assets/cards/plants/Sunflower.png",
       "Kernel-Pult": "/assets/cards/plants/Kernel Corn.png",
       "Chomper": "/assets/cards/plants/Bonk Choy.png",
-      "Mushroom Grotto": "/assets/cards/plants/Planet of the Grapes.png"
+      "Mushroom Grotto": "/assets/cards/plants/Planet of the Grapes.png",
+      "Shooting Starfruit": "/assets/cards/plants/Starfruit.png",
+      "Heartichoke": "/assets/cards/plants/Sunflower.png",
+      "Tricarrotops": "/assets/cards/plants/Bananasaurus Rex.png",
+      "Velociradish Hunters": "/assets/cards/plants/Bananasaurus Rex.png",
+      "Velociradish Hatchling": "/assets/cards/plants/Bananasaurus Rex.png",
+      "Tactical Cuke": "/assets/cards/plants/Cherry Bomb.png"
     },
     "zombies": {
       "Area 22": "/assets/cards/zombies/Area 22.png",
@@ -176,7 +182,13 @@ export const ASSET_MANIFEST = {
       "Gargantuar's Feast": "/assets/cards/zombies/Bad Moon Rising.png",
       "Jester": "/assets/cards/zombies/Conga Zombie.png",
       "Zombot Plank Walker": "/assets/cards/zombies/Zombot 1000.png",
-      "Haunted Castle": "/assets/cards/zombies/Area 22.png"
+      "Haunted Castle": "/assets/cards/zombies/Area 22.png",
+      "Tankylosaurus": "/assets/cards/zombies/Arm Wrestler.png",
+      "Mondo Bronto": "/assets/cards/zombies/Zombot 1000.png",
+      "Zombot Sharktronic Sub": "/assets/cards/zombies/Zombot 1000.png",
+      "Smashing Gargantuar": "/assets/cards/zombies/Arm Wrestler.png",
+      "Turquoise Skull Zombie": "/assets/cards/zombies/Disco Zombie.png",
+      "Imp-Throwing Gargantuar": "/assets/cards/zombies/Arm Wrestler.png"
     }
   },
   "traits": {
