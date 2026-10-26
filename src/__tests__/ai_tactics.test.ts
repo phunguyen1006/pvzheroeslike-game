@@ -913,7 +913,8 @@ describe('AI Opponent Engine Tactics Suite (Phase 7)', () => {
     it('Deploys Going Viral when zombies are present to grant +1/+1 and Frenzy', () => {
       const state = setupState()
       state.phase = 'ZOMBIE_TRICKS'
-      state.zombieHero.brains = 3
+      const viralCard = getCard('zombie_going_viral')
+      state.zombieHero.brains = Math.max(3, viralCard.cost)
 
       state.lanes[1].zombieMinion = createTestMinion({
         instanceId: 'z_1',
@@ -932,7 +933,7 @@ describe('AI Opponent Engine Tactics Suite (Phase 7)', () => {
         currentHealth: 2,
       })
 
-      state.zombieHand = [getCard('zombie_going_viral')]
+      state.zombieHand = [viralCard]
 
       const decision = getAIDecision(state, 'zombies', { difficulty: 'normal', archetype: 'tempo' })
       expect(decision.action).toBe('PLAY_TRICK')
@@ -983,7 +984,6 @@ describe('AI Opponent Engine Tactics Suite (Phase 7)', () => {
       it('plays affordable cheap minion while preserving remaining brains for Going Viral', () => {
         const state = setupState()
         state.phase = 'ZOMBIE_PLAY'
-        state.zombieHero.brains = 4
 
         // Have a zombie on board so Going Viral reservation triggers
         state.lanes[1].zombieMinion = createTestMinion({
@@ -995,19 +995,20 @@ describe('AI Opponent Engine Tactics Suite (Phase 7)', () => {
           currentHealth: 1,
         })
 
-        const viral = getCard('zombie_going_viral') // cost 3
+        const viral = getCard('zombie_going_viral')
         const armWrestler = getCard('zombie_arm_wrestler') // cost 1
         state.zombieHand = [viral, armWrestler]
+        state.zombieHero.brains = viral.cost + 1
 
-        // Reservation should ask for 3 brains
-        const reservation = reserveBrainsForTricks(state, state.zombieHand, 4, 'tempo', 'expert')
-        expect(reservation.reservedBrains).toBe(3)
+        // Reservation should ask for viral.cost brains
+        const reservation = reserveBrainsForTricks(state, state.zombieHand, state.zombieHero.brains, 'tempo', 'expert')
+        expect(reservation.reservedBrains).toBe(viral.cost)
 
-        // AI should play Arm Wrestler (cost 1 <= 4 - 3) while reserving 3 brains
+        // AI should play Arm Wrestler (cost 1 <= (viral.cost + 1) - viral.cost) while reserving brains
         const decision = getAIDecision(state, 'zombies', { difficulty: 'expert', archetype: 'tempo' })
         expect(decision.action).toBe('PLAY_MINION')
         expect(decision.card?.id).toBe('zombie_arm_wrestler')
-        expect(decision.reason).toContain('Preserving 3 brains for tricks')
+        expect(decision.reason).toContain(`Preserving ${viral.cost} brains for tricks`)
       })
 
       it('reserves brains for lethal Brute Strength buff on an unblocked zombie', () => {

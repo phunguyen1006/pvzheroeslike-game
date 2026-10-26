@@ -2,44 +2,57 @@ import React, { useEffect, useState } from 'react'
 import { soundManager } from '../../audio/SoundManager'
 
 export interface ComicSpeechBubbleProps {
-  text: string
+  text?: string
+  message?: string
   emoji?: string
-  side: 'plants' | 'zombies'
+  side?: 'plants' | 'zombies'
+  heroSide?: 'plants' | 'zombies'
   onDismiss?: () => void
-  duration?: number // default 2500ms (Round 12 standard)
+  duration?: number
+  durationMs?: number // default 2500ms (Round 12 standard)
 }
 
 export const ComicSpeechBubble: React.FC<ComicSpeechBubbleProps> = ({
   text,
+  message,
   emoji = '💬',
   side,
+  heroSide,
   onDismiss,
-  duration = 2500,
+  duration,
+  durationMs,
 }) => {
   const [isFadingOut, setIsFadingOut] = useState(false)
+  const effectiveText = message ?? text ?? ''
+  const effectiveSide = heroSide ?? side ?? 'plants'
+  const effectiveDuration = durationMs ?? duration ?? 2500
 
   useEffect(() => {
-    soundManager.playBubblePop()
+    try {
+      soundManager.playBubblePop()
+    } catch {
+      // Sound fallback
+    }
 
     const fadeTimer = setTimeout(() => {
       setIsFadingOut(true)
-    }, Math.max(100, duration - 400))
+    }, Math.max(100, effectiveDuration - 400))
 
     const dismissTimer = setTimeout(() => {
       if (onDismiss) {
         onDismiss()
       }
-    }, duration)
+    }, effectiveDuration)
 
     return () => {
       clearTimeout(fadeTimer)
       clearTimeout(dismissTimer)
     }
-  }, [duration, onDismiss, text])
+  }, [effectiveDuration, onDismiss, effectiveText])
 
   return (
     <div
-      className={`comic-speech-bubble-anchor speech-bubble-${side} ${
+      className={`comic-speech-bubble-wrapper comic-speech-bubble-anchor bubble-${effectiveSide} speech-bubble-${effectiveSide} ${
         isFadingOut ? 'bubble-is-fading' : ''
       }`}
       onClick={onDismiss}
@@ -47,10 +60,10 @@ export const ComicSpeechBubble: React.FC<ComicSpeechBubbleProps> = ({
     >
       <div className="comic-speech-bubble-body">
         <span className="comic-speech-emoji">{emoji}</span>
-        <span className="comic-speech-text">{text}</span>
+        <span className="comic-speech-text">{effectiveText}</span>
       </div>
       {/* Comic speech bubble directional tail */}
-      <div className="comic-speech-tail" />
+      <div className="comic-speech-tail speech-bubble-tail" />
     </div>
   )
 }

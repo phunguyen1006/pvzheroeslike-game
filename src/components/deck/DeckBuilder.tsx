@@ -60,6 +60,9 @@ export const DECK_STORAGE_KEY = 'pvz_heroes_saved_decks_v1'
 
 export type CostFilter = number | 'all' | '1-2' | '3-4' | '5+'
 
+export type SortField = 'cost' | 'attack' | 'health' | 'rarity' | 'name'
+export type SortOrder = 'asc' | 'desc'
+
 export interface DeckCodeExportPayload {
   format: 'pvz_heroes_deck_v1'
   name: string
@@ -238,6 +241,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   const [selectedTribe, setSelectedTribe] = useState<string>('all')
   const [selectedRarity, setSelectedRarity] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [sortBy, setSortBy] = useState<SortField>('cost')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
   const [deckName, setDeckName] = useState<string>(
     initialSide === 'plants' ? 'Chiến Thuật Cây Trồng #1' : 'Đội Quân Thây Ma #1'
   )
@@ -274,7 +279,22 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   }, [])
 
   const availableCards = selectedSide === 'plants' ? PLANT_CARDS : ZOMBIE_CARDS
-  const currentTribes = selectedSide === 'plants' ? PLANT_TRIBES : ZOMBIE_TRIBES
+  const currentTribes = useMemo(() => {
+    const set = new Set<string>()
+    const baseTribes = selectedSide === 'plants' ? PLANT_TRIBES : ZOMBIE_TRIBES
+    baseTribes.forEach((t) => set.add(t))
+    availableCards.forEach((c) => {
+      if (c.tribe) {
+        c.tribe.split(/\s*[,/]\s*|\s+/).forEach((t) => {
+          const clean = t.trim()
+          if (clean && clean.length > 1) {
+            set.add(clean)
+          }
+        })
+      }
+    })
+    return Array.from(set).sort()
+  }, [availableCards, selectedSide])
   const plantClasses = ['Guardian', 'Kabloom', 'Mega-Grow', 'Smarty', 'Solar']
   const zombieClasses = ['Beastly', 'Brainy', 'Crazy', 'Hearty', 'Sneaky']
   const currentClasses = selectedSide === 'plants' ? plantClasses : zombieClasses
@@ -346,6 +366,41 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     selectedType,
   ])
 
+  const rarityRank: Record<Rarity, number> = {
+    Common: 1,
+    Uncommon: 2,
+    Rare: 3,
+    'Super-Rare': 4,
+    Legendary: 5,
+    Event: 6,
+    Token: 7,
+  }
+
+  // Sorted cards by Cost, Attack, Health, Rarity, Name
+  const sortedCards = useMemo(() => {
+    const list = [...filteredCards]
+    list.sort((a, b) => {
+      let diff = 0
+      if (sortBy === 'cost') {
+        diff = a.cost - b.cost
+      } else if (sortBy === 'attack') {
+        diff = (a.attack || 0) - (b.attack || 0)
+      } else if (sortBy === 'health') {
+        const hpA = a.hp || a.health || 0
+        const hpB = b.hp || b.health || 0
+        diff = hpA - hpB
+      } else if (sortBy === 'rarity') {
+        const rankA = a.rarity ? rarityRank[a.rarity] || 0 : 0
+        const rankB = b.rarity ? rarityRank[b.rarity] || 0 : 0
+        diff = rankA - rankB
+      } else if (sortBy === 'name') {
+        diff = a.name.localeCompare(b.name)
+      }
+      return sortOrder === 'asc' ? diff : -diff
+    })
+    return list
+  }, [filteredCards, sortBy, sortOrder])
+
   // Total cards in deck
   const totalCardsInDeck = useMemo(() => {
     return Object.values(deckMap).reduce((sum, count) => sum + count, 0)
@@ -368,15 +423,16 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     return { minions, tricks, environments }
   }, [deckMap, availableCards])
 
-  // Calculate Mana Curve Bar Chart bins: 1 (includes 0 & 1), 2, 3, 4, 5, 6+
+  // Calculate Mana Curve Bar Chart bins: 1 (includes 0 & 1), 2, 3, 4, 5, 6, 7+
   const manaCurve = useMemo(() => {
-    const bins: Record<'1' | '2' | '3' | '4' | '5' | '6+', number> = {
+    const bins: Record<'1' | '2' | '3' | '4' | '5' | '6' | '7+', number> = {
       '1': 0,
       '2': 0,
       '3': 0,
       '4': 0,
       '5': 0,
-      '6+': 0,
+      '6': 0,
+      '7+': 0,
     }
 
     let totalCost = 0
@@ -397,8 +453,10 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           bins['4'] += count
         } else if (card.cost === 5) {
           bins['5'] += count
+        } else if (card.cost === 6) {
+          bins['6'] += count
         } else {
-          bins['6+'] += count
+          bins['7+'] += count
         }
       }
     })
@@ -837,12 +895,58 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Sort Controls Bar */}
+              <div className="filter-group sort-filter-group">
+                <div className="sort-group-left">
+                  <span className="filter-group-label">Sắp xếp (Sort):</span>
+                  <div className="filter-chips-row">
+                    <button
+                      className={`filter-chip sort-chip ${sortBy === 'cost' ? 'active-chip' : ''}`}
+                      onClick={() => setSortBy('cost')}
+                    >
+                      Chi phí (Cost)
+                    </button>
+                    <button
+                      className={`filter-chip sort-chip ${sortBy === 'attack' ? 'active-chip' : ''}`}
+                      onClick={() => setSortBy('attack')}
+                    >
+                      Công (Attack)
+                    </button>
+                    <button
+                      className={`filter-chip sort-chip ${sortBy === 'health' ? 'active-chip' : ''}`}
+                      onClick={() => setSortBy('health')}
+                    >
+                      Máu (Health)
+                    </button>
+                    <button
+                      className={`filter-chip sort-chip ${sortBy === 'rarity' ? 'active-chip' : ''}`}
+                      onClick={() => setSortBy('rarity')}
+                    >
+                      Độ hiếm (Rarity)
+                    </button>
+                    <button
+                      className={`filter-chip sort-chip ${sortBy === 'name' ? 'active-chip' : ''}`}
+                      onClick={() => setSortBy('name')}
+                    >
+                      Tên (A-Z)
+                    </button>
+                  </div>
+                </div>
+                <button
+                  className="sort-order-toggle-btn"
+                  onClick={() => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                  title={`Thứ tự: ${sortOrder === 'asc' ? 'Tăng dần' : 'Giảm dần'}`}
+                >
+                  {sortOrder === 'asc' ? '🔼 Tăng dần' : '🔽 Giảm dần'}
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Cards Catalog Grid */}
           <div className="catalog-cards-container">
-            {filteredCards.length === 0 ? (
+            {sortedCards.length === 0 ? (
               <div className="no-cards-found">
                 <div className="no-cards-emoji">🔍</div>
                 <h3>Không tìm thấy lá bài phù hợp</h3>
@@ -856,6 +960,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     setSelectedTribe('all')
                     setSelectedRarity('all')
                     setSearchQuery('')
+                    setSortBy('cost')
+                    setSortOrder('asc')
                   }}
                 >
                   Đặt lại toàn bộ lọc
@@ -863,7 +969,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               </div>
             ) : (
               <div className="catalog-cards-grid">
-                {filteredCards.map((cardData) => {
+                {sortedCards.map((cardData) => {
                   const engineCard = toEngineCard(cardData)
                   const countInDeck = deckMap[cardData.id] || 0
                   const isMaxCopies = countInDeck >= 4
@@ -967,7 +1073,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               </span>
             </div>
             <div className="mana-bars-row">
-              {(['1', '2', '3', '4', '5', '6+'] as const).map((costBin) => {
+              {(['1', '2', '3', '4', '5', '6', '7+'] as const).map((costBin) => {
                 const count = manaCurve.bins[costBin] || 0
                 const fillPercent = (count / manaCurve.maxCount) * 100
 

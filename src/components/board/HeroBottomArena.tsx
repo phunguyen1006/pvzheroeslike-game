@@ -15,6 +15,7 @@ export interface HeroBottomArenaProps {
   activeEmote?: { text: string; emoji?: string } | null
   onDismissEmote?: () => void
   onSuperBlockClick?: () => void
+  onHeroClick?: () => void
   winner?: Side | null
   isWinner?: boolean
   isDefeated?: boolean
@@ -31,6 +32,7 @@ export const HeroBottomArena: React.FC<HeroBottomArenaProps> = ({
   activeEmote,
   onDismissEmote,
   onSuperBlockClick,
+  onHeroClick,
   winner,
   isWinner = winner === side,
   isDefeated = Boolean(winner && winner !== side),
@@ -155,8 +157,11 @@ export const HeroBottomArena: React.FC<HeroBottomArenaProps> = ({
           } ${isHurt ? 'hero-portrait-hurt-shake' : ''} ${
             isUsingSuperpower ? 'hero-portrait-superpower-glow' : ''
           } ${isLowHp ? 'hero-portrait-low-hp' : ''} ${
-            isWinner ? 'hero-winner-radiance' : ''
-          } ${isDefeated ? 'hero-defeated-gloom' : ''}`}
+            isWinner ? 'hero-winner-radiance is-winner' : ''
+          } ${isDefeated ? 'hero-defeated-gloom is-defeated' : ''}`}
+          onClick={onHeroClick}
+          style={{ cursor: onHeroClick ? 'pointer' : 'default' }}
+          title={onHeroClick ? 'Nhấp để mở bảng Biểu cảm (Click để mở biểu cảm Hero!)' : undefined}
         >
           {/* Victory Gold Aura & Crown */}
           {isWinner && (

@@ -19,9 +19,12 @@ export const LaneEnvironmentFX: React.FC<LaneEnvironmentFXProps> = ({
 
   return (
     <div className={`lane-living-fx-container lane-fx-${lane.type}`} aria-hidden="true">
-      {/* 1. Heights Lane (Lane 1): High Altitude Cliff, Drifting Wind Streaks & Minion Elevation Aura */}
+      {/* 1. Heights Lane (Lane 1): High Altitude Cliff, Drifting Wind Streaks & 3D Elevation Roof Ledge */}
       {isHeights && (
         <div className="heights-living-fx">
+          {/* 3D Roof Ledge / Cliff Edge Texture */}
+          <div className="heights-roof-ledge" />
+
           {/* Drifting Breeze / Cloud Streaks */}
           <div className="heights-wind-layer">
             <div className="heights-wind-streak streak-1" />
@@ -29,15 +32,16 @@ export const LaneEnvironmentFX: React.FC<LaneEnvironmentFXProps> = ({
             <div className="heights-wind-streak streak-3" />
           </div>
 
-          {/* Altitude Cliff Edge Indicator */}
-          <div className="heights-altitude-badge">
+          {/* 3D Altitude Cliff Edge Indicator */}
+          <div className="heights-altitude-badge heights-3d-elevation-badge">
             <span className="altitude-icon">🏔️</span>
             <span className="altitude-label">HEIGHTS +20m</span>
           </div>
 
-          {/* Minion Elevated Perch Aura */}
+          {/* Minion Elevated Perch Aura & Elevation Drop Shadow */}
           {hasMinion && (
             <div className="heights-elevation-aura">
+              <div className="heights-minion-elevation-shadow" />
               <div className="aura-sunbeam" />
               <div className="aura-dust-motes" />
             </div>
@@ -45,7 +49,7 @@ export const LaneEnvironmentFX: React.FC<LaneEnvironmentFXProps> = ({
         </div>
       )}
 
-      {/* 2. Water / Amphibious Lane (Lane 5): Concentric Ripples, Water Caustics & Splash Foam */}
+      {/* 2. Water / Amphibious Lane (Lane 5): Concentric Ripples, Water Caustics & Splash Droplets */}
       {isWater && (
         <div className="water-living-fx">
           {/* Animated Water Surface Waves & Caustics */}
@@ -62,6 +66,14 @@ export const LaneEnvironmentFX: React.FC<LaneEnvironmentFXProps> = ({
             <div className="water-ripple-ring ring-3" />
           </div>
 
+          {/* Splash Droplets Particles */}
+          <div className="splash-droplets">
+            <div className="water-splash-droplet droplet-1" />
+            <div className="water-splash-droplet droplet-2" />
+            <div className="water-splash-droplet droplet-3" />
+            <div className="water-splash-droplet droplet-4" />
+          </div>
+
           {/* Water Splash Foam when Minion is Submerged/Swimming */}
           {hasMinion && (
             <div className="water-splash-foam-emitter">
@@ -74,7 +86,16 @@ export const LaneEnvironmentFX: React.FC<LaneEnvironmentFXProps> = ({
         </div>
       )}
 
-      {/* 3. Gravestone Crack & Ground Eruption Reveal FX */}
+      {/* 3. Environment Terrain Overlay across the entire lane */}
+      {lane.environment && (
+        <div className={`lane-environment-terrain-overlay env-${lane.environment.id}`}>
+          <div className="env-terrain-texture" />
+          <div className="env-glowing-border" />
+          <div className="env-name-tag">{lane.environment.name}</div>
+        </div>
+      )}
+
+      {/* 4. Gravestone Crack & Ground Eruption Reveal FX */}
       {(isGravestoneRevealing || isGravestone) && (
         <div className={`gravestone-ground-fx ${isGravestoneRevealing ? 'is-erupting' : 'is-sealed'}`}>
           <div className="stone-crack-lines">

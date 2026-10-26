@@ -118,6 +118,7 @@ export function App() {
   const [isCombatLogOpen, setIsCombatLogOpen] = useState(false)
   const [playingFlyCard, setPlayingFlyCard] = useState<{ card: CardType; laneIndex: number } | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isEmotePaletteOpen, setIsEmotePaletteOpen] = useState(false)
   const [playerEmote, setPlayerEmote] = useState<{ text: string; emoji?: string } | null>(null)
   const [opponentEmote, setOpponentEmote] = useState<{ text: string; emoji?: string } | null>(null)
 
@@ -125,7 +126,7 @@ export function App() {
     setPlayerEmote({ text: speech, emoji })
 
     // AI opponent reactive retort
-    const opponentReplies: Record<EmoteType, { text: string; emoji: string; replyType: EmoteType }> = {
+    const opponentReplies: Partial<Record<EmoteType, { text: string; emoji: string; replyType: EmoteType }>> = {
       hello: { text: 'Chuẩn bị tinh thần đi!', emoji: '👋', replyType: 'hello' },
       taunt: { text: 'Chưa biết mèo nào cắn mỉu nào đâu!', emoji: '😏', replyType: 'taunt' },
       oops: { text: 'Haha! Đúng lúc sơ hở rồi!', emoji: '😈', replyType: 'taunt' },
@@ -1048,6 +1049,7 @@ export function App() {
             isDefeated={gameState.winner === 'zombies'}
             activeEmote={playerEmote}
             onDismissEmote={() => setPlayerEmote(null)}
+            onHeroClick={() => setIsEmotePaletteOpen((prev) => !prev)}
             onSuperBlockClick={() => {
               if (gameState.plantHero.blockMeter >= 8) {
                 soundManager.playSuperBlock()
@@ -1074,6 +1076,8 @@ export function App() {
                 heroSide="plants"
                 onTriggerEmote={handleTriggerPlayerEmote}
                 disabled={isCombatResolving}
+                isOpen={isEmotePaletteOpen}
+                onToggleOpen={() => setIsEmotePaletteOpen((prev) => !prev)}
               />
             </div>
 

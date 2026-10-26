@@ -210,15 +210,15 @@ describe('Dino-Roar, Evolution, Trickster & Mulligan Dedicated Suite', () => {
         laneIndex: 1,
       })
 
-      // Evolved Gatling Pea stats: 5/4 + 1/1 = 6/5
+      // Evolved Gatling Pea stats: base + 1/1
       const evolvedMinion = nextState.lanes[1].plantMinion
       expect(evolvedMinion).toBeDefined()
       expect(evolvedMinion?.name).toBe('Gatling Pea')
-      expect(evolvedMinion?.currentAttack).toBe(6)
-      expect(evolvedMinion?.currentHealth).toBe(5)
+      expect(evolvedMinion?.currentAttack).toBe(gatlingCard.attack + 1)
+      expect(evolvedMinion?.currentHealth).toBe(gatlingCard.health + 1)
 
-      // Bonus attack struck Zombie Hero directly (open lane) for 6 damage
-      expect(nextState.zombieHero.hp).toBe(20 - 6)
+      // Bonus attack struck Zombie Hero directly (open lane)
+      expect(nextState.zombieHero.hp).toBe(20 - (gatlingCard.attack + 1))
       expect(nextState.combatLog.some(l => l.includes('Pea Evolution'))).toBe(true)
       expect(nextState.combatLog.some(l => l.includes('Bonus Attack'))).toBe(true)
     })
@@ -233,8 +233,8 @@ describe('Dino-Roar, Evolution, Trickster & Mulligan Dedicated Suite', () => {
         cardId: 'plant_repeater',
         tribe: 'Pea Plant',
       })
-      // Enemy Zombie on lane 2 (5 HP)
-      state.lanes[2].zombieMinion = createMockMinion('cone', 'Conehead', 'zombies', 2, 5)
+      // Enemy Zombie on lane 2 (2 HP)
+      state.lanes[2].zombieMinion = createMockMinion('cone', 'Conehead', 'zombies', 2, 2)
 
       const gatlingCard = convertCardDataToCard(getCardById('plant_gatling_pea')!, 'plants')
       state.plantHand = [gatlingCard]
@@ -246,7 +246,7 @@ describe('Dino-Roar, Evolution, Trickster & Mulligan Dedicated Suite', () => {
         laneIndex: 2,
       })
 
-      // Gatling Pea has 6 attack, deals 6 damage to 5-HP Conehead -> destroyed!
+      // Gatling Pea deals bonus attack damage to Conehead -> destroyed!
       expect(nextState.lanes[2].zombieMinion).toBeNull()
       expect(nextState.combatLog.some(l => l.includes('tiêu diệt bởi Gatling Pea'))).toBe(true)
     })

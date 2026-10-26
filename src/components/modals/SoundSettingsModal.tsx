@@ -67,9 +67,16 @@ export const SoundSettingsModal: React.FC<SoundSettingsModalProps> = ({
       bgmVolume: 60,
       sfxVolume: 85,
       isMuted: false,
+      bgmTheme: 'auto',
     })
     setSettings(soundManager.getSettings())
     soundManager.playBuff()
+  }
+
+  const handleThemeSelect = (theme: 'plants' | 'zombies' | 'auto') => {
+    soundManager.setBGMTheme(theme)
+    setSettings((prev) => ({ ...prev, bgmTheme: theme }))
+    soundManager.playClick()
   }
 
   return (
@@ -205,6 +212,40 @@ export const SoundSettingsModal: React.FC<SoundSettingsModalProps> = ({
           </div>
         </div>
 
+        {/* BGM Theme Selector */}
+        <div className="sound-theme-selector-section">
+          <div className="sound-theme-header">
+            <span className="theme-header-icon">📻</span>
+            <span className="theme-header-title">Chủ Đề Nhạc Nền (BGM Theme)</span>
+          </div>
+          <div className="sound-theme-options-grid">
+            <button
+              className={`sound-theme-pill ${settings.bgmTheme === 'plants' ? 'active-theme-pill plant-theme-active' : ''}`}
+              onClick={() => handleThemeSelect('plants')}
+              disabled={settings.isMuted}
+            >
+              <span className="theme-pill-icon">🌱</span>
+              <span className="theme-pill-label">Plants Funk</span>
+            </button>
+            <button
+              className={`sound-theme-pill ${settings.bgmTheme === 'zombies' ? 'active-theme-pill zombie-theme-active' : ''}`}
+              onClick={() => handleThemeSelect('zombies')}
+              disabled={settings.isMuted}
+            >
+              <span className="theme-pill-icon">🧟</span>
+              <span className="theme-pill-label">Zombies Spooky</span>
+            </button>
+            <button
+              className={`sound-theme-pill ${settings.bgmTheme === 'auto' || !settings.bgmTheme ? 'active-theme-pill auto-theme-active' : ''}`}
+              onClick={() => handleThemeSelect('auto')}
+              disabled={settings.isMuted}
+            >
+              <span className="theme-pill-icon">🔄</span>
+              <span className="theme-pill-label">Tự Động (Auto)</span>
+            </button>
+          </div>
+        </div>
+
         {/* Test Sound Quick Buttons */}
         <div className="sound-test-bar">
           <span className="test-bar-caption">Thử âm thanh:</span>
@@ -224,6 +265,14 @@ export const SoundSettingsModal: React.FC<SoundSettingsModalProps> = ({
               title="Phát tiếng Super-Block Fanfare"
             >
               🛡️ Khiên Chắn
+            </button>
+            <button
+              className="sound-test-chip"
+              onClick={() => soundManager.playWaterSplash()}
+              disabled={settings.isMuted}
+              title="Phát tiếng Nước Bắn"
+            >
+              🌊 Nước Bắn
             </button>
             <button
               className="sound-test-chip reset-chip"

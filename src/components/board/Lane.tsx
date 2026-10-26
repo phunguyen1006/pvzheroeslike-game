@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { MinionSlot } from './MinionSlot'
 import { LaneEnvironmentFX } from './LaneEnvironmentFX'
+import { soundManager } from '../../audio/SoundManager'
 import type { LaneState, Card as CardType, Minion as MinionType } from '../../engine/types'
 
 export interface LaneProps {
@@ -56,6 +57,9 @@ export const Lane: React.FC<LaneProps> = ({
       (currentZombieId && currentZombieId !== prevZombieIdRef.current)
     ) {
       setIsLandingThud(true)
+      if (isWater) {
+        soundManager.playWaterSplash()
+      }
       const timer = setTimeout(() => setIsLandingThud(false), 700)
       prevPlantIdRef.current = currentPlantId
       prevZombieIdRef.current = currentZombieId

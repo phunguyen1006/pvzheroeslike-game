@@ -1,10 +1,13 @@
 // Comprehensive Synthesized Web Audio Manager for PvZ Heroes sound effects
 // Generates authentic arcade/tactical game SFX & dynamic ambient BGM using Web Audio API
+export type BGMTheme = 'plants' | 'zombies' | 'auto'
+
 export interface SoundSettings {
   masterVolume: number // 0 to 100
   bgmVolume: number // 0 to 100
   sfxVolume: number // 0 to 100
   isMuted: boolean
+  bgmTheme?: BGMTheme
 }
 
 const STORAGE_KEY = 'pvz_sound_settings'
@@ -14,6 +17,7 @@ export const DEFAULT_SETTINGS: SoundSettings = {
   bgmVolume: 60,
   sfxVolume: 85,
   isMuted: false,
+  bgmTheme: 'auto',
 }
 
 class SoundManager {
@@ -26,6 +30,7 @@ class SoundManager {
   private bgmVolume: number = 0.6
   private sfxVolume: number = 0.85
   private isMuted: boolean = false
+  private bgmTheme: BGMTheme = 'auto'
 
   // Background Music loop state
   private isBgmActive: boolean = false
@@ -54,6 +59,9 @@ class SoundManager {
         if (typeof parsed.isMuted === 'boolean') {
           this.isMuted = parsed.isMuted
         }
+        if (parsed.bgmTheme === 'plants' || parsed.bgmTheme === 'zombies' || parsed.bgmTheme === 'auto') {
+          this.bgmTheme = parsed.bgmTheme
+        }
       }
     } catch {
       // Ignore localStorage read errors
@@ -68,6 +76,7 @@ class SoundManager {
         bgmVolume: Math.round(this.bgmVolume * 100),
         sfxVolume: Math.round(this.sfxVolume * 100),
         isMuted: this.isMuted,
+        bgmTheme: this.bgmTheme,
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
     } catch {
@@ -129,6 +138,7 @@ class SoundManager {
       bgmVolume: Math.round(this.bgmVolume * 100),
       sfxVolume: Math.round(this.sfxVolume * 100),
       isMuted: this.isMuted,
+      bgmTheme: this.bgmTheme,
     }
   }
 
@@ -145,6 +155,18 @@ class SoundManager {
     if (typeof settings.isMuted === 'boolean') {
       this.setMuted(settings.isMuted)
     }
+    if (settings.bgmTheme) {
+      this.setBGMTheme(settings.bgmTheme)
+    }
+    this.saveToStorage()
+  }
+
+  getBGMTheme(): BGMTheme {
+    return this.bgmTheme
+  }
+
+  setBGMTheme(theme: BGMTheme) {
+    this.bgmTheme = theme
     this.saveToStorage()
   }
 
@@ -230,35 +252,71 @@ class SoundManager {
     const dest = this.getBGMDestination()
     if (dest && this.ctx && !this.isMuted && this.bgmVolume > 0.02) {
       const now = this.ctx.currentTime
-      // PvZ Heroes signature whimsical tactical bassline (D minor funky groove)
-      // D2 (73.4), F2 (87.3), G2 (98.0), A2 (110.0), C3 (130.8)
-      const bassNotes = [73.42, 73.42, 87.31, 98.0, 73.42, 110.0, 98.0, 87.31]
-      const noteFreq = bassNotes[this.bgmStep % bassNotes.length]
+      const activeTheme = this.bgmTheme === 'auto' ? 'plants' : this.bgmTheme
 
-      const osc = this.ctx.createOscillator()
-      const gain = this.ctx.createGain()
-      osc.type = 'triangle'
-      osc.frequency.setValueAtTime(noteFreq, now)
-      gain.gain.setValueAtTime(0.08, now)
-      gain.gain.exponentialRampToValueAtTime(0.005, now + 0.28)
+      if (activeTheme === 'plants') {
+        // Plants Garden Funk: Upbeat, bouncy, cheerful C/F major funk groove
+        // C2 (65.41), E2 (82.41), G2 (98.0), A2 (110.0), C3 (130.81), G2 (98.0), F2 (87.31), G2 (98.0)
+        const plantBass = [65.41, 65.41, 82.41, 98.0, 130.81, 98.0, 87.31, 98.0]
+        const noteFreq = plantBass[this.bgmStep % plantBass.length]
 
-      osc.connect(gain)
-      gain.connect(dest)
-      osc.start(now)
-      osc.stop(now + 0.3)
+        const osc = this.ctx.createOscillator()
+        const gain = this.ctx.createGain()
+        osc.type = 'triangle'
+        osc.frequency.setValueAtTime(noteFreq, now)
+        gain.gain.setValueAtTime(0.09, now)
+        gain.gain.exponentialRampToValueAtTime(0.005, now + 0.22)
 
-      // Light percussion shaker tick on odd beats
-      if (this.bgmStep % 2 === 1) {
-        const tickOsc = this.ctx.createOscillator()
-        const tickGain = this.ctx.createGain()
-        tickOsc.type = 'sawtooth'
-        tickOsc.frequency.setValueAtTime(1400, now)
-        tickGain.gain.setValueAtTime(0.015, now)
-        tickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05)
-        tickOsc.connect(tickGain)
-        tickGain.connect(dest)
-        tickOsc.start(now)
-        tickOsc.stop(now + 0.05)
+        osc.connect(gain)
+        gain.connect(dest)
+        osc.start(now)
+        osc.stop(now + 0.25)
+
+        // Snappy acoustic woodblock / bubble tick on odd beats
+        if (this.bgmStep % 2 === 1) {
+          const woodOsc = this.ctx.createOscillator()
+          const woodGain = this.ctx.createGain()
+          woodOsc.type = 'sine'
+          woodOsc.frequency.setValueAtTime(880, now)
+          woodOsc.frequency.exponentialRampToValueAtTime(1400, now + 0.04)
+          woodGain.gain.setValueAtTime(0.02, now)
+          woodGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04)
+          woodOsc.connect(woodGain)
+          woodGain.connect(dest)
+          woodOsc.start(now)
+          woodOsc.stop(now + 0.04)
+        }
+      } else {
+        // Zombies Graveyard Funk: Eerie, spooky suspense, D minor funky groove
+        // D2 (73.42), F2 (87.31), G2 (98.0), A2 (110.0), C3 (130.81)
+        const zombieBass = [73.42, 73.42, 87.31, 98.0, 73.42, 116.54, 110.0, 87.31]
+        const noteFreq = zombieBass[this.bgmStep % zombieBass.length]
+
+        const osc = this.ctx.createOscillator()
+        const gain = this.ctx.createGain()
+        osc.type = 'sawtooth'
+        osc.frequency.setValueAtTime(noteFreq, now)
+        gain.gain.setValueAtTime(0.07, now)
+        gain.gain.exponentialRampToValueAtTime(0.004, now + 0.28)
+
+        osc.connect(gain)
+        gain.connect(dest)
+        osc.start(now)
+        osc.stop(now + 0.3)
+
+        // Light percussion shaker tick on odd beats
+        if (this.bgmStep % 2 === 1) {
+          const tickOsc = this.ctx.createOscillator()
+          const tickGain = this.ctx.createGain()
+          tickOsc.type = 'sawtooth'
+          tickOsc.frequency.setValueAtTime(1400, now)
+          tickGain.gain.setValueAtTime(0.015, now)
+          tickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05)
+          tickOsc.connect(tickGain)
+          tickGain.connect(dest)
+          tickOsc.start(now)
+          tickOsc.stop(now + 0.05)
+        }
       }
     }
 
@@ -268,18 +326,25 @@ class SoundManager {
   }
 
   // --- Hero Emotes SFX ---
-  playEmote(type: 'hello' | 'taunt' | 'oops' | 'victory') {
+  playEmote(type: string) {
     switch (type) {
       case 'hello':
+      case 'wellplayed':
+      case 'goodgame':
         this.playEmoteHello()
         break
       case 'taunt':
+      case 'brains':
+      case 'gargantuar':
         this.playEmoteTaunt()
         break
       case 'oops':
+      case 'thinking':
+      case 'noway':
         this.playEmoteOops()
         break
       case 'victory':
+      default:
         this.playEmoteVictory()
         break
     }
@@ -398,6 +463,43 @@ class SoundManager {
   }
 
   // --- Gameplay SFX ---
+
+  // Comic speech bubble pop sound
+  playBubblePop() {
+    const dest = this.getSFXDestination()
+    if (!dest || !this.ctx) return
+    const now = this.ctx.currentTime
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(450, now)
+    osc.frequency.exponentialRampToValueAtTime(800, now + 0.08)
+    gain.gain.setValueAtTime(0.2, now)
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08)
+    osc.connect(gain)
+    gain.connect(dest)
+    osc.start(now)
+    osc.stop(now + 0.08)
+  }
+
+  // Water Splash SFX for Water lane and Amphibious drops
+  playWaterSplash() {
+    const dest = this.getSFXDestination()
+    if (!dest || !this.ctx) return
+    const now = this.ctx.currentTime
+
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(360, now)
+    osc.frequency.exponentialRampToValueAtTime(140, now + 0.12)
+    gain.gain.setValueAtTime(0.3, now)
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
+    osc.connect(gain)
+    gain.connect(dest)
+    osc.start(now)
+    osc.stop(now + 0.15)
+  }
 
   // 1. Card Click & Drop (light thud)
   playCardDrop() {

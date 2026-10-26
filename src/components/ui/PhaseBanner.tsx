@@ -85,7 +85,7 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({
 
         const timer = setTimeout(() => {
           setComicBanner(null)
-        }, 1500)
+        }, 1100)
 
         prevPhaseRef.current = phase
         return () => clearTimeout(timer)
@@ -108,8 +108,9 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({
       {/* 1. Dramatic Comic Banner Overlay (Pop-in & Slide-Across) */}
       {comicBanner && (
         <div className="comic-phase-overlay" aria-live="assertive" role="alert">
+          <div className="comic-sunburst" aria-hidden="true" />
           <div className="comic-speed-lines" aria-hidden="true" />
-          <div className={`comic-banner-ribbon ${comicBanner.themeClass}`}>
+          <div className={`comic-banner-ribbon ${comicBanner.themeClass} comic-slide-in-bounce`}>
             <div className="comic-ribbon-shine" />
             <div className="comic-banner-content">
               <span className="comic-phase-icon">{comicBanner.icon}</span>

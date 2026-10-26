@@ -199,8 +199,8 @@ export const HeroTopArena: React.FC<HeroTopArenaProps> = ({
             isHurt ? 'hero-portrait-hurt-shake' : ''
           } ${isUsingSuperpower ? 'hero-portrait-superpower-glow' : ''} ${
             isLowHp ? 'hero-portrait-low-hp' : ''
-          } ${isWinner ? 'hero-winner-radiance' : ''} ${
-            isDefeated ? 'hero-defeated-gloom' : ''
+          } ${isWinner ? 'hero-winner-radiance is-winner' : ''} ${
+            isDefeated ? 'hero-defeated-gloom is-defeated' : ''
           }`}
         >
           {/* Victory Gold Aura & Crown */}
